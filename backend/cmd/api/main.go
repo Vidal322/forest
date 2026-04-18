@@ -3,12 +3,22 @@ package main
 import (
 	"fmt"
 	"github.com/Vidal322/forest/internal/config"
+	"github.com/Vidal322/forest/internal/db"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	cfg := config.Load()
+	_, err := db.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	http.HandleFunc("/", handler)
 	log.Fatal(http.ListenAndServe(":"+cfg.ServerPort, nil))
 }
