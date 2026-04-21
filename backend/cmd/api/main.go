@@ -14,8 +14,13 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	cfg := config.Load()
-	_, err := db.New(cfg)
+	conn, err := db.New(cfg)
 	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	if err := db.RunMigrations(conn); err != nil {
 		log.Fatal(err)
 	}
 
