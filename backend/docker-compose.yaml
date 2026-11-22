@@ -1,0 +1,32 @@
+name: forest
+
+# Local PostgreSQL + PostGIS for development.
+#   cp .env.example .env && docker compose up -d
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      TZ: Europe/Lisbon
+    # The database's own clock zone decides "today" for watering rules.
+    # Passed on every start, so it holds even for an existing volume.
+    command: ["postgres", "-c", "timezone=Europe/Lisbon", "-c", "log_timezone=Europe/Lisbon"]
+    ports:
+      # localhost only; 5433 avoids clashing with another local Postgres on 5432
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  db_data:
+    name: forest_db_data
