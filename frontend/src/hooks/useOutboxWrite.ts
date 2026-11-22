@@ -8,7 +8,8 @@ import { isWaiting, markShownInline } from '../api/outbox'
  * - waiting: kept on the phone until there is a connection — the form is free again
  * - error:   the server refused it; shown by the form, so the sync bar won't repeat it
  */
-export function useOutboxWrite<TData, TVars>(m: UseMutationResult<TData, Error, TVars>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- any mutation: only its status is read
+export function useOutboxWrite(m: UseMutationResult<any, Error, any>) {
   const qc = useQueryClient()
   const waiting = m.isPending && isWaiting(m)
   const busy = m.isPending && !waiting

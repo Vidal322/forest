@@ -40,3 +40,8 @@ export function fitZoom(
   const exact = Math.log2(Math.min(view.x / photo.width, view.y / photo.height))
   return snap > 0 ? Math.floor(exact / snap + 1e-9) * snap : exact
 }
+
+/** The outer ring of GeoJSON polygon coordinates, as Leaflet positions. */
+export function outerRingLatLngs(coordinates: readonly (readonly FramePoint[])[]): LatLng[] {
+  return (coordinates[0] ?? []).map((p) => toLatLng(p))
+}
