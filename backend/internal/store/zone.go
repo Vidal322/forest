@@ -156,13 +156,17 @@ func (s *Store) PutZone(ctx context.Context, id uuid.UUID, in ZoneInput) (z Zone
 		if err != nil {
 			return err
 		}
+		// trees counted in the zone move with it to another plot
+		if _, err := tx.db.Exec(ctx, `UPDATE tree SET plot_id = $2 WHERE zone_id = $1 AND plot_id <> $2`, id, in.PlotID); err != nil {
+			return err
+		}
 		z, err = tx.GetZone(ctx, id)
 		return err
 	})
 	return z, created, err
 }
 
-// DeleteZone soft-deletes a zone and its tasks; its activity history stays. Idempotent.
+// DeleteZone soft-deletes a zone with its tasks and counted trees; its activity history stays. Idempotent.
 func (s *Store) DeleteZone(ctx context.Context, id uuid.UUID) error {
 	return s.inTx(ctx, func(tx *Store) error {
 		var existed bool
@@ -175,7 +179,11 @@ func (s *Store) DeleteZone(ctx context.Context, id uuid.UUID) error {
 		if !existed {
 			return ErrNotFound
 		}
-		_, err = tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE zone_id = $1 AND deleted_at IS NULL`, id)
+		if _, err := tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE zone_id = $1 AND deleted_at IS NULL`, id); err != nil {
+			return err
+		}
+		// trees counted in the zone no longer feed the plot's numbers (like its history)
+		_, err = tx.db.Exec(ctx, `UPDATE tree SET deleted_at = now() WHERE zone_id = $1 AND deleted_at IS NULL`, id)
 		return err
 	})
 }

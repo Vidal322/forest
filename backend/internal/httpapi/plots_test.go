@@ -58,3 +58,24 @@ func TestPlotsAndZonesAPI(t *testing.T) {
 		t.Fatalf("zones after plot delete: %d %v", len(zones), err)
 	}
 }
+
+func TestTreeCountsAPI(t *testing.T) {
+	h := newFieldRouter(t)
+	upload(t, h, "Quinta", pngBytes(t, 300, 200))
+	plotID, zoneID, spID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	send(t, h, http.MethodPut, "/api/plots/"+plotID, `{"name":"P","geom":`+squareJSON+`}`)
+	send(t, h, http.MethodPut, "/api/zones/"+zoneID, `{"plot_id":"`+plotID+`","geom":{"type":"Polygon","coordinates":[[[10,10],[30,10],[30,30],[10,30]]]}}`)
+	send(t, h, http.MethodPut, "/api/species/"+spID, `{"scientific_name":"Test tree `+spID[:8]+`"}`)
+	rec := send(t, h, http.MethodPut, "/api/zones/"+zoneID+"/trees/"+spID, `{"alive":5,"dead":1}`)
+	if rec.Code != 200 {
+		t.Fatalf("set: %d %s", rec.Code, rec.Body)
+	}
+	rec = send(t, h, http.MethodGet, "/api/tree-counts", "")
+	var counts []store.TreeCount
+	if err := json.NewDecoder(rec.Body).Decode(&counts); err != nil || len(counts) != 1 || counts[0].Alive != 5 || counts[0].Dead != 1 {
+		t.Fatalf("counts: %+v %v", counts, err)
+	}
+	if rec = send(t, h, http.MethodPut, "/api/zones/"+zoneID+"/trees/nope", `{"alive":1}`); rec.Code != 400 {
+		t.Fatalf("bad species id: %d", rec.Code)
+	}
+}

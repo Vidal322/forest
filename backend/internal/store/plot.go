@@ -173,8 +173,11 @@ func (s *Store) DeletePlot(ctx context.Context, id uuid.UUID) error {
 			return err
 		}
 		// a new statement sees tasks committed while we waited for the zones
-		_, err = tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE deleted_at IS NULL
-			AND (plot_id = $1 OR zone_id IN (SELECT id FROM zone WHERE plot_id = $1))`, id)
+		if _, err := tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE deleted_at IS NULL
+			AND (plot_id = $1 OR zone_id IN (SELECT id FROM zone WHERE plot_id = $1))`, id); err != nil {
+			return err
+		}
+		_, err = tx.db.Exec(ctx, `UPDATE tree SET deleted_at = now() WHERE deleted_at IS NULL AND plot_id = $1`, id)
 		return err
 	})
 }

@@ -67,6 +67,8 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/zones", listZones)
 			r.Put("/zones/{id}", putZone)
 			r.Delete("/zones/{id}", deleteZone)
+			r.Get("/tree-counts", listHandler(h, h.store.ListTreeCounts))
+			r.Put("/zones/{id}/trees/{species_id}", h.putTreeCounts)
 
 			r.Get("/activities", h.listActivities)
 			r.Put("/activities/{id}", h.putActivity)
