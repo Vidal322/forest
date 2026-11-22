@@ -9,6 +9,7 @@ import { ActivityEditForm } from '../components/ActivityEditForm'
 import { Flash } from '../components/Flash'
 import { StatusBadge } from '../components/StatusBadge'
 import { TaskForm } from '../components/TaskForm'
+import { ZoneTrees } from '../components/ZoneTrees'
 import { formatDay, relativeDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { useFieldToday } from '../hooks/useFieldToday'
@@ -166,6 +167,8 @@ export function ZonePage() {
           </>
         )}
       </section>
+
+      {zone.kind === 'cultivation' && <ZoneTrees zoneId={zone.id} species={species.data ?? []} onMessage={show} />}
 
       <section aria-labelledby="zone-history">
         <h2 id="zone-history" className="section-head">

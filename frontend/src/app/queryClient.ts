@@ -5,6 +5,7 @@ import { plots, zones } from '../api/plots'
 import { species } from '../api/species'
 import { wateringRules } from '../api/stats'
 import { tasks } from '../api/tasks'
+import { registerTreeMutations } from '../api/trees'
 
 export function newQueryClient(options: { retry?: boolean } = {}) {
   const qc = new QueryClient({
@@ -25,6 +26,7 @@ export function newQueryClient(options: { retry?: boolean } = {}) {
   activities.register(qc)
   tasks.register(qc)
   wateringRules.register(qc)
+  registerTreeMutations(qc)
   registerFieldMutations(qc)
   return qc
 }

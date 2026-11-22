@@ -25,6 +25,7 @@ const sowing: Activity = {
 
 function zoneApi() {
   let entries = [sowing]
+  let trees: { zone_id: string; species_id: string; alive: number; dead: number }[] = []
   return fakeApi({
     'DELETE /api/activities/[^/]+': ({ path }) => {
       entries = entries.filter((a) => a.id !== path.split('/').pop())
@@ -35,6 +36,13 @@ function zoneApi() {
     'GET /api/activities.*': () => ({ status: 200, body: entries }),
     'GET /api/tasks': () => ({ status: 200, body: [] }),
     'GET /api/species': () => ({ status: 200, body: [{ id: 's1', scientific_name: 'Quercus suber', common_name: 'sobreiro', notes: null, updated_at: 'x' }] }),
+    'GET /api/tree-counts': () => ({ status: 200, body: trees }),
+    'PUT /api/zones/[^/]+/trees/[^/]+': ({ path, body }) => {
+      const [, , , zone_id, , species_id] = path.split('/')
+      const c = { zone_id: zone_id!, species_id: species_id!, ...(body as { alive: number; dead: number }) }
+      trees = [...trees.filter((t) => t.species_id !== species_id), c]
+      return { status: 200, body: c }
+    },
     'PUT /api/activities/[^/]+': ({ body }) => ({ status: 200, body: { ...sowing, ...(body as object), version: 3 } }),
     'PUT /api/tasks/[^/]+': ({ path, body }) => ({ status: 201, body: { ...(body as object), id: path.split('/').pop(), version: 1, completed_at: null, created_at: 'x', updated_at: 'x' } }),
   })
@@ -106,5 +114,39 @@ describe('ZonePage', () => {
     await userEvent.click(within(screen.getByRole('group', { name: 'Confirm delete' })).getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('Entry deleted.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Edit: .*Sowed/ })).not.toBeInTheDocument()
+  })
+
+  it('counts trees by species, and records deaths', async () => {
+    const api = zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    expect(await screen.findByText('No trees counted here yet.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Count trees/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Add a species'), 's1')
+    await userEvent.click(screen.getByRole('button', { name: 'One alive sobreiro more' }))
+    await userEvent.click(screen.getByRole('button', { name: 'One alive sobreiro more' }))
+    await userEvent.click(within(screen.getByRole('form', { name: 'Count trees' })).getByRole('button', { name: 'Save' }))
+    const table = await screen.findByRole('table')
+    expect(within(table).getByRole('row', { name: /sobreiro 2 0/ })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Count trees/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'One alive sobreiro less' }))
+    await userEvent.click(screen.getByRole('button', { name: 'One dead sobreiro more' }))
+    await userEvent.click(within(screen.getByRole('form', { name: 'Count trees' })).getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('row', { name: /sobreiro 1 1/ })).toBeInTheDocument()
+    const puts = api.calls.filter((c) => c.path.includes('/trees/'))
+    expect(puts.map((c) => c.body)).toEqual([{ alive: 2, dead: 0 }, { alive: 1, dead: 1 }])
+  })
+
+  it('refuses tree counts the server would refuse', async () => {
+    const api = zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: /Count trees/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Add a species'), 's1')
+    const alive = screen.getByRole('textbox', { name: 'sobreiro, alive' })
+    await userEvent.clear(alive)
+    await userEvent.type(alive, '20000')
+    await userEvent.click(within(screen.getByRole('form', { name: 'Count trees' })).getByRole('button', { name: 'Save' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Counts are whole numbers from 0 to 10,000.')
+    expect(api.calls.some((c) => c.path.includes('/trees/'))).toBe(false)
   })
 })
