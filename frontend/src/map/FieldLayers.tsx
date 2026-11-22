@@ -40,6 +40,7 @@ export function FieldLayers({
   zones,
   today,
   selectedId,
+  selectedIds,
   onSelectZone,
   onBackgroundClick,
   interactive = true,
@@ -48,6 +49,8 @@ export function FieldLayers({
   zones: Zone[]
   today: string
   selectedId?: string | null
+  /** several selected zones (quick log); drawn like the selected one */
+  selectedIds?: ReadonlySet<string>
   onSelectZone?: (z: Zone) => void
   /** A tap on the map outside any zone (e.g. to close the zone's sheet). */
   onBackgroundClick?: () => void
@@ -95,13 +98,13 @@ export function FieldLayers({
       ))}
       {ordered.map((z) => {
         const status = zoneStatus(z, today)
-        const isSelected = z.id === selectedId
+        const isSelected = z.id === selectedId || Boolean(selectedIds?.has(z.id))
         const showLabel = z.label && z.kind === 'cultivation' && widthOf(z.geom) * scale >= LABEL_MIN_PX
         return (
           <Polygon
             // `interactive` is read by Leaflet only once: remount when it changes
             key={`${z.id}:${interactive}`}
-            ref={isSelected ? selectedRef : undefined}
+            ref={z.id === selectedId ? selectedRef : undefined}
             className="map-zone"
             positions={ringLatLngs(z.geom)}
             pathOptions={zoneStyle(status, isSelected)}

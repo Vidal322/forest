@@ -16,6 +16,8 @@ interface EntityOptions<T extends Entity, In> {
   optimistic: (id: string, input: In, before: T | undefined) => T
   /** Other lists a change here affects (e.g. deleting a plot deletes its zones). */
   alsoRefresh?: QueryKey[]
+  /** Extra optimistic work when an entry is saved (e.g. a log entry recolours zones). */
+  onSaveOptimistic?: (qc: QueryClient, input: In) => void
   /** Extra optimistic work when an entry is deleted; returns how to undo it. */
   onDeleteOptimistic?: (qc: QueryClient, id: string) => () => void
 }
@@ -56,6 +58,7 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
         await qc.cancelQueries({ queryKey: listKey })
         const before = qc.getQueryData<T[]>(listKey)?.find((x) => x.id === id)
         replace(qc, id, opts.optimistic(id, input, before))
+        opts.onSaveOptimistic?.(qc, input)
         return { before }
       },
       onSuccess: (saved: T) => replace(qc, saved.id, saved),

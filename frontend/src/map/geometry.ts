@@ -22,8 +22,14 @@ function distToSegment(p: FramePoint, a: FramePoint, b: FramePoint): number {
   return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy))
 }
 
-/** Inside the ring, or within `tolerance` units of its edge (the server allows 1 unit). */
-export function pointNearRing(p: FramePoint, ring: readonly FramePoint[], tolerance = 1): boolean {
+/**
+ * The server accepts shapes within 1 unit of their plot (ST_Buffer(plot, 1)); its
+ * buffer is a polygon slightly inside a true 1-unit circle, so the phone uses a bit less.
+ */
+export const EDGE_TOLERANCE = 0.9
+
+/** Inside the ring, or within `tolerance` units of its edge. */
+export function pointNearRing(p: FramePoint, ring: readonly FramePoint[], tolerance = EDGE_TOLERANCE): boolean {
   if (pointInRing(p, ring)) return true
   for (let i = 0; i < ring.length; i++) {
     if (distToSegment(p, ring[i]!, ring[(i + 1) % ring.length]!) <= tolerance) return true
@@ -66,6 +72,45 @@ function segmentsCross(a: FramePoint, b: FramePoint, c: FramePoint, d: FramePoin
   )
 }
 
+/** Do segments a–b and c–d cross properly (each passes through the other's interior)? */
+function properlyCross(a: FramePoint, b: FramePoint, c: FramePoint, d: FramePoint): boolean {
+  return orient(a, b, c) * orient(a, b, d) < 0 && orient(c, d, a) * orient(c, d, b) < 0
+}
+
+/**
+ * Is the shape `inner` inside `outer` (both open rings), like the server's
+ * ST_Within(inner, ST_Buffer(outer, 1))? Corners alone aren't enough: with an
+ * L-shaped plot an edge can cut across the notch while every corner is inside.
+ */
+export function ringInsideRing(inner: readonly FramePoint[], outer: readonly FramePoint[]): boolean {
+  if (!inner.every((c) => pointNearRing(c, outer))) return false
+  for (let i = 0; i < inner.length; i++) {
+    const a = inner[i]!
+    const b = inner[(i + 1) % inner.length]!
+    const crosses = outer.some((c, j) => properlyCross(a, b, c, outer[(j + 1) % outer.length]!))
+    if (!crosses) continue
+    // it crosses the outline: allowed only if it never strays further than the tolerance
+    const steps = Math.min(2000, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25))
+    for (let k = 1; k < steps; k++) {
+      const t = k / steps
+      if (!pointNearRing([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])], outer)) return false
+    }
+  }
+  return true
+}
+
+/** Drop a corner that sits exactly on the previous one (dragged onto its neighbour). */
+export function dedupeCorners(corners: readonly FramePoint[]): FramePoint[] {
+  const out = corners.filter((p, i) => {
+    const prev = corners[(i - 1 + corners.length) % corners.length]!
+    return i === 0 ? true : p[0] !== prev[0] || p[1] !== prev[1]
+  })
+  const first = out[0]
+  const last = out[out.length - 1]
+  if (out.length > 1 && first && last && first[0] === last[0] && first[1] === last[1]) out.pop()
+  return out
+}
+
 /** Does the closed outline through these corners (open ring) cross itself? */
 export function selfIntersects(corners: readonly FramePoint[]): boolean {
   const n = corners.length
@@ -104,21 +149,21 @@ export function centroid(corners: readonly FramePoint[]): FramePoint {
   return [corners.reduce((s, p) => s + p[0], 0) / n, corners.reduce((s, p) => s + p[1], 0) / n]
 }
 
-/** Index after which a new corner goes: the edge nearest to p (or the end, under 3 corners). */
+/**
+ * Index at which a new corner goes: under 3 corners at the end; after that into the
+ * edge whose length grows least by passing through p (nearest edge, ties broken sensibly).
+ */
 export function insertionIndex(corners: readonly FramePoint[], p: FramePoint): number {
   if (corners.length < 3) return corners.length
+  const dist = (u: FramePoint, v: FramePoint) => Math.hypot(u[0] - v[0], u[1] - v[1])
   let best = corners.length
-  let bestDist = Infinity
+  let bestCost = Infinity
   for (let i = 0; i < corners.length; i++) {
     const a = corners[i]!
     const b = corners[(i + 1) % corners.length]!
-    const dx = b[0] - a[0]
-    const dy = b[1] - a[1]
-    const len2 = dx * dx + dy * dy
-    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2))
-    const d = Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy))
-    if (d < bestDist) {
-      bestDist = d
+    const cost = dist(a, p) + dist(p, b) - dist(a, b)
+    if (cost < bestCost) {
+      bestCost = cost
       best = i + 1
     }
   }

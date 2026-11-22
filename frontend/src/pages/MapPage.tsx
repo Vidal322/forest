@@ -1,13 +1,17 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
 import { plots as plotsApi, zones as zonesApi } from '../api/plots'
 import { FieldMap } from '../components/FieldMap'
+import { DrawMenu } from '../components/DrawMenu'
 import { Legend } from '../components/Legend'
+import { ShapeEditor } from '../components/ShapeEditor'
 import { ZoneList } from '../components/ZoneList'
 import { ZoneSheet } from '../components/ZoneSheet'
 import { useFieldToday } from '../hooks/useFieldToday'
+import { checkDraft, editDraft, withCorners, type Draft } from '../map/draft'
+import { DrawLayer } from '../map/DrawLayer'
 import { FieldLayers } from '../map/FieldLayers'
 
 export function MapPage() {
@@ -17,8 +21,30 @@ export function MapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [panel, setPanel] = useState<'legend' | 'zones' | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
+  const [draft, setDraft] = useState<Draft | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
   const photo = field.data ? fieldPhoto(field.data) : null
   const today = useFieldToday()
+
+  // short confirmations ("Added Plot 1.") fade after a few seconds
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const startDraft = (d: Draft) => {
+    setMenuOpen(false)
+    setPanel(null)
+    setSelectedId(null)
+    setDraft(d)
+  }
+  const finishDraft = useCallback((message: string, selectZoneId?: string) => {
+    setDraft(null)
+    setToast((t) => ({ text: message, n: (t?.n ?? 0) + 1 }))
+    if (selectZoneId) setSelectedId(selectZoneId)
+  }, [])
 
   const select = useCallback((z: { id: string }) => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -39,14 +65,27 @@ export function MapPage() {
         <h1 className="visually-hidden">Field map</h1>
         <FieldMap key={`${photo.width}x${photo.height}`} photo={photo}>
           <FieldLayers
-            plots={plots.data ?? []}
-            zones={zones.data ?? []}
+            plots={(plots.data ?? []).filter((p) => !(draft?.kind === 'plot' && p.id === draft.id))}
+            zones={(zones.data ?? []).filter((z) => !(draft?.kind === 'zone' && z.id === draft.id))}
             today={today}
-            selectedId={selectedId}
-            onSelectZone={select}
-            onBackgroundClick={closeSheet}
+            selectedId={draft ? null : selectedId}
+            onSelectZone={draft ? undefined : select}
+            onBackgroundClick={draft ? undefined : closeSheet}
+            interactive={!draft}
           />
+          {draft && (
+            <DrawLayer
+              corners={draft.corners}
+              readOnly={draft.step === 'details'}
+              valid={checkDraft(draft, plots.data ?? [], zones.data ?? []).ok || draft.corners.length < 3}
+              liveValid={(c) => c.length < 3 || checkDraft({ ...draft, corners: c }, plots.data ?? [], zones.data ?? []).ok}
+              selected={draft.selectedCorner}
+              onSelect={(i) => setDraft({ ...draft, selectedCorner: i })}
+              onChange={(corners) => setDraft(withCorners(draft, corners))}
+            />
+          )}
         </FieldMap>
+        {!draft && (
         <div className="map-overlay map-overlay--bottom-left">
           <div className="row">
             <button
@@ -88,6 +127,7 @@ export function MapPage() {
             </div>
           )}
         </div>
+        )}
         {failed && (
           <div className="map-overlay map-overlay--top note warn" role="alert">
             {friendlyError(plots.error ?? zones.error)}{' '}
@@ -103,15 +143,51 @@ export function MapPage() {
             </button>
           </div>
         )}
-        {empty && !selected && (
-          <p className="map-overlay map-overlay--top note">No plots yet. Draw your first plot to start.</p>
+        {empty && !selected && !draft && (
+          <p className="map-overlay map-overlay--top note">No plots yet. Tap “＋ Draw” to outline your first plot.</p>
         )}
-        {selected && (
+        {/* always present, so screen readers hear each new message */}
+        <output className="map-overlay map-overlay--toast map-toast-region" aria-live="polite">
+          {toast && (
+            <span key={toast.n} className="map-toast">
+              {toast.text}
+            </span>
+          )}
+        </output>
+        {selected && !draft && (
           <ZoneSheet
             zone={selected}
             plot={plots.data?.find((p) => p.id === selected.plot_id)}
             today={today}
             onClose={closeSheet}
+          >
+            <div className="row form__actions">
+              <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
+                ✎ Edit zone
+              </button>
+            </div>
+          </ZoneSheet>
+        )}
+        {draft && (
+          <ShapeEditor
+            draft={draft}
+            setDraft={setDraft}
+            plots={plots.data ?? []}
+            zones={zones.data ?? []}
+            metresPerUnit={field.data?.metres_per_unit ?? null}
+            onDone={finishDraft}
+          />
+        )}
+        {!draft && !selected && !menuOpen && (
+          <button type="button" className="fab" onClick={() => setMenuOpen(true)}>
+            ＋ Draw
+          </button>
+        )}
+        {menuOpen && (
+          <DrawMenu
+            plots={plots.data ?? []}
+            onPick={startDraft}
+            onClose={() => setMenuOpen(false)}
           />
         )}
       </div>
