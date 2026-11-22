@@ -15,6 +15,7 @@ type Config struct {
 	HTTPAddr        string        // FOREST_HTTP_ADDR, default ":8080"
 	LogLevel        slog.Level    // FOREST_LOG_LEVEL: debug|info|warn|error, default info
 	ShutdownTimeout time.Duration // FOREST_SHUTDOWN_TIMEOUT, default 10s
+	DatabaseURL     string        // DATABASE_URL, required
 }
 
 // Load reads the configuration from the environment.
@@ -48,6 +49,11 @@ func load(getenv func(string) string) (Config, error) {
 			return Config{}, fmt.Errorf("FOREST_SHUTDOWN_TIMEOUT: must be positive, got %s", d)
 		}
 		cfg.ShutdownTimeout = d
+	}
+
+	cfg.DatabaseURL = getenv("DATABASE_URL")
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL is not set (cp .env.example .env)")
 	}
 
 	return cfg, nil

@@ -37,8 +37,8 @@ migration: ## create a new migration: make migration name=add_something
 run: ## run the API
 	go run ./cmd/api
 
-test: ## run all tests with the race detector
-	go test -race ./...
+test: ## run all tests with the race detector (DB tests must not be skipped)
+	FOREST_REQUIRE_DB=1 go test -race ./...
 
 lint: ## golangci-lint
 	golangci-lint run ./...

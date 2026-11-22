@@ -6,8 +6,19 @@ import (
 	"time"
 )
 
+const testDB = "postgres://localhost:5433/forest"
+
+// env returns a getenv over m, with DATABASE_URL set unless m sets it (even to "").
 func env(m map[string]string) func(string) string {
-	return func(k string) string { return m[k] }
+	return func(k string) string {
+		if v, ok := m[k]; ok {
+			return v
+		}
+		if k == "DATABASE_URL" {
+			return testDB
+		}
+		return ""
+	}
 }
 
 func TestLoadDefaults(t *testing.T) {
@@ -15,7 +26,7 @@ func TestLoadDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.HTTPAddr != ":8080" || cfg.LogLevel != slog.LevelInfo || cfg.ShutdownTimeout != 10*time.Second {
+	if cfg.HTTPAddr != ":8080" || cfg.LogLevel != slog.LevelInfo || cfg.ShutdownTimeout != 10*time.Second || cfg.DatabaseURL != testDB {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }
@@ -39,6 +50,7 @@ func TestLoadRejectsBadValues(t *testing.T) {
 		"bad level":        {"FOREST_LOG_LEVEL": "loud"},
 		"bad duration":     {"FOREST_SHUTDOWN_TIMEOUT": "soon"},
 		"negative timeout": {"FOREST_SHUTDOWN_TIMEOUT": "-1s"},
+		"no database":      {"DATABASE_URL": ""},
 	} {
 		if _, err := load(env(m)); err == nil {
 			t.Errorf("%s: expected an error", name)

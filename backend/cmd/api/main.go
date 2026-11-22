@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"forest/internal/config"
+	"forest/internal/db"
 	"forest/internal/httpapi"
+	"forest/internal/store"
 )
 
 func main() {
@@ -34,13 +36,23 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	pool, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	// One small app, one database: bring the schema up to date on every start.
+	if err := db.Migrate(ctx, pool, log); err != nil {
+		return err
+	}
+
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.HTTPAddr)
 	if err != nil {
 		return err
 	}
 	log.Info("listening", "addr", ln.Addr().String())
 
-	handler := httpapi.NewRouter(httpapi.Deps{Log: log})
+	handler := httpapi.NewRouter(httpapi.Deps{Log: log, Store: store.New(pool)})
 	// After the first signal, stop catching signals so a second Ctrl-C kills the process.
 	go func() { <-ctx.Done(); stop() }()
 	return serve(ctx, ln, handler, cfg.ShutdownTimeout, log)
