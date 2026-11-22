@@ -298,7 +298,7 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .map-overlay--toast { bottom: 76px; left: 50%; transform: translateX(-50%); width: min(92%, 420px); text-align: center; pointer-events: none; }
 
 /* ---------- quick log ---------- */
-.log__map { height: min(45vh, 420px); }
+.log__map { height: min(40vh, 420px); height: min(40dvh, 420px); }
 .log__count { font-weight: 700; }
 .chip {
   font: inherit; font-size: 0.9rem; min-height: 40px; padding: 0.3rem 0.85rem; border-radius: 999px; cursor: pointer;
@@ -325,6 +325,7 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .per-zone { display: grid; gap: 0.4rem; }
 .per-zone__row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0.25rem 0; font-weight: 400; }
 .per-zone__row input { max-width: 7rem; }
+.per-zone__row label { margin: 0; font-weight: 400; }
 .log__species { border: 0; padding: 0; }
 .log__species legend { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem; padding: 0; }
 .zone-checks { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem; margin: 0.5rem 0 0; max-height: 40vh; overflow-y: auto; background: var(--card); }
@@ -339,7 +340,11 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .save-bar .form__error { margin: 0 0 0.5rem; background: #fbeae7; padding: 0.4rem 0.6rem; border-radius: 8px; }
 .log__when { border: 0; padding: 0; }
 .log__when legend { padding: 0; }
-@media (max-height: 740px) { .log__map { height: 36vh; } }
+/* short phones: the three action buttons must show above the Save bar without scrolling */
+@media (max-height: 740px) { .log__map { height: 30vh; height: 30dvh; } }
+.log__select { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0.4rem -1rem 0; padding: 0 1rem; }
+.log__select .chip { flex: none; }
+.log__count { display: block; margin-top: 0.4rem; }
 
 /* ---------- tasks ---------- */
 .tasks__group { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 1.1rem 0 0.4rem; }

@@ -50,6 +50,10 @@ export function ActivityEditForm({
   const droppedZones = activity.zones.length - keptZones.length
   const droppedSpecies = activity.species.filter((s) => !liveSpecies.has(s.species_id)).length
 
+  // the entry's zones, editable: a zone tapped by mistake can go, a forgotten one can come in
+  const [chosenZoneIds, setZoneIds] = useState(() => keptZones.map((z) => z.zone_id))
+  // a zone deleted on another phone while the form is open simply drops out
+  const zoneIds = chosenZoneIds.filter((id) => liveZone.has(id))
   const [type, setType] = useState(activity.type)
   const [day, setDay] = useState(activity.performed_on)
   const [notes, setNotes] = useState(activity.notes ?? '')
@@ -90,14 +94,14 @@ export function ActivityEditForm({
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
-    if (keptZones.length === 0) return setLocalError('All the zones of this entry were deleted. Delete the entry instead.')
+    if (zoneIds.length === 0) return setLocalError('Keep at least one zone (or delete the entry).')
     if (!day || day > today) return setLocalError("The day can't be after today.")
     const zoneRows = []
-    for (const z of keptZones) {
-      const c = type === 'other' && !unit ? null : parseCount(counts[z.zone_id] ?? '')
+    for (const zoneId of zoneIds) {
+      const c = type === 'other' && !unit ? null : parseCount(counts[zoneId] ?? '')
       if (c === 'bad') return setLocalError('Quantities are whole numbers, like 100.')
       if (c !== null && !unit) return setLocalError('Choose a unit for the quantity.')
-      zoneRows.push({ zone_id: z.zone_id, quantity: c, unit: c === null ? null : unit })
+      zoneRows.push({ zone_id: zoneId, quantity: c, unit: c === null ? null : unit })
     }
     const sp = []
     if (hasSpecies) {
@@ -153,16 +157,47 @@ export function ActivityEditForm({
       <input id={ids.day} type="date" value={day} max={today} onChange={(e) => setDay(e.target.value)} />
 
       <fieldset className="chips-field">
-        <legend>Quantity per zone (optional)</legend>
-        {keptZones.map((z) => (
-          <label key={z.zone_id} className="per-zone__row">
-            <span>
-              {zoneName(liveZone.get(z.zone_id)!)}
-              <span className="visually-hidden">, {unit ? UNIT_LABEL[unit] : 'quantity'}</span>
-            </span>
-            <input inputMode="numeric" value={counts[z.zone_id] ?? ''} onChange={(e) => setCounts({ ...counts, [z.zone_id]: e.target.value })} />
-          </label>
-        ))}
+        <legend>Zones, and the quantity in each (optional)</legend>
+        {zoneIds.map((zoneId) => {
+          const name = zoneName(liveZone.get(zoneId)!)
+          return (
+            <div key={zoneId} className="per-zone__row">
+              <label htmlFor={`${ids.unit}-${zoneId}`}>
+                {name}
+                <span className="visually-hidden">, {unit ? UNIT_LABEL[unit] : 'quantity'}</span>
+              </label>
+              <span className="row">
+                <input
+                  id={`${ids.unit}-${zoneId}`}
+                  inputMode="numeric"
+                  value={counts[zoneId] ?? ''}
+                  onChange={(e) => setCounts({ ...counts, [zoneId]: e.target.value })}
+                />
+                {zoneIds.length > 1 && (
+                  <button type="button" className="btn btn-icon" aria-label={`Remove ${name} from this entry`} onClick={() => setZoneIds((z) => z.filter((x) => x !== zoneId))}>
+                    ✕
+                  </button>
+                )}
+              </span>
+            </div>
+          )
+        })}
+        {zones.some((z) => !zoneIds.includes(z.id)) && (
+          <select
+            aria-label="Add a zone to this entry"
+            value=""
+            onChange={(e) => e.target.value && setZoneIds((z) => [...z, e.target.value])}
+          >
+            <option value="">＋ Add a zone…</option>
+            {zones
+              .filter((z) => !zoneIds.includes(z.id))
+              .map((z) => (
+                <option key={z.id} value={z.id}>
+                  {zoneName(z)}
+                </option>
+              ))}
+          </select>
+        )}
         <label htmlFor={ids.unit} className="visually-hidden">
           Unit
         </label>

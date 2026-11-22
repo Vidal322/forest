@@ -25,7 +25,7 @@ interface EntityOptions<T extends Entity, In> {
    */
   versioned?: boolean
   /** Extra optimistic work when an entry is deleted; returns how to undo it. */
-  onDeleteOptimistic?: (qc: QueryClient, id: string, before: T | undefined) => () => void
+  onDeleteOptimistic?: (qc: QueryClient, id: string, before: T | undefined) => (() => void) | Promise<() => void>
 }
 
 /**
@@ -98,7 +98,7 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
         await qc.cancelQueries({ queryKey: listKey })
         const before = qc.getQueryData<T[]>(listKey)?.find((x) => x.id === id)
         replace(qc, id, undefined)
-        const undoExtra = opts.onDeleteOptimistic?.(qc, id, before)
+        const undoExtra = await opts.onDeleteOptimistic?.(qc, id, before)
         return { before, undoExtra }
       },
       onError: (err, id: string, ctx) => {

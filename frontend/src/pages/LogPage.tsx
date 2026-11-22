@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import {
   ACTIVITY,
@@ -16,12 +16,12 @@ import { SAVED_ON_PHONE } from '../api/outbox'
 import { plots as plotsApi, zoneName, zones as zonesApi, type Zone } from '../api/plots'
 import { useSpeciesList } from '../api/species'
 import { FieldMap } from '../components/FieldMap'
-import { Flash } from '../components/Flash'
+import { ToastLine } from '../components/TaskRow'
 import { StatusBadge } from '../components/StatusBadge'
 import { addDays, formatDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { useFieldToday } from '../hooks/useFieldToday'
-import { useFlash } from '../hooks/useFlash'
+import type { Toast } from '../hooks/useTaskToggle'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
 import { FieldLayers } from '../map/FieldLayers'
@@ -52,7 +52,20 @@ export function LogPage() {
   const ownsResult = pendingId !== null && save.variables?.id === pendingId
   const saveState = useOutboxWrite(save, ownsResult)
   const today = useFieldToday()
-  const flash = useFlash()
+  const del = activities.useDelete()
+  // the last message, with an Undo for the entry just logged (a wrong tap is fixed in one more)
+  const [toast, setToast] = useState<Toast | null>(null)
+  const say = useCallback(
+    (text: string, undoId?: string) =>
+      setToast((t) => ({
+        text,
+        n: (t?.n ?? 0) + 1,
+        undo: undoId ? () => del.mutate(undoId) : undefined,
+      })),
+    // del.mutate is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
   const [params, setParams] = useSearchParams()
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set(params.getAll('zone')))
@@ -79,15 +92,14 @@ export function LogPage() {
 
   // (a zone deleted meanwhile simply isn't in `chosen`, which is built from the live list)
 
-  const { show } = flash
   // queued offline: as good as saved — clear the form for the next entry
   const queued = ownsResult && saveState.waiting
   useEffect(() => {
     if (!queued) return
-    show(SAVED_ON_PHONE)
+    say(SAVED_ON_PHONE, pendingId ?? undefined)
     reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only touches state setters
-  }, [queued, show])
+  }, [queued, say])
 
   const toggle = (z: Zone) =>
     setSelected((s) => {
@@ -167,7 +179,7 @@ export function LogPage() {
       },
       {
         onSuccess: () => {
-          show(`Logged: ${what} ${zonesPhrase(names)}${day === today ? ' today' : ` on ${formatDay(day, today)}`}.`)
+          say(`Logged: ${what} ${zonesPhrase(names)}${day === today ? ' today' : ` on ${formatDay(day, today)}`}.`, id)
           reset()
         },
       },
@@ -190,7 +202,13 @@ export function LogPage() {
     <form className="page log" onSubmit={submit} noValidate>
       <h1>Log activity</h1>
       <p className="muted small">① tap zones · ② tap what you did · ③ Save</p>
-      <Flash flash={flash} />
+      <ToastLine
+        toast={toast}
+        onUndo={() => {
+          toast?.undo?.()
+          setToast({ text: 'Entry removed.', n: (toast?.n ?? 0) + 1 })
+        }}
+      />
 
       {photo && (
         <div className="setup-map log__map">
@@ -206,11 +224,10 @@ export function LogPage() {
         </div>
       )}
 
-      <div className="row">
-        <output className="log__count" aria-live="polite">
+      <output className="log__count" aria-live="polite">
           {chosen.length === 0 ? 'No zones selected' : `${zonesPhrase(chosen.map((z) => zoneName(z)))} selected`}
-        </output>
-        <span className="spacer" />
+      </output>
+      <div className="row log__select">
         {dry.length > 0 && (
           <button type="button" className="chip" onClick={() => setSelected((s) => new Set([...s, ...dry.map((z) => z.id)]))}>
             All that need water ({dry.length})
@@ -229,7 +246,9 @@ export function LogPage() {
       {showList && (
         <fieldset className="zone-checks">
           <legend className="visually-hidden">Zones</legend>
-          {allZones.length === 0 && <p className="muted">{zones.isError ? friendlyError(zones.error) : 'No zones yet.'}</p>}
+          {allZones.length === 0 && (
+            <p className="muted">{zones.isError ? friendlyError(zones.error) : zones.isPending ? 'Loading zones…' : 'No zones yet.'}</p>
+          )}
           {allZones.map((z) => {
             const s = zoneStatus(z, today)
             return (

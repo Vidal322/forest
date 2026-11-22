@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Browser } from 'leaflet'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -162,5 +162,18 @@ describe('LogPage', () => {
     fireEvent.change(screen.getByLabelText('Another day'), { target: { value: '2999-01-01' } })
     await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
     expect(screen.getByRole('alert')).toHaveTextContent("The day can't be after today.")
+  })
+
+  it('undoes the entry just logged in one tap', async () => {
+    const api = logApi()
+    renderApp('/log')
+    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    await screen.findByText(/Logged: watered Clareira today/)
+    const id = api.calls.find((c) => c.method === 'PUT')!.path.split('/').pop()
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(await screen.findByText('Entry removed.')).toBeInTheDocument()
+    await waitFor(() => expect(api.calls.some((c) => c.method === 'DELETE' && c.path === `/api/activities/${id}`)).toBe(true))
   })
 })

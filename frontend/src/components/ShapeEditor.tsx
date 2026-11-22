@@ -3,6 +3,8 @@ import { ApiError } from '../api/client'
 import { friendlyError } from '../api/errors'
 import { DELETED_ON_PHONE, SAVED_ON_PHONE } from '../api/outbox'
 import { formatHa, plots as plotsApi, zoneName, zones as zonesApi, type Plot, type Zone, type ZoneKind } from '../api/plots'
+import { isOpen, tasks as tasksApi } from '../api/tasks'
+import { useTreeCounts } from '../api/trees'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { closeRing, ringArea } from '../map/geometry'
 import { checkDraft, withCorners, type Draft } from '../map/draft'
@@ -193,6 +195,7 @@ function PlotDetails({
   const { busy, error } = useShapeWrite(save, del, onDone)
   const ids = { name: useId(), ha: useId(), notes: useId() }
   const zoneCount = zones.filter((z) => z.plot_id === draft.id).length
+  const taken = useTakenAlong((z) => z === draft.id, new Set(zones.filter((z) => z.plot_id === draft.id).map((z) => z.id)))
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -222,7 +225,10 @@ function PlotDetails({
       onBack={() => setDraft({ ...draft, step: 'shape' })}
       onSubmit={submit}
       deleteLabel="Delete plot"
-      deleteQuestion={`Delete ${original?.name}${zoneCount ? ` and its ${zoneCount} zone${zoneCount === 1 ? '' : 's'}` : ''}? Their history is kept.`}
+      deleteQuestion={deleteQuestion(
+        original?.name ?? 'this plot',
+        [plural(zoneCount, 'zone'), plural(taken.tasks, 'open task'), plural(taken.trees, 'counted tree')],
+      )}
       onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`Deleted ${original.name}.`) }) : undefined}
     >
       <label htmlFor={ids.name}>Name</label>
@@ -273,6 +279,7 @@ function ZoneDetails({
   const { busy, error } = useShapeWrite(save, del, onDone)
   const [localError, setLocalError] = useState('')
   const ids = { label: useId(), notes: useId(), kind: useId() }
+  const taken = useTakenAlong(() => false, new Set([draft.id]))
   const plot = plots.find((p) => p.id === plotId)
 
   const submit = (e: FormEvent) => {
@@ -299,7 +306,7 @@ function ZoneDetails({
       onBack={() => setDraft({ ...draft, step: 'shape' })}
       onSubmit={submit}
       deleteLabel="Delete zone"
-      deleteQuestion={`Delete ${name}? What was logged there is kept.`}
+      deleteQuestion={deleteQuestion(name, [plural(taken.tasks, 'open task'), plural(taken.trees, 'counted tree')])}
       onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`Deleted ${name}.`) }) : undefined}
     >
       <label htmlFor={ids.label}>
@@ -322,4 +329,25 @@ function ZoneDetails({
       <textarea id={ids.notes} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
     </DetailsShell>
   )
+}
+
+function plural(n: number, word: string): string | null {
+  return n > 0 ? `${n} ${word}${n === 1 ? '' : 's'}` : null
+}
+
+/** "Delete Plot 1 with its 3 zones and 2 open tasks? What was logged there is kept." */
+function deleteQuestion(name: string, along: (string | null)[]): string {
+  const parts = along.filter(Boolean) as string[]
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
+  return `Delete ${name}${list ? ` with its ${list}` : ''}? What was logged there is kept.`
+}
+
+/** Open tasks and counted trees that a delete takes along (shown before confirming). */
+function useTakenAlong(onPlot: (plotId: string | null) => boolean, zoneIds: Set<string>) {
+  const tasks = tasksApi.useList()
+  const trees = useTreeCounts()
+  return {
+    tasks: (tasks.data ?? []).filter((t) => isOpen(t) && (onPlot(t.plot_id) || (t.zone_id !== null && zoneIds.has(t.zone_id)))).length,
+    trees: (trees.data ?? []).filter((c) => zoneIds.has(c.zone_id)).reduce((n, c) => n + c.alive + c.dead, 0),
+  }
 }

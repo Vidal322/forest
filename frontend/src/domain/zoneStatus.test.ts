@@ -29,6 +29,11 @@ describe('zoneStatus', () => {
     expect(zoneStatus({ ...z, last_planted_on: '2026-11-20' }, today)).toBe('planted')
   })
 
+  it('a zone that was only ever watered never shows as sown', () => {
+    const z = { ...base, last_watered_on: '2026-11-10', current_interval_days: 14 }
+    expect(zoneStatus(z, today)).toBe('watered') // 12 days: not recent, but within the interval
+  })
+
   it('shows recent watering over planting', () => {
     const z = { ...base, last_planted_on: '2026-10-01', last_watered_on: '2026-11-20', current_interval_days: 14 }
     expect(zoneStatus(z, today)).toBe('watered')

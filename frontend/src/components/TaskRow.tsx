@@ -1,5 +1,5 @@
 import { isOpen, TASK_KIND, type Task } from '../api/tasks'
-import { relativeDay } from '../domain/dates'
+import { fieldToday, relativeDay } from '../domain/dates'
 import type { Toast } from '../hooks/useTaskToggle'
 
 /** The short message with an optional Undo, shown above the lists. */
@@ -36,7 +36,7 @@ export function TaskRow({
 }) {
   const open = isOpen(task)
   const overdue = open && task.due_on !== null && task.due_on < today
-  const closedOn = task.completed_at ? relativeDay(task.completed_at.slice(0, 10), today) : null
+  const closedOn = task.completed_at ? relativeDay(fieldToday(new Date(task.completed_at)), today) : null
   return (
     <li className={`task${open ? '' : ' task--closed'}${overdue ? ' task--overdue' : ''}`}>
       <button type="button" className="task__tick" aria-pressed={!open} aria-label={`Done: ${task.title}`} onClick={onToggle}>

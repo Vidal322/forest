@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query'
 import { defineEntity } from './entity'
 
 export type Ring = [number, number][]
@@ -53,21 +54,19 @@ export const plots = defineEntity<Plot, PlotInput>({
     area_ha: before && JSON.stringify(before.geom) === JSON.stringify(input.geom) ? before.area_ha : null,
     updated_at: new Date().toISOString(),
   }),
-  alsoRefresh: [['zones'], ['plot-stats']],
-  // deleting a plot deletes its zones: hide them at once too (also while offline)
+  alsoRefresh: [['zones'], ['plot-stats'], ['tasks'], ['tree-counts']],
+  // deleting a plot deletes its zones, their tasks and counted trees: hide them at once (also offline)
   onDeleteOptimistic: (qc, id) => {
-    const before = qc.getQueryData<Zone[]>(['zones'])
-    qc.setQueryData<Zone[]>(['zones'], (list = []) => list.filter((z) => z.plot_id !== id))
-    return () => {
-      const gone = (before ?? []).filter((z) => z.plot_id === id)
-      qc.setQueryData<Zone[]>(['zones'], (list = []) => [...list, ...gone.filter((g) => !list.some((z) => z.id === g.id))])
-    }
+    const zoneIds = new Set((qc.getQueryData<Zone[]>(['zones']) ?? []).filter((z) => z.plot_id === id).map((z) => z.id))
+    return hideRelated(qc, (r) => r.plot_id === id || (r.zone_id != null && zoneIds.has(r.zone_id)), zoneIds)
   },
 })
 
 export const zones = defineEntity<Zone, ZoneInput>({
   name: 'zones',
-  alsoRefresh: [['plot-stats']],
+  alsoRefresh: [['plot-stats'], ['tasks'], ['tree-counts']],
+  // deleting a zone deletes its tasks and counted trees: hide them at once (also offline)
+  onDeleteOptimistic: (qc, id) => hideRelated(qc, (r) => r.zone_id === id, new Set([id])),
   sort: (a, b) => a.id.localeCompare(b.id), // drawing order is decided by FieldLayers
   optimistic: (id, input, before) => ({
     // a new zone has no history yet; an edited one keeps its derived state
@@ -94,4 +93,34 @@ export const KIND_LABEL: Record<ZoneKind, string> = { cultivation: 'Planting', p
 
 export function formatHa(ha: number): string {
   return `${ha < 10 ? ha.toFixed(2) : ha.toFixed(1)} ha`
+}
+
+type Related = { id?: string; plot_id?: string | null; zone_id?: string | null; species_id?: string }
+
+const sameRow = (a: Related, b: Related) =>
+  a.id !== undefined ? a.id === b.id : a.zone_id === b.zone_id && a.species_id === b.species_id
+
+/**
+ * Hide zones, tasks and tree counts that a delete takes along; returns how to undo it
+ * (putting back only the rows it hid, so later changes aren't lost).
+ */
+async function hideRelated(qc: QueryClient, gone: (r: Related) => boolean, zoneIds: Set<string>) {
+  const keys = [['zones'], ['tasks'], ['tree-counts']] as const
+  // a refresh already on its way would bring the hidden rows back
+  await Promise.all(keys.map((k) => qc.cancelQueries({ queryKey: k })))
+  const tests: Record<string, (r: Related) => boolean> = {
+    zones: (z) => z.id !== undefined && zoneIds.has(z.id),
+    tasks: gone,
+    'tree-counts': (c) => c.zone_id != null && zoneIds.has(c.zone_id),
+  }
+  const removed = keys.map((k) => {
+    const test = tests[k[0]]!
+    const rows = (qc.getQueryData<Related[]>(k) ?? []).filter(test)
+    qc.setQueryData<Related[]>(k, (list) => list?.filter((r) => !test(r)))
+    return rows
+  })
+  return () =>
+    keys.forEach((k, i) =>
+      qc.setQueryData<Related[]>(k, (list) => (list ? [...list, ...removed[i]!.filter((r) => !list.some((x) => sameRow(x, r)))] : list)),
+    )
 }

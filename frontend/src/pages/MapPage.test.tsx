@@ -176,7 +176,7 @@ describe('drawing', () => {
       if (path === '/api/field') return new Response(JSON.stringify(testField))
       if (path === '/api/plots') return new Response(JSON.stringify([testPlot]))
       if (path === '/api/zones') return new Response(JSON.stringify([]))
-      return new Response('{"status":"ok"}')
+      return new Response(path.startsWith('/api/') ? '[]' : '{"status":"ok"}')
     })
     const { container } = renderApp('/')
     await userEvent.click(await screen.findByRole('button', { name: '＋ Draw' }))
@@ -197,5 +197,28 @@ describe('drawing', () => {
     expect(await screen.findByText('Added Nova.')).toBeInTheDocument()
     const put = api.fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!
     expect(JSON.parse(String(put[1]!.body))).toMatchObject({ plot_id: testPlot.id, label: 'Nova', kind: 'cultivation' })
+  })
+
+  it('deleting a zone says what goes with it, and hides its tasks at once', async () => {
+    const task = { id: 't1', zone_id: testZone.id, plot_id: null, title: 'Regar', status: 'open', kind: 'water', due_on: null, created_at: 'x' }
+    let tasks = [task]
+    mapApi({
+      'GET /api/tasks': () => ({ status: 200, body: tasks }),
+      // the server deletes the zone's tasks with it
+      'DELETE /api/zones/[^/]+': () => {
+        tasks = []
+        return { status: 204 }
+      },
+    })
+    const { queryClient } = renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Edit zone/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(queryClient.getQueryData(['tasks'])).toBeDefined())
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(screen.getByRole('group', { name: 'Confirm delete' })).toHaveTextContent('Delete Clareira with its 1 open task?')
+    await userEvent.click(screen.getByRole('button', { name: 'Delete zone' }))
+    await waitFor(() => expect(queryClient.getQueryData(['tasks'])).toEqual([]))
   })
 })

@@ -5,7 +5,7 @@ export type ZoneStatus = 'needs-water' | 'watered' | 'planted' | 'sown' | 'unsow
 
 export const STATUS_LABEL: Record<ZoneStatus, string> = {
   'needs-water': 'Needs water',
-  watered: 'Watered recently',
+  watered: 'Watered',
   planted: 'Planted',
   sown: 'Sown',
   unsown: 'Nothing yet',
@@ -46,6 +46,8 @@ export function zoneStatus(z: ZoneState, today: string): ZoneStatus {
   if (latest(z.last_watered_on, z.last_sown_on, z.last_planted_on) === null) return 'unsown'
   if (needsWater(z, today)) return 'needs-water'
   if (z.last_watered_on && daysBetween(z.last_watered_on, today) <= RECENTLY_WATERED_DAYS) return 'watered'
+  // within the interval, no recent watering: say what is there
   if (z.last_planted_on) return 'planted'
-  return 'sown'
+  if (z.last_sown_on) return 'sown'
+  return 'watered' // only ever watered (e.g. an existing planting): watered within the interval
 }
