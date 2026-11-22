@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
 import { plots as plotsApi, zones as zonesApi } from '../api/plots'
@@ -18,7 +18,9 @@ export function MapPage() {
   const field = useField()
   const plots = plotsApi.useList()
   const zones = zonesApi.useList()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // ?zone=<id> opens a zone's sheet, ?edit=<id> its outline editor (links from the zone page)
+  const [params, setParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState<string | null>(() => params.get('zone'))
   const [panel, setPanel] = useState<'legend' | 'zones' | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -26,6 +28,18 @@ export function MapPage() {
   const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
   const photo = field.data ? fieldPhoto(field.data) : null
   const today = useFieldToday()
+
+  const editId = params.get('edit')
+  const [handledEdit, setHandledEdit] = useState<string | null>(null)
+  if (editId && editId !== handledEdit && zones.data) {
+    // adjusting state during render (React's pattern for reacting to a changed input)
+    setHandledEdit(editId)
+    const z = zones.data.find((x) => x.id === editId)
+    if (z) setDraft(editDraft('zone', z))
+  }
+  useEffect(() => {
+    if (editId && handledEdit === editId) setParams({}, { replace: true })
+  }, [editId, handledEdit, setParams])
 
   // short confirmations ("Added Plot 1.") fade after a few seconds
   useEffect(() => {
@@ -52,9 +66,16 @@ export function MapPage() {
   }, [])
   const closeSheet = useCallback(() => {
     setSelectedId(null)
+    // a closed sheet must not come back on reload or Back
+    setParams((p) => {
+      if (!p.has('zone')) return p
+      const next = new URLSearchParams(p)
+      next.delete('zone')
+      return next
+    }, { replace: true })
     const back = returnFocus.current
     if (back?.isConnected) requestAnimationFrame(() => back.focus())
-  }, [])
+  }, [setParams])
 
   if (photo) {
     const selected = zones.data?.find((z) => z.id === selectedId)
@@ -164,6 +185,9 @@ export function MapPage() {
             <div className="row form__actions">
               <Link className="btn btn-primary" to={`/log?zone=${selected.id}`}>
                 ＋ Log activity
+              </Link>
+              <Link className="btn" to={`/zones/${selected.id}`}>
+                History & tasks
               </Link>
               <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
                 ✎ Edit zone

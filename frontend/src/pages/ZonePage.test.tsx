@@ -1,0 +1,110 @@
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it } from 'vitest'
+import type { Activity } from '../api/activities'
+import { addDays, fieldToday } from '../domain/dates'
+import { fakeApi } from '../test/fakeApi'
+import { testPlot, testZone } from '../test/fixtures'
+import { renderApp } from '../test/render'
+
+const today = fieldToday()
+const sowing: Activity = {
+  id: '50000000-0000-4000-8000-000000000001',
+  type: 'sowing',
+  performed_on: addDays(today, -3),
+  notes: 'Ninhos feitos',
+  zones: [
+    { zone_id: testZone.id, quantity: 100, unit: 'holes' },
+    { zone_id: '20000000-0000-4000-8000-0000000000ff', quantity: 80, unit: 'holes' },
+  ],
+  species: [{ species_id: 's1', quantity: null, unit: null, notes: null }],
+  version: 2,
+  created_at: 'x',
+  updated_at: 'x',
+}
+
+function zoneApi() {
+  let entries = [sowing]
+  return fakeApi({
+    'DELETE /api/activities/[^/]+': ({ path }) => {
+      entries = entries.filter((a) => a.id !== path.split('/').pop())
+      return { status: 204 }
+    },
+    'GET /api/zones': () => ({ status: 200, body: [testZone] }),
+    'GET /api/plots': () => ({ status: 200, body: [testPlot] }),
+    'GET /api/activities.*': () => ({ status: 200, body: entries }),
+    'GET /api/tasks': () => ({ status: 200, body: [] }),
+    'GET /api/species': () => ({ status: 200, body: [{ id: 's1', scientific_name: 'Quercus suber', common_name: 'sobreiro', notes: null, updated_at: 'x' }] }),
+    'PUT /api/activities/[^/]+': ({ body }) => ({ status: 200, body: { ...sowing, ...(body as object), version: 3 } }),
+    'PUT /api/tasks/[^/]+': ({ path, body }) => ({ status: 201, body: { ...(body as object), id: path.split('/').pop(), version: 1, completed_at: null, created_at: 'x', updated_at: 'x' } }),
+  })
+}
+
+describe('ZonePage', () => {
+  it('shows the zone’s history with quantities, species and notes', async () => {
+    zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    expect(await screen.findByRole('heading', { name: 'Clareira' })).toBeInTheDocument()
+    const history = await screen.findByRole('button', { name: /Edit: .*Sowed/ })
+    expect(history).toHaveTextContent('Sowed · 100 covas')
+    expect(history).toHaveTextContent('3 days ago')
+    expect(history).toHaveTextContent('with 1 other zone')
+    expect(history).toHaveTextContent('sobreiro')
+    expect(history).toHaveTextContent('Ninhos feitos')
+  })
+
+  it('edits an entry from its version', async () => {
+    const api = zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Sowed/ }))
+    expect(screen.getByText(/1 deleted zone will be left out/)).toBeInTheDocument()
+    const qty = screen.getByRole('textbox', { name: /Clareira, covas/ })
+    await userEvent.clear(qty)
+    await userEvent.type(qty, '120')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Entry saved.')).toBeInTheDocument()
+    const body = api.calls.find((c) => c.method === 'PUT')!.body as Record<string, unknown>
+    expect(body.base_version).toBe(2)
+    // the entry's other zone was deleted meanwhile: left out (the server would refuse it)
+    expect(body.zones).toEqual([{ zone_id: testZone.id, quantity: 120, unit: 'holes' }])
+    expect(body.species).toEqual([{ species_id: 's1', quantity: null, unit: null, notes: null }])
+  })
+
+  it('adds a task to this zone', async () => {
+    const api = zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: /Add task/ }))
+    expect(screen.queryByLabelText('Where')).not.toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('What needs doing?'), 'Regar')
+    await userEvent.click(within(screen.getByRole('form')).getByRole('button', { name: 'Add task' }))
+    expect(await screen.findByText('Added “Regar”.')).toBeInTheDocument()
+    expect(api.calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ zone_id: testZone.id, plot_id: null, title: 'Regar' })
+  })
+
+  it('says so when the zone is gone', async () => {
+    zoneApi()
+    renderApp('/zones/20000000-0000-4000-8000-000000000999')
+    expect(await screen.findByRole('heading', { name: 'Zone not found' })).toBeInTheDocument()
+  })
+
+  it('keeps the version the form opened with, even if the list refreshes meanwhile', async () => {
+    const api = zoneApi()
+    const { queryClient } = renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Sowed/ }))
+    // another phone changed it: the list now says version 5
+    queryClient.setQueryData<Activity[]>(['activities'], (l) => l?.map((a) => ({ ...a, version: 5 })))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await screen.findByText('Entry saved.')
+    expect((api.calls.find((c) => c.method === 'PUT')!.body as { base_version: number }).base_version).toBe(2)
+  })
+
+  it('closes and confirms when an entry is deleted', async () => {
+    zoneApi()
+    renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Sowed/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Confirm delete' })).getByRole('button', { name: 'Delete' }))
+    expect(await screen.findByText('Entry deleted.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit: .*Sowed/ })).not.toBeInTheDocument()
+  })
+})

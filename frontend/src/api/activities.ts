@@ -1,4 +1,5 @@
-import type { QueryClient } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
+import { apiGet } from './client'
 import { defineEntity } from './entity'
 import type { Zone } from './plots'
 
@@ -48,6 +49,15 @@ export const ACTIVITY: Record<ActivityType, { label: string; past: string; icon:
   other: { label: 'Other', past: 'logged', icon: '•', unit: null },
 }
 
+/** Units a quantity per zone can be in, by type (the server refuses others; totals add these up). */
+export const ZONE_UNITS: Record<ActivityType, QuantityUnit[]> = {
+  sowing: ['holes', 'seeds'],
+  planting: ['trees'],
+  watering: ['litres'],
+  fertilizing: ['kg', 'litres'],
+  other: ['holes', 'seeds', 'trees', 'litres', 'kg'],
+}
+
 export const UNIT_LABEL: Record<QuantityUnit, string> = {
   holes: 'covas',
   seeds: 'seeds',
@@ -63,27 +73,38 @@ const LAST_FIELD: Partial<Record<ActivityType, 'last_watered_on' | 'last_sown_on
 }
 
 /**
- * Show a new log entry on the map at once (also offline): move the zones' "last
- * watered / sown / planted" dates. The server's zone list replaces this on refresh.
+ * Keep the map's colours right at once (also offline) when an entry is added,
+ * changed or deleted: work out the zones' "last watered / sown / planted" again
+ * from the cached entries. The server's zone list replaces this on refresh.
+ *
+ * The cache holds the latest entries only, so a date found there wins; when none is,
+ * the server's date is kept unless it came from the entry that was changed/removed.
  */
-function applyToZones(qc: QueryClient, input: ActivityInput) {
-  const field = LAST_FIELD[input.type]
-  if (!field) return
-  const ids = new Set(input.zones.map((z) => z.zone_id))
-  const before = new Map<string, string | null>()
-  qc.setQueryData<Zone[]>(['zones'], (list) =>
-    list?.map((z) => {
-      if (!ids.has(z.id) || (z[field] !== null && z[field]! >= input.performed_on)) return z
-      before.set(z.id, z[field])
-      return { ...z, [field]: input.performed_on }
+function recolourZones(qc: QueryClient, zoneIds: Set<string>, removed: Activity | undefined) {
+  const list = qc.getQueryData<Activity[]>(['activities']) ?? []
+  const before = qc.getQueryData<Zone[]>(['zones'])
+  qc.setQueryData<Zone[]>(['zones'], (zones) =>
+    zones?.map((z) => {
+      if (!zoneIds.has(z.id)) return z
+      const next = { ...z }
+      for (const [type, field] of Object.entries(LAST_FIELD) as [ActivityType, (typeof LAST_FIELD)[ActivityType] & string][]) {
+        const cached = list
+          .filter((a) => a.type === type && a.zones.some((x) => x.zone_id === z.id))
+          .reduce<string | null>((m, a) => (m === null || a.performed_on > m ? a.performed_on : m), null)
+        const current = z[field]
+        const cameFromRemoved =
+          removed !== undefined && removed.type === type && removed.performed_on === current && removed.zones.some((x) => x.zone_id === z.id)
+        if (cached !== null && (current === null || cached > current || cameFromRemoved)) next[field] = cached
+        else if (cached === null && cameFromRemoved) next[field] = null
+      }
+      return next
     }),
   )
-  // refused by the server: put the dates back (a refetch follows anyway)
-  return () =>
-    qc.setQueryData<Zone[]>(['zones'], (list) =>
-      list?.map((z) => (before.has(z.id) && z[field] === input.performed_on ? { ...z, [field]: before.get(z.id)! } : z)),
-    )
+  return () => qc.setQueryData(['zones'], before)
 }
+
+const zoneIdsOf = (...entries: ({ zones: { zone_id: string }[] } | undefined)[]) =>
+  new Set(entries.flatMap((e) => e?.zones.map((z) => z.zone_id) ?? []))
 
 export const activities = defineEntity<Activity, ActivityInput>({
   name: 'activities',
@@ -94,7 +115,8 @@ export const activities = defineEntity<Activity, ActivityInput>({
     return { id, ...rest, version: before?.version ?? 1, created_at: before?.created_at ?? now, updated_at: now }
   },
   alsoRefresh: [['zones']],
-  onSaveOptimistic: applyToZones,
+  onSaveOptimistic: (qc, input, before) => recolourZones(qc, zoneIdsOf(input, before), before),
+  onDeleteOptimistic: (qc, _id, before) => recolourZones(qc, zoneIdsOf(before), before),
   versioned: true,
 })
 
@@ -103,4 +125,32 @@ export function zonesPhrase(names: string[]): string {
   if (names.length === 1) return names[0]!
   if (names.length <= 3) return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
   return `${names.length} zones`
+}
+
+/** The server's default page size for GET /api/activities. */
+const GLOBAL_LIST_LIMIT = 500
+
+/**
+ * A zone's whole history: the server's list for the zone (not capped like the global
+ * one), with the cached global list on top for entries made or changed on the phone.
+ */
+export function useZoneHistory(zoneId: string | undefined) {
+  const all = activities.useList()
+  const zone = useQuery({
+    // under ['activities'], so every refresh of the log refreshes it too
+    queryKey: ['activities', 'zone', zoneId],
+    queryFn: ({ signal }) => apiGet<Activity[]>(`/api/activities?zone_id=${zoneId}&limit=5000`, { signal }),
+    enabled: Boolean(zoneId),
+  })
+  const recent = (all.data ?? []).filter((a) => a.zones.some((z) => z.zone_id === zoneId))
+  // The global list is complete unless the server capped it: only then can older
+  // entries be missing, and they come from the zone's own list.
+  const capped = (all.data?.length ?? 0) >= GLOBAL_LIST_LIMIT
+  const oldestRecent = capped ? all.data![all.data!.length - 1]!.performed_on : null
+  const recentIds = new Set(recent.map((a) => a.id))
+  const older = capped ? (zone.data ?? []).filter((a) => !recentIds.has(a.id) && a.performed_on < oldestRecent!) : []
+  const data = [...recent, ...older].sort(
+    (a, b) => b.performed_on.localeCompare(a.performed_on) || b.created_at.localeCompare(a.created_at),
+  )
+  return { data, isPending: all.isPending && zone.isPending, isError: all.isError && zone.isError, error: all.error ?? zone.error, offline: all.isPending && all.fetchStatus === 'paused' }
 }

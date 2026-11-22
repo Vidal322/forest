@@ -17,7 +17,7 @@ interface EntityOptions<T extends Entity, In> {
   /** Other lists a change here affects (e.g. deleting a plot deletes its zones). */
   alsoRefresh?: QueryKey[]
   /** Extra optimistic work when an entry is saved (e.g. a log entry recolours zones); returns how to undo it. */
-  onSaveOptimistic?: (qc: QueryClient, input: In) => (() => void) | void
+  onSaveOptimistic?: (qc: QueryClient, input: In, before: T | undefined) => (() => void) | void
   /**
    * Entries carry a server `version` and edits send `base_version`. Several edits of one
    * entry queued offline were all made from the same version; once the first lands, the
@@ -25,7 +25,7 @@ interface EntityOptions<T extends Entity, In> {
    */
   versioned?: boolean
   /** Extra optimistic work when an entry is deleted; returns how to undo it. */
-  onDeleteOptimistic?: (qc: QueryClient, id: string) => () => void
+  onDeleteOptimistic?: (qc: QueryClient, id: string, before: T | undefined) => () => void
 }
 
 /**
@@ -55,11 +55,16 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
 
   const isCode = (err: unknown, code: string) => (err as { code?: string } | null)?.code === code
 
-  // versions our own successful writes produced, by id (see `versioned`)
-  const ownVersions = new Map<string, number>()
-  const rebase = (id: string, input: In): In => {
+  // versions our own successful writes produced, by id (see `versioned`), per client
+  const ownVersionsByClient = new WeakMap<QueryClient, Map<string, number>>()
+  const ownVersions = (qc: QueryClient) => {
+    let m = ownVersionsByClient.get(qc)
+    if (!m) ownVersionsByClient.set(qc, (m = new Map()))
+    return m
+  }
+  const rebase = (qc: QueryClient, id: string, input: In): In => {
     const base = (input as { base_version?: number | null }).base_version
-    const own = ownVersions.get(id)
+    const own = ownVersions(qc).get(id)
     if (!opts.versioned || base == null || own === undefined || own <= base) return input
     return { ...input, base_version: own }
   }
@@ -68,17 +73,17 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
   function register(qc: QueryClient) {
     qc.setMutationDefaults(saveKey, {
       ...outboxDefaults,
-      mutationFn: ({ id, input }: SaveVars<In>) => apiSend<T>('PUT', `${path}/${id}`, rebase(id, input)),
+      mutationFn: ({ id, input }: SaveVars<In>) => apiSend<T>('PUT', `${path}/${id}`, rebase(qc, id, input)),
       onMutate: async ({ id, input }: SaveVars<In>) => {
         await qc.cancelQueries({ queryKey: listKey })
         const before = qc.getQueryData<T[]>(listKey)?.find((x) => x.id === id)
         replace(qc, id, opts.optimistic(id, input, before))
-        const undoExtra = opts.onSaveOptimistic?.(qc, input)
+        const undoExtra = opts.onSaveOptimistic?.(qc, input, before)
         return { before, undoExtra }
       },
       onSuccess: (saved: T) => {
         const v = (saved as { version?: number }).version
-        if (opts.versioned && v !== undefined) ownVersions.set(saved.id, v)
+        if (opts.versioned && v !== undefined) ownVersions(qc).set(saved.id, v)
         replace(qc, saved.id, saved)
       },
       onError: (err, { id }: SaveVars<In>, ctx) => {
@@ -96,7 +101,7 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
         await qc.cancelQueries({ queryKey: listKey })
         const before = qc.getQueryData<T[]>(listKey)?.find((x) => x.id === id)
         replace(qc, id, undefined)
-        const undoExtra = opts.onDeleteOptimistic?.(qc, id)
+        const undoExtra = opts.onDeleteOptimistic?.(qc, id, before)
         return { before, undoExtra }
       },
       onError: (err, id: string, ctx) => {

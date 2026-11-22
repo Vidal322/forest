@@ -31,7 +31,7 @@ export function SyncStatus() {
       )}
       {failed.map((m) => (
         <p key={m.mutationId} className="sync__failed" role="alert">
-          A change could not be saved: {friendlyError(m.state.error)}{' '}
+          {describe(m.state.variables)} could not be saved: {friendlyError(m.state.error)}{' '}
           <button type="button" className="btn btn-small" onClick={() => qc.getMutationCache().remove(m)}>
             OK
           </button>
@@ -39,4 +39,11 @@ export function SyncStatus() {
       ))}
     </div>
   )
+}
+
+/** "“Falta semear”" for a write whose input has a title/name, else "A change". */
+function describe(variables: unknown): string {
+  const input = (variables as { input?: Record<string, unknown> } | undefined)?.input
+  const name = input?.title ?? input?.name ?? input?.scientific_name ?? input?.label
+  return typeof name === 'string' && name ? `“${name}”` : 'A change'
 }

@@ -41,5 +41,6 @@ export function relativeDay(iso: string, today: string = fieldToday()): string {
   if (d === 1) return 'yesterday'
   if (d > 1 && d < 14) return `${d} days ago`
   if (d === -1) return 'tomorrow'
+  if (d < -1 && d > -14) return `in ${-d} days`
   return formatDay(iso, today)
 }
