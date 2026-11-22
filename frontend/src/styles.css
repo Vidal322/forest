@@ -406,3 +406,18 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .photo-row { display: flex; align-items: center; gap: 0.75rem; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem; }
 .photo-row__thumb { width: 64px; height: 48px; object-fit: cover; border-radius: 6px; }
 .photo-row__text { flex: 1; display: flex; flex-direction: column; }
+
+/* ---------- trees ---------- */
+table.trees { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+table.trees th, table.trees td { text-align: left; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); }
+table.trees th { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); }
+.trees__total td { font-weight: 700; }
+.tree-row { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem 0.75rem; margin: 0.5rem 0; }
+.tree-row legend { font-weight: 700; padding: 0 0.25rem; }
+.stepper { display: flex; align-items: center; gap: 0.4rem; margin: 0.25rem 0; }
+.stepper__label { width: 3.5rem; }
+.stepper input { width: 5rem; text-align: center; }
+.leaflet-marker-icon.map-pin.is-open { background: #fff; color: var(--task); }
+.pair-chips { list-style: none; padding: 0; margin: 0.5rem 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.align-switch { margin: 0 0 0.5rem; border: 0; padding: 0; }
+.setup-map.is-active { outline: 3px solid var(--moss); }

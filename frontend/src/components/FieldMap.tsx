@@ -2,13 +2,20 @@ import 'leaflet/dist/leaflet.css'
 import { Browser, type Map as LeafletMap } from 'leaflet'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ImageOverlay, MapContainer } from 'react-leaflet'
+import { isIdentity, type Affine } from '../map/affine'
+import { AffineImage } from '../map/AffineImage'
 import { FRAME_CRS, fitZoom, frameBounds } from '../map/frame'
 
 export interface FieldPhoto {
   url: string
-  /** Size of the photo in frame units (pixels of the first photo). */
+  /** Size of the frame (pixels of the first photo): the map's extent. */
   width: number
   height: number
+  /**
+   * A newer photo's own size and its transform onto the frame. Absent (or identity)
+   * when the photo is the frame itself.
+   */
+  image?: { width: number; height: number; affine: Affine }
 }
 
 /** How far past the photo's edges you can zoom out, in zoom levels (each level halves the size). */
@@ -27,11 +34,14 @@ export function FieldMap({
   photo,
   children,
   wheelZoom = true,
+  doubleTapZoom = true,
 }: {
   photo: FieldPhoto
   children?: ReactNode
   /** false for a map inside a scrolling page: the mouse wheel then scrolls the page. */
   wheelZoom?: boolean
+  /** false where every tap places something: a double-tap would place it twice. */
+  doubleTapZoom?: boolean
 }) {
   const { width, height } = photo
   const bounds = useMemo(() => frameBounds(width, height), [width, height])
@@ -80,8 +90,19 @@ export function FieldMap({
         zoomDelta={0.5}
         attributionControl={false}
         scrollWheelZoom={wheelZoom}
+        doubleClickZoom={doubleTapZoom}
       >
-        <ImageOverlay url={photo.url} bounds={bounds} alt="Aerial photo of the field" />
+        {photo.image && !isIdentity(photo.image.affine) ? (
+          <AffineImage
+            url={photo.url}
+            width={photo.image.width}
+            height={photo.image.height}
+            affine={photo.image.affine}
+            alt="Aerial photo of the field"
+          />
+        ) : (
+          <ImageOverlay url={photo.url} bounds={bounds} alt="Aerial photo of the field" />
+        )}
         {children}
       </MapContainer>
       <button

@@ -22,6 +22,8 @@ const FIELD_LABELS: Record<string, string> = {
   description: 'The details',
   label: 'The name',
   geom: 'The outline',
+  alignment: 'The landmarks',
+  captured_on: 'The photo date',
 }
 
 function sentence(s: string): string {

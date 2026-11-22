@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { FieldPhoto } from '../components/FieldMap'
+import { toAffine } from '../map/affine'
 import type { FramePoint } from '../map/frame'
 import { ApiError, apiGet, apiRequest, apiSend } from './client'
 import { outboxDefaults, pendingWrites } from './outbox'
@@ -17,6 +18,7 @@ export interface Photo {
   affine_to_frame: number[]
   captured_on: string | null
   created_at: string
+  alignment_points?: { photo: [number, number]; frame: [number, number] }[]
 }
 
 export interface Field {
@@ -61,7 +63,13 @@ export function useField() {
 /** What FieldMap needs to show the field's current photo. */
 export function fieldPhoto(field: Field): FieldPhoto | null {
   if (!field.photo) return null
-  return { url: `/api/photos/${field.photo.key}`, width: field.frame_width, height: field.frame_height }
+  const p = field.photo
+  return {
+    url: `/api/photos/${p.key}`,
+    width: field.frame_width,
+    height: field.frame_height,
+    image: { width: p.width, height: p.height, affine: toAffine(p.affine_to_frame) },
+  }
 }
 
 export function lineOf(a: FramePoint, b: FramePoint): LineString {

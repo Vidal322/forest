@@ -43,7 +43,7 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'field-photos',
-              expiration: { maxEntries: 10 },
+              expiration: { maxEntries: 40 },
               cacheableResponse: { statuses: [200] },
             },
           },

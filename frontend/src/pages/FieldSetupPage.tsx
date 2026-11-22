@@ -17,6 +17,8 @@ import { SAVED_ON_PHONE } from '../api/outbox'
 import { Flash } from '../components/Flash'
 import { FieldMap } from '../components/FieldMap'
 import { useFlash, type FlashState } from '../hooks/useFlash'
+import { PhotoAlignment } from '../components/PhotoAlignment'
+import { PhotoHistory } from '../components/PhotoHistory'
 import { WateringRules } from '../components/WateringRules'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { CalibrationLine } from '../map/CalibrationLine'
@@ -175,6 +177,8 @@ function FieldSettings({ field, flash }: { field: Field; flash: FlashState }) {
       <ScaleForm field={field} flash={flash} />
       <DetailsForm field={field} flash={flash} />
       <WateringRules defaultDays={field.default_water_interval_days} onMessage={flash.show} />
+      <PhotoAlignment field={field} onDone={flash.show} />
+      <PhotoHistory onMessage={flash.show} />
       <section className="card" aria-labelledby="frame-facts">
         <h2 id="frame-facts">What is stored</h2>
         <dl className="facts">
