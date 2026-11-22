@@ -1,4 +1,8 @@
+import { FieldMap, type FieldPhoto } from './components/FieldMap'
 import { ServerStatus } from './components/ServerStatus'
+
+// Stand-in photo (same terrain as docs/mockups) until fields and photo upload exist.
+const PLACEHOLDER_PHOTO: FieldPhoto = { url: '/placeholder-field.svg', width: 1000, height: 700 }
 
 export default function App() {
   return (
@@ -10,11 +14,9 @@ export default function App() {
         <span className="spacer" />
         <ServerStatus />
       </header>
-      <main className="page">
-        <h1>Your field</h1>
-        <p className="muted">
-          The map, quick log and tasks arrive here step by step. See <code>docs/mockups</code> for where this is going.
-        </p>
+      <main className="fieldmap-page">
+        <h1 className="visually-hidden">Your field</h1>
+        <FieldMap key={`${PLACEHOLDER_PHOTO.width}x${PLACEHOLDER_PHOTO.height}`} photo={PLACEHOLDER_PHOTO} />
       </main>
     </>
   )

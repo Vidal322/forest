@@ -67,3 +67,24 @@ code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radi
   .status--checking .status__dot { animation: pulse 1s ease-in-out infinite alternate; }
   @keyframes pulse { to { opacity: 0.3; } }
 }
+
+/* ---------- field map ---------- */
+#root { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.fieldmap-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.fieldmap { position: relative; flex: 1; min-height: 0; }
+/* .fieldmap prefix: leaflet.css is loaded after this file and sets its own grey background. */
+.fieldmap .fieldmap__map { position: absolute; inset: 0; background: #3b382e; }
+/* Bigger zoom buttons: this is used with a thumb, outdoors. */
+.fieldmap .leaflet-touch .leaflet-bar a,
+.fieldmap .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; font-size: 22px; }
+/* Keep the controls clear of a notch in landscape. */
+.fieldmap .leaflet-left .leaflet-control { margin-left: max(10px, env(safe-area-inset-left)); }
+.fieldmap .leaflet-bottom .leaflet-control { margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+.fieldmap__fit {
+  position: absolute; z-index: 1000; top: 10px; right: max(10px, env(safe-area-inset-right));
+  min-height: 44px; padding: 0 0.9rem;
+  border: 2px solid rgba(0, 0, 0, 0.2); border-radius: var(--radius);
+  background: var(--card); color: var(--ink); font: inherit; font-weight: 600;
+  cursor: pointer;
+}
+.fieldmap__fit:disabled { opacity: 0.5; cursor: default; }
