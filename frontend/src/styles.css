@@ -1,0 +1,69 @@
+/* Forest — global styles. Tokens match docs/mockups/style.css so the app and mockups look the same. */
+:root {
+  --paper: #f4f1ea;
+  --card: #fffdf8;
+  --ink: #2b2a24;
+  --muted: #6d6a5e;
+  --line: #ddd5c4;
+  --moss: #4f6b3a;
+  --bark: #6b4f36;
+  --sand: #d9cbb0;
+
+  /* zone status legend */
+  --plot: #3f8f3a;
+  --planted: #2e6b3f;
+  --watered: #3a7fc1;
+  --sown: #c9a227;
+  --needs-water: #d9822b;
+  --unsown: #efe7d6;
+  --path: #8a867c;
+  --task: #c0392b;
+
+  --radius: 10px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; }
+h1 { font-size: 1.35rem; margin: 0 0 0.25rem; }
+a { color: var(--moss); }
+code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radius: 4px; }
+.muted { color: var(--muted); }
+.spacer { flex: 1; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  padding-top: max(0.6rem, env(safe-area-inset-top));
+  padding-left: max(0.9rem, env(safe-area-inset-left));
+  padding-right: max(0.9rem, env(safe-area-inset-right));
+  background: var(--moss); color: #fff;
+}
+.topbar__brand { font-weight: 700; white-space: nowrap; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+
+.status {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.8rem; padding: 0.25rem 0.65rem; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.status__dot { width: 8px; height: 8px; border-radius: 50%; background: #c9c3b4; }
+.status--online .status__dot { background: #8fe07a; }
+.status--no-network .status__dot,
+.status--unreachable .status__dot { background: #f0a050; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .status--checking .status__dot { animation: pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse { to { opacity: 0.3; } }
+}
