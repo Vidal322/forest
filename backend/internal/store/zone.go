@@ -162,17 +162,20 @@ func (s *Store) PutZone(ctx context.Context, id uuid.UUID, in ZoneInput) (z Zone
 	return z, created, err
 }
 
-// DeleteZone soft-deletes a zone; its activity history stays. Idempotent.
+// DeleteZone soft-deletes a zone and its tasks; its activity history stays. Idempotent.
 func (s *Store) DeleteZone(ctx context.Context, id uuid.UUID) error {
-	var existed bool
-	err := s.db.QueryRow(ctx, `
-		WITH upd AS (UPDATE zone SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id)
-		SELECT EXISTS (SELECT 1 FROM upd) OR EXISTS (SELECT 1 FROM zone WHERE id = $1)`, id).Scan(&existed)
-	if err != nil {
+	return s.inTx(ctx, func(tx *Store) error {
+		var existed bool
+		err := tx.db.QueryRow(ctx, `
+			WITH upd AS (UPDATE zone SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id)
+			SELECT EXISTS (SELECT 1 FROM upd) OR EXISTS (SELECT 1 FROM zone WHERE id = $1)`, id).Scan(&existed)
+		if err != nil {
+			return err
+		}
+		if !existed {
+			return ErrNotFound
+		}
+		_, err = tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE zone_id = $1 AND deleted_at IS NULL`, id)
 		return err
-	}
-	if !existed {
-		return ErrNotFound
-	}
-	return nil
+	})
 }

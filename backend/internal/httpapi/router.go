@@ -68,6 +68,10 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/activities", h.listActivities)
 			r.Put("/activities/{id}", h.putActivity)
 			r.Delete("/activities/{id}", deleteHandler(h, h.store.DeleteActivity))
+
+			r.Get("/tasks", h.listTasks)
+			r.Put("/tasks/{id}", h.putTask)
+			r.Delete("/tasks/{id}", deleteHandler(h, h.store.DeleteTask))
 		})
 	}
 

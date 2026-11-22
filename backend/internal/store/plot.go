@@ -152,7 +152,7 @@ func (s *Store) PutPlot(ctx context.Context, id uuid.UUID, in PlotInput) (p Plot
 	return p, created, err
 }
 
-// DeletePlot soft-deletes a plot together with its zones (their history stays).
+// DeletePlot soft-deletes a plot together with its zones and tasks (history stays).
 // The plot row is locked first — the same order PutZone uses — so a zone saved
 // at the same moment either lands before (and is deleted too) or is refused.
 func (s *Store) DeletePlot(ctx context.Context, id uuid.UUID) error {
@@ -168,7 +168,13 @@ func (s *Store) DeletePlot(ctx context.Context, id uuid.UUID) error {
 		if _, err := tx.db.Exec(ctx, `UPDATE plot SET deleted_at = now() WHERE id = $1`, id); err != nil {
 			return err
 		}
-		_, err = tx.db.Exec(ctx, `UPDATE zone SET deleted_at = now() WHERE plot_id = $1 AND deleted_at IS NULL`, id)
+		// lock order plot → zone → task, as PutZone/PutTask take them
+		if _, err := tx.db.Exec(ctx, `UPDATE zone SET deleted_at = now() WHERE plot_id = $1 AND deleted_at IS NULL`, id); err != nil {
+			return err
+		}
+		// a new statement sees tasks committed while we waited for the zones
+		_, err = tx.db.Exec(ctx, `UPDATE task SET deleted_at = now() WHERE deleted_at IS NULL
+			AND (plot_id = $1 OR zone_id IN (SELECT id FROM zone WHERE plot_id = $1))`, id)
 		return err
 	})
 }
