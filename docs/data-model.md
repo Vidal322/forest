@@ -357,6 +357,7 @@ erDiagram
 - `task`: `CHECK (num_nonnulls(plot_id, zone_id) = 1)` and `CHECK ((status IN ('done','cancelled')) = (completed_at IS NOT NULL))`.
 - `activity_zone` and `activity_species`: `CHECK ((quantity IS NULL) = (unit IS NULL))`.
 - `activity_species`: only allowed for activities of type sowing or planting (checked by the API).
+- `activity_zone.unit` must fit the activity type (API): sowing holes/seeds, planting trees, watering litres, fertilizing kg/litres, other any — so totals like "covas sown" never silently miss entries.
 - Every activity has ≥ 1 zone. A foreign key can't enforce that, so the API does (the activity and its join rows are written in one transaction).
 - A zone must lie inside its plot: checked by the API with `ST_Within(zone.geom, ST_Buffer(plot.geom, 1))` (1 unit tolerance). The same check applies to `tree.position` vs its plot. Cross-table CHECKs aren't possible in PostgreSQL.
 - Zones **may overlap** (e.g. re-sowing part of an old area); no exclusion constraint. Each zone belongs to exactly one plot, which is stored, not inferred from geometry.

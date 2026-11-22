@@ -17,6 +17,17 @@ var ActivityTypes = []string{"watering", "sowing", "planting", "fertilizing", "o
 // QuantityUnits for activity_zone / activity_species quantities.
 var QuantityUnits = []string{"holes", "seeds", "trees", "litres", "kg"}
 
+// zoneUnits: what a quantity per zone can be counted in, by activity type. Totals
+// (covas sown, litres watered) add these up, so a mismatched unit is refused
+// instead of silently dropping out of the numbers.
+var zoneUnits = map[string][]string{
+	"sowing":      {"holes", "seeds"},
+	"planting":    {"trees"},
+	"watering":    {"litres"},
+	"fertilizing": {"kg", "litres"},
+	"other":       QuantityUnits,
+}
+
 // ActivityZone is one zone an activity applied to, with what was done there.
 type ActivityZone struct {
 	ZoneID   uuid.UUID `json:"zone_id"`
@@ -106,6 +117,9 @@ func (in ActivityInput) normalize(today string) (ActivityInput, error) {
 		seen[z.ZoneID] = true
 		if err := checkQuantity("zones", z.Quantity, z.Unit); err != nil {
 			return in, err
+		}
+		if z.Unit != nil && !slices.Contains(zoneUnits[in.Type], *z.Unit) {
+			return in, invalid("zones", "%s are not counted for %s", *z.Unit, in.Type)
 		}
 	}
 	if len(in.Species) > 0 && in.Type != "sowing" && in.Type != "planting" {
