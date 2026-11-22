@@ -71,11 +71,16 @@ export function FieldLayers({
     [zones],
   )
 
-  const selectedRef = useRef<LeafletPolygon>(null)
+  const layerRefs = useRef(new Map<string, LeafletPolygon>())
   const selected = zones.find((z) => z.id === selectedId)
+  // selected zones on top, so their white outline isn't hidden under a neighbour
+  const selectionKey = [...(selectedIds ?? [])].sort().join(',')
+  useEffect(() => {
+    for (const id of selectionKey ? selectionKey.split(',') : []) layerRefs.current.get(id)?.bringToFront()
+  }, [selectionKey, zones])
   useEffect(() => {
     if (!selected) return
-    selectedRef.current?.bringToFront()
+    layerRefs.current.get(selected.id)?.bringToFront()
     // keep the zone visible above the sheet that covers the bottom of the screen
     const size = map.getSize()
     const sheet = size.x < 900 ? Math.round(size.y * 0.6) : 0
@@ -104,7 +109,10 @@ export function FieldLayers({
           <Polygon
             // `interactive` is read by Leaflet only once: remount when it changes
             key={`${z.id}:${interactive}`}
-            ref={z.id === selectedId ? selectedRef : undefined}
+            ref={(layer) => {
+              if (layer) layerRefs.current.set(z.id, layer)
+              else layerRefs.current.delete(z.id)
+            }}
             className="map-zone"
             positions={ringLatLngs(z.geom)}
             pathOptions={zoneStyle(status, isSelected)}

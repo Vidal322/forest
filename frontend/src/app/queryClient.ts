@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { registerFieldMutations } from '../api/field'
+import { activities } from '../api/activities'
 import { plots, zones } from '../api/plots'
 import { species } from '../api/species'
 
@@ -13,6 +14,7 @@ export function newQueryClient(options: { retry?: boolean } = {}) {
   species.register(qc)
   plots.register(qc)
   zones.register(qc)
+  activities.register(qc)
   registerFieldMutations(qc)
   return qc
 }

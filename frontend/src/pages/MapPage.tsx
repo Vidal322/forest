@@ -162,6 +162,9 @@ export function MapPage() {
             onClose={closeSheet}
           >
             <div className="row form__actions">
+              <Link className="btn btn-primary" to={`/log?zone=${selected.id}`}>
+                ＋ Log activity
+              </Link>
               <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
                 ✎ Edit zone
               </button>

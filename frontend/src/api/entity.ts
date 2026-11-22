@@ -16,8 +16,14 @@ interface EntityOptions<T extends Entity, In> {
   optimistic: (id: string, input: In, before: T | undefined) => T
   /** Other lists a change here affects (e.g. deleting a plot deletes its zones). */
   alsoRefresh?: QueryKey[]
-  /** Extra optimistic work when an entry is saved (e.g. a log entry recolours zones). */
-  onSaveOptimistic?: (qc: QueryClient, input: In) => void
+  /** Extra optimistic work when an entry is saved (e.g. a log entry recolours zones); returns how to undo it. */
+  onSaveOptimistic?: (qc: QueryClient, input: In) => (() => void) | void
+  /**
+   * Entries carry a server `version` and edits send `base_version`. Several edits of one
+   * entry queued offline were all made from the same version; once the first lands, the
+   * next ones are sent from the version it produced instead of conflicting with ourselves.
+   */
+  versioned?: boolean
   /** Extra optimistic work when an entry is deleted; returns how to undo it. */
   onDeleteOptimistic?: (qc: QueryClient, id: string) => () => void
 }
@@ -49,22 +55,38 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
 
   const isCode = (err: unknown, code: string) => (err as { code?: string } | null)?.code === code
 
+  // versions our own successful writes produced, by id (see `versioned`)
+  const ownVersions = new Map<string, number>()
+  const rebase = (id: string, input: In): In => {
+    const base = (input as { base_version?: number | null }).base_version
+    const own = ownVersions.get(id)
+    if (!opts.versioned || base == null || own === undefined || own <= base) return input
+    return { ...input, base_version: own }
+  }
+
   /** Registered on the client so writes kept on the phone can resume after a reload. */
   function register(qc: QueryClient) {
     qc.setMutationDefaults(saveKey, {
       ...outboxDefaults,
-      mutationFn: ({ id, input }: SaveVars<In>) => apiSend<T>('PUT', `${path}/${id}`, input),
+      mutationFn: ({ id, input }: SaveVars<In>) => apiSend<T>('PUT', `${path}/${id}`, rebase(id, input)),
       onMutate: async ({ id, input }: SaveVars<In>) => {
         await qc.cancelQueries({ queryKey: listKey })
         const before = qc.getQueryData<T[]>(listKey)?.find((x) => x.id === id)
         replace(qc, id, opts.optimistic(id, input, before))
-        opts.onSaveOptimistic?.(qc, input)
-        return { before }
+        const undoExtra = opts.onSaveOptimistic?.(qc, input)
+        return { before, undoExtra }
       },
-      onSuccess: (saved: T) => replace(qc, saved.id, saved),
-      onError: (err, { id }: SaveVars<In>, ctx) =>
+      onSuccess: (saved: T) => {
+        const v = (saved as { version?: number }).version
+        if (opts.versioned && v !== undefined) ownVersions.set(saved.id, v)
+        replace(qc, saved.id, saved)
+      },
+      onError: (err, { id }: SaveVars<In>, ctx) => {
+        const c = ctx as { before?: T; undoExtra?: () => void } | undefined
         // deleted on the server meanwhile: drop it here too; otherwise put back what was there
-        replace(qc, id, isCode(err, 'deleted') ? undefined : (ctx as { before?: T } | undefined)?.before),
+        replace(qc, id, isCode(err, 'deleted') ? undefined : c?.before)
+        c?.undoExtra?.()
+      },
       onSettled: () => refreshWhenIdle(qc),
     })
     qc.setMutationDefaults(deleteKey, {

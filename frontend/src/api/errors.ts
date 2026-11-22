@@ -10,6 +10,18 @@ const FIELD_LABELS: Record<string, string> = {
   calibration_line: 'The scale line',
   calibration_length_m: 'The distance',
   default_water_interval_days: 'The watering interval',
+  performed_on: 'The date',
+  zones: 'Zones:',
+  species: 'Species:',
+  title: 'The title',
+  zone_id: 'The place',
+  plot_id: 'The plot',
+  kind: 'The kind',
+  status: 'The status',
+  due_on: 'The due date',
+  description: 'The details',
+  label: 'The name',
+  geom: 'The outline',
 }
 
 function sentence(s: string): string {
