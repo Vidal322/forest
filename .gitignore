@@ -1,1 +1,25 @@
-*.env
+# secrets (keep the example file and direnv's .envrc)
+.env
+.env.*
+!.env.example
+
+# nix / direnv
+.direnv/
+result
+
+# editors / OS
+.DS_Store
+*.log
+
+# backend
+backend/bin/
+backend/tmp/
+*.test
+*.out
+
+# frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+coverage/
