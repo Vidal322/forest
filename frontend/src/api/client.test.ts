@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiGet } from './client'
+import { ApiError, apiGet, apiSend } from './client'
 
 type FetchFn = (input: string, init: RequestInit) => Promise<Response>
 
@@ -64,5 +64,34 @@ describe('apiGet', () => {
     const p = apiGet('/healthz', { signal: ctrl.signal })
     ctrl.abort(new Error('user left the page'))
     await expect(p).rejects.toThrow('user left the page')
+  })
+})
+
+describe('apiSend', () => {
+  it('sends JSON with the method and Content-Type', async () => {
+    const fetchMock = respond(201, '{"id":"x"}')
+    await expect(apiSend('PUT', '/api/species/x', { scientific_name: 'Q' })).resolves.toEqual({ id: 'x' })
+    const init = fetchMock.mock.calls[0]![1]
+    expect(init.method).toBe('PUT')
+    expect(init.body).toBe('{"scientific_name":"Q"}')
+    expect(new Headers(init.headers).get('Content-Type')).toBe('application/json')
+    expect(new Headers(init.headers).get('Accept')).toBe('application/json')
+  })
+
+  it('sends no body or Content-Type for a DELETE', async () => {
+    const fetchMock = respond(204, null)
+    await expect(apiSend('DELETE', '/api/species/x')).resolves.toBeUndefined()
+    const init = fetchMock.mock.calls[0]![1]
+    expect(init.body).toBeUndefined()
+    expect(new Headers(init.headers).has('Content-Type')).toBe(false)
+  })
+
+  it('keeps the field the server blamed', async () => {
+    respond(422, '{"error":{"code":"invalid","message":"is required","field":"scientific_name"}}')
+    await expect(apiSend('PUT', '/api/species/x', {})).rejects.toMatchObject({
+      status: 422,
+      code: 'invalid',
+      field: 'scientific_name',
+    })
   })
 })

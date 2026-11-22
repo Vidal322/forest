@@ -51,7 +51,83 @@ code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radi
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-.page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+/* ---------- app shell: top bar, scrolling main, bottom tabs on phones ---------- */
+.main { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.page {
+  width: 100%; max-width: 900px; margin: 0 auto;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left));
+}
+.topbar__brand { color: #fff; text-decoration: none; }
+.topnav { display: flex; gap: 0.25rem; margin-left: 0.75rem; }
+.topnav__link {
+  color: #e8efe1; text-decoration: none; padding: 0 0.7rem; border-radius: 6px; font-size: 0.95rem;
+  min-height: 44px; display: inline-flex; align-items: center;
+}
+.topnav__link.active { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.tabs { display: none; }
+@media (max-width: 640px) {
+  .topnav { display: none; }
+  .tabs {
+    display: flex; background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabs a {
+    flex: 1; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.78rem; color: var(--muted); text-decoration: none;
+  }
+  .tabs a.active { color: var(--moss); font-weight: 700; }
+  .tabs__icon { font-size: 1.25rem; line-height: 1.2; }
+}
+
+/* ---------- building blocks ---------- */
+h2 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+.row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin: 0.75rem 0; }
+.note { border-left: 4px solid var(--sown); background: #fbf5e1; padding: 0.6rem 0.8rem; border-radius: 6px; margin: 0.75rem 0; }
+.note.warn { border-color: var(--task); background: #fbeae7; }
+.empty { text-align: center; padding: 2rem 1rem; border: 2px dashed var(--line); border-radius: var(--radius); margin: 1rem 0; }
+.flash:not(:empty) { display: block; color: var(--moss); font-weight: 600; margin: 0.5rem 0; }
+
+.btn {
+  font: inherit; min-height: 44px; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+}
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn-primary { background: var(--moss); border-color: var(--moss); color: #fff; font-weight: 600; }
+.btn-danger { background: var(--task); border-color: var(--task); color: #fff; font-weight: 600; }
+.btn-link-danger { border-color: transparent; background: none; color: var(--task); }
+
+label { display: block; font-size: 0.9rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+/* 16px+ text so iOS doesn't zoom in when an input gets focus */
+input:not([type='checkbox']):not([type='radio']), select, textarea {
+  font: inherit; font-size: max(1rem, 16px); width: 100%; min-height: 44px; padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+}
+textarea { min-height: auto; resize: vertical; }
+input[aria-invalid='true'] { border-color: var(--task); box-shadow: 0 0 0 1px var(--task); }
+.form__error { color: var(--task); font-weight: 600; margin: 0.75rem 0 0; }
+.form__actions { margin-top: 1rem; }
+.confirm { border: 0; margin: 1rem 0 0; padding: 0.75rem; border-radius: 8px; background: #fbeae7; }
+.confirm p { margin: 0 0 0.5rem; }
+.search { margin: 0.75rem 0; }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.list__item {
+  width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; min-height: 56px;
+  display: flex; flex-direction: column; gap: 0.1rem; padding: 0.65rem 0.9rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.list__item:hover { border-color: var(--moss); }
+.list__title { font-weight: 600; }
+.list__sub { font-size: 0.9rem; }
+
+.menu { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.5rem; }
+.menu a {
+  display: flex; align-items: center; gap: 0.6rem; min-height: 56px; padding: 0 1rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--ink); text-decoration: none; font-weight: 600;
+}
 
 .status {
   display: inline-flex; align-items: center; gap: 0.4rem;
@@ -79,7 +155,10 @@ code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radi
 .fieldmap .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; font-size: 22px; }
 /* Keep the controls clear of a notch in landscape. */
 .fieldmap .leaflet-left .leaflet-control { margin-left: max(10px, env(safe-area-inset-left)); }
-.fieldmap .leaflet-bottom .leaflet-control { margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+/* on phones the bottom tabs already keep clear of the home indicator */
+@media (min-width: 641px) {
+  .fieldmap .leaflet-bottom .leaflet-control { margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+}
 .fieldmap__fit {
   position: absolute; z-index: 1000; top: 10px; right: max(10px, env(safe-area-inset-right));
   min-height: 44px; padding: 0 0.9rem;
@@ -88,3 +167,11 @@ code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radi
   cursor: pointer;
 }
 .fieldmap__fit:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- sync bar ---------- */
+.sync { background: #fbf5e1; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.sync p, .sync output { margin: 0; padding: 0.4rem max(1rem, env(safe-area-inset-left)); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.sync__failed { background: #fbeae7; color: var(--ink); }
+.btn-small { min-height: 36px; padding: 0.25rem 0.75rem; }
+.list__item:disabled { opacity: 0.55; cursor: default; }
+h1:focus { outline: none; }
