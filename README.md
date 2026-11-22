@@ -1,21 +1,47 @@
-# Forest — Plantation Session Tracker
+# Forest — reforestation field tracker
 
-Forest is a tool for managing and tracking tree plantation sessions in a field. It helps teams record what was planted, where, and when — and provides insights into the field's composition over time.
+Forest replaces the hand-annotated satellite screenshot of a reforestation field. It is a phone-first web app
+(installable, works without signal) for recording what was sown, planted and watered where, and what is still to do.
 
-## Core Concepts
+## What you can do
 
-- **Species** — A type of tree (e.g., *Eucalyptus grandis*, *Pinus elliottii*). Serves as a reference catalog for all trees in the field.
-- **Region** — A bounded area of the field, represented as a rectangular box. Regions are the spatial unit for organizing plantations.
-- **Session** — A plantation event: a set of trees planted on a specific date in a specific region.
-- **Tree** — An individual tree planted during a session, linked to both its species and the session it belongs to.
+- **Set up the field** from a satellite screenshot or drone photo. All EXIF/GPS data is removed on upload; positions
+  are pixels of that photo, so nothing can be placed on a real map. Set the scale by dragging a line over something of
+  known length (areas then show in hectares).
+- **Draw plots and zones** on the photo with your finger: tap corners, drag to adjust. Zones are coloured by state:
+  *needs water*, *watered recently*, *planted*, *sown*, *nothing yet*, *path*.
+- **Log work in three taps**: tap the zones (or "all that need water"), tap *Watered / Sowed / Planted*, Save. Optional:
+  day, covas or litres per zone, seed mix, notes.
+- **Tasks** on a zone or a whole plot ("Falta semear", "Melhorar caminho"), grouped by urgency, ticked done in one tap.
+- **Zone page**: its state, open tasks, trees by species (alive/dead) and the full history, where any entry can be
+  fixed or deleted.
+- **Plot stats**: measured vs. old-map hectares, covas sown, trees planted, species, waterings, what needs water now.
+- **Seasonal watering**: e.g. every 4 days June–September, every 14 days November–February.
+- **Newer photos**: align a fresher satellite image by tapping 3–4 matching landmarks; every drawing stays in place.
+- **Offline**: everything you log or change without signal is kept on the phone and sent, in order, when the signal
+  returns — also after the app was closed. A bar shows what is still waiting.
 
-## What You Can Do
+## Running it
 
-- **Register plantation sessions** — Record when and where trees were planted, along with which species were used.
-- **Manage species** — Add and maintain the catalog of tree species available for planting.
-- **Query a region** — See all trees currently planted in a given region, organized by session or species.
-- **View region stats** — Get aggregated statistics for a region, such as total tree count, species diversity, and plantation history.
+Everything runs inside the Nix dev shell (`nix develop`, or direnv).
 
-## Goal
+```sh
+cd backend
+cp .env.example .env      # first time only
+make db-up                # PostgreSQL + PostGIS in Docker (port 5433)
+make run                  # API on :8080; applies database migrations on start
 
-The goal of Forest is to give field teams a clear, queryable record of plantation activity — making it easy to understand the current state of any region and track how the field evolves over time.
+cd ../frontend
+pnpm install
+pnpm dev                  # http://localhost:5173 (proxies /api to :8080)
+pnpm dev:lan              # open it on a phone on the same network
+```
+
+Checks before committing: `make check` (backend: lint + tests against the dev database, each test in a rolled-back
+transaction) and `pnpm check` (frontend: lint, types, tests). `pnpm build` produces the installable app in
+`frontend/dist` (service worker included; offline mode needs https or localhost).
+
+## Design
+
+- `docs/data-model.md` — the schema (source of truth) and the reasons behind it.
+- `docs/mockups/` — the UI the app follows.

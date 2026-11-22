@@ -15,7 +15,8 @@ Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/moc
 
 - Backend (`cd backend`): `make db-up migrate`, `make run`, `make check` (lint + tests), `make db-smoke` (schema checks).
   First run: `cp .env.example .env`. The database is on port 5433.
-- Frontend (`cd frontend`): `pnpm dev` (proxies `/api` and `/healthz` to :8080), `pnpm dev:lan` (open it on a phone), `pnpm check`.
+- Frontend (`cd frontend`): `pnpm dev` (proxies `/api` and `/healthz` to :8080), `pnpm dev:lan` (open it on a phone), `pnpm check`, `pnpm build` (PWA).
+- The API applies migrations itself on start; photos are stored under `FOREST_DATA_DIR` (default `backend/data`).
 
 ## Rules worth remembering
 
@@ -24,3 +25,10 @@ Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/moc
 - Zone status ("needs water", …) is derived from the activity log (`zone_status` view), never stored.
 - "Today" is `field_today()` (Europe/Lisbon), not `current_date`.
 - `activity` and `task` have a `version` that only the database bumps (trigger). The API never sets it.
+- Every write is `PUT /api/<kind>/{client uuid}` (upsert by id, same content = no-op); deletes are soft (tombstones → 410
+  on a late write). Versioned kinds take `base_version` and answer 409 `{error, current}` on a stale edit.
+- Lock order in the store: plot → zone → task/trees (avoid deadlocks between edits and cascading deletes).
+- Frontend writes go through the outbox (`src/api/outbox.ts`, `entity.ts`: mutation defaults by key, one ordered scope),
+  persisted in IndexedDB (`src/app/persist.ts`). Forms use `useOutboxWrite`; a queued change counts as saved.
+- Backend tests share the dev DB: `dbtest.Tx` (rolled back, savepoint per statement); give test rows unique names.
+- Frontend tests: `src/test/fakeApi.ts` + `renderApp`; Leaflet needs `Browser.any3d = true` and stubbed client sizes.
