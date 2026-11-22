@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Tasks</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("tasks.html")</script>
+<main class="page">
+  <div class="row"><h1>Tasks</h1><span class="spacer"></span><button class="btn btn-primary" onclick="document.getElementById('new').open = true">＋ New task</button></div>
+  <div class="row" style="margin:.6rem 0" id="filters">
+    <button class="chip" data-f="all">All</button><button class="chip is-on" data-f="active">Open + in progress</button>
+    <button class="chip" data-f="done">Done</button><button class="chip" data-f="cancelled">Cancelled</button>
+    <span class="spacer"></span>
+    <select style="width:auto" id="plot-f"><option value="">All plots</option><option value="1">Plot 1</option><option value="2">Plot 2</option></select>
+  </div>
+
+  <details id="new" class="card">
+    <summary><b>New task</b></summary>
+    <label>Title</label><input placeholder="e.g. Mais ninhos">
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div><label>Kind</label><select><option>Sow</option><option>Plant</option><option>Water</option><option>Fertilize</option><option>Add nests</option><option>Improve path</option><option>Other</option></select></div>
+      <div><label>Due</label><input type="date"></div>
+    </div>
+    <label>Where</label><select><option>Zone Z9 · Mais ninhos</option><option>Plot 2 (whole plot)</option><option>Pick on map…</option></select>
+    <label>Description</label><textarea rows="2"></textarea>
+    <button class="btn btn-primary" style="margin-top:.6rem">Create</button>
+  </details>
+
+  <div class="card" style="margin-top:1rem">
+    <table class="stack">
+      <thead><tr><th>Task</th><th>Where</th><th>Kind</th><th>Status</th><th>Due</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+<script>
+  let filter = "active";
+  const LABEL = { open: "open", in_progress: "in progress", done: "done", cancelled: "cancelled" };
+  function render() {
+    const pf = document.getElementById("plot-f").value;
+    const rows = FOREST.tasks.filter(t =>
+      (filter === "all" || (filter === "active" ? isOpen(t) : t.status === filter)) &&
+      (!pf || tasksOfPlot(+pf).includes(t)));
+    document.getElementById("rows").innerHTML = rows.map(t => {
+      const where = t.zone ? `${t.zone} · ${zoneById(t.zone).label}` : `Plot ${t.plot} (whole plot)`;
+      const overdue = isOpen(t) && t.due && t.due < FOREST.today;
+      return `<tr class="${overdue ? "overdue" : ""}">
+        <td data-label="Task"><b>${t.title}</b></td><td data-label="Where">${where}</td><td data-label="Kind">${t.kind}</td>
+        <td data-label="Status"><span class="badge st-${t.status}">${LABEL[t.status]}</span></td>
+        <td data-label="Due">${fmt(t.due)}${overdue ? " ⚠ overdue" : ""}</td>
+        <td>${isOpen(t) ? '<button class="chip">✓ Done</button> <button class="chip">✕ Cancel</button>' : ""}</td></tr>`;
+    }).join("") || `<tr><td colspan="6" class="muted">No tasks.</td></tr>`;
+  }
+  document.querySelectorAll("#filters [data-f]").forEach(b => b.onclick = () => {
+    filter = b.dataset.f;
+    document.querySelectorAll("#filters [data-f]").forEach(x => x.classList.toggle("is-on", x === b));
+    render();
+  });
+  document.getElementById("plot-f").onchange = render;
+  render();
+</script>
+</body></html>

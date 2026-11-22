@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Zone detail</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("zone-detail.html")</script>
+<main class="page">
+  <p class="muted small"><a href="map.html">Map</a> › <span id="crumb"></span></p>
+  <div class="row"><h1 id="title"></h1><span class="badge" id="status"></span></div>
+  <p class="muted" id="sub"></p>
+
+  <div class="split">
+    <div>
+      <div class="card row">
+        <div><div class="big-number" id="dry"></div><div class="muted" id="dry-sub"></div></div>
+        <span class="spacer"></span>
+        <a class="btn btn-primary btn-big" id="water-now">💧 Watered today</a>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">Activity</h2>
+        <ul class="timeline" id="timeline"></ul>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">Trees by species</h2>
+        <table class="stack">
+          <thead><tr><th>Species</th><th>Alive</th><th>Dead</th><th></th></tr></thead>
+          <tbody id="trees"></tbody>
+        </table>
+        <p class="muted small" id="no-trees" hidden>No planted trees recorded here yet.</p>
+      </div>
+    </div>
+
+    <aside>
+      <div class="map" id="map"></div>
+      <p class="muted small" id="overlap"></p>
+      <div class="card" style="margin-top:.75rem">
+        <h3 style="margin-top:0">Open tasks</h3>
+        <div id="tasks"></div>
+        <button class="btn">＋ Add task</button>
+      </div>
+      <div class="card"><a class="btn" href="draw-zone.html">✎ Edit shape</a> <button class="btn">Archive zone</button></div>
+    </aside>
+  </div>
+</main>
+<script>
+  const z = zoneById(location.hash.slice(1)) || zoneById("Z3");
+  const st = zoneStatus(z), plot = FOREST.plots[z.plot - 1];
+  document.title = `Forest — ${z.id}`;
+  document.getElementById("crumb").textContent = `${plot.name} › ${z.id}`;
+  document.getElementById("title").textContent = `${z.id} · ${z.label}`;
+  const badge = document.getElementById("status");
+  badge.textContent = STATUS_LABEL[st]; badge.classList.add(`zone--${st}`);
+  document.getElementById("sub").textContent = `${plot.name} · ${z.kind} · ${areaHa(z.pts).toFixed(2)} ha`;
+
+  const lw = lastOf(z.id, "watering"), interval = intervalFor(FOREST.today);
+  document.getElementById("dry").textContent = lw ? `${daysBetween(lw, FOREST.today)} days` : "Never watered";
+  document.getElementById("dry").style.color = st === "needs-water" ? "" : "var(--moss)";
+  document.getElementById("dry-sub").textContent = lw ? `since last watered (${fmt(lw)}) · winter rule: every ${interval} d` : `winter rule: every ${interval} d`;
+  document.getElementById("water-now").href = `quick-log.html#${z.id},watering`;
+
+  const sp = ids => (ids || []).map(id => speciesById(id).common).join(" + ");
+  const ev = zoneEvents(z.id);
+  document.getElementById("timeline").innerHTML = ev.map(a => {
+    const q = a.zones[z.id];
+    const others = Object.keys(a.zones).filter(id => id !== z.id);
+    return `<li class="zone--${ACT[a.type].cls}"><b>${fmt(a.date)}</b> · ${ACT[a.type].label}${q ? ` ${q} ${a.unit}` : ""}` +
+      `${a.species ? ` <span class="muted small">— ${sp(a.species)}</span>` : ""}` +
+      `${others.length ? ` <span class="muted small">· with ${others.join(", ")}</span>` : ""}` +
+      `${a.notes ? `<br><span class="muted small">"${a.notes}"</span>` : ""}</li>`;
+  }).join("") || "<li>No activity yet.</li>";
+
+  const rows = FOREST.trees.filter(t => t.zone === z.id);
+  document.getElementById("no-trees").hidden = rows.length > 0;
+  document.getElementById("trees").innerHTML = rows.map(t => {
+    const s = speciesById(t.species);
+    return `<tr><td data-label="Species"><i>${s.sci}</i> — ${s.common}</td><td data-label="Alive">${t.alive}</td><td data-label="Dead" class="dead">${t.dead}</td>
+      <td><button class="chip mark-dead">✝ Mark 1 dead</button></td></tr>`;
+  }).join("");
+  document.querySelectorAll(".mark-dead").forEach(b => b.onclick = () => {
+    const tr = b.closest("tr"), a = tr.children[1], d = tr.children[2];
+    if (+a.textContent > 0) { a.textContent = +a.textContent - 1; d.textContent = +d.textContent + 1; }
+  });
+
+  const open = FOREST.tasks.filter(t => t.zone === z.id && isOpen(t));
+  document.getElementById("tasks").innerHTML = open.map(t => {
+    const overdue = t.due && t.due < FOREST.today;
+    return `<p>${overdue ? '<span class="badge st-open">overdue</span> ' : ""}${t.title} <span class="muted small">· due ${fmt(t.due)}</span></p>`;
+  }).join("") || '<p class="muted small">None.</p>';
+
+  const over = FOREST.zones.filter(o => o.id !== z.id && (o.pts.some(p => inside(p, z.pts)) || z.pts.some(p => inside(p, o.pts))));
+  document.getElementById("overlap").textContent = over.length ? `Overlaps ${over.map(o => o.id).join(", ")} — logging here doesn't update ${over.length > 1 ? "them" : "it"}.` : "";
+
+  renderMap(document.getElementById("map"), { highlight: z.id, layers: { tasks: false, trees: false }, viewBox: bbox(z.pts, 60), scaleBar: false });
+</script>
+</body></html>

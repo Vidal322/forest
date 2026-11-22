@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Plot stats</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("plot-stats.html")</script>
+<main class="page">
+  <h1>Plot stats</h1>
+  <p class="muted">Areas are measured from the drawn outlines × scale (0.48 m/unit); the hectares you wrote on the old map are shown as "label".</p>
+  <div class="grid wide" id="plots"></div>
+</main>
+<script>
+  const uniq = a => [...new Set(a)];
+  document.getElementById("plots").innerHTML = FOREST.plots.map(p => {
+    const zones = zonesOfPlot(p.id), zids = zones.map(z => z.id);
+    const cult = zones.filter(z => z.kind === "cultivation");
+    const trees = FOREST.trees.filter(t => zids.includes(t.zone));
+    const alive = trees.reduce((n, t) => n + t.alive, 0), dead = trees.reduce((n, t) => n + t.dead, 0);
+    // species_count = species of alive trees ∪ species sown/planted in the plot's zones
+    const acts = FOREST.activities.filter(a => Object.keys(a.zones).some(id => zids.includes(id)));
+    const species = uniq([...trees.filter(t => t.alive).map(t => t.species), ...acts.flatMap(a => a.species || [])]);
+    // Shannon diversity over alive trees
+    const bySp = {}; trees.forEach(t => bySp[t.species] = (bySp[t.species] || 0) + t.alive);
+    const H = -Object.values(bySp).reduce((h, n) => h + (n / alive) * Math.log(n / alive), 0);
+    const watered = cult.filter(z => { const w = lastOf(z.id, "watering"); return w && daysBetween(w, FOREST.today) <= 7; });
+    const coverage = Math.round(watered.length / cult.length * 100);
+    const lastW = acts.filter(a => a.type === "watering").map(a => a.date).sort().pop();
+    const openTasks = tasksOfPlot(p.id).filter(isOpen).length;
+    const dry = cult.filter(z => zoneStatus(z) === "needs-water").map(z => z.id);
+    // activities per week, last 8 weeks (oldest → newest)
+    const weeks = [...Array(8)].map((_, i) => {
+      const end = addDays(FOREST.today, -7 * (7 - i)), start = addDays(end, -6);
+      return acts.filter(a => a.date >= start && a.date <= end).length;
+    });
+    const max = Math.max(...weeks, 1);
+    const bars = weeks.map((v, i) => `<rect x="${i * 30 + 4}" y="${60 - v / max * 55}" width="22" height="${v / max * 55}" fill="var(--moss)" rx="2"><title>${v} activities</title></rect>`).join("");
+    const recent = [...acts].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4).map(a =>
+      `<li>${fmt(a.date)} · ${ACT[a.type].label} ${Object.keys(a.zones).filter(id => zids.includes(id)).join(", ")}</li>`).join("");
+    return `<div class="card">
+      <h2 style="margin-top:0">${p.name}</h2>
+      <div class="stats">
+        <div class="stat"><b>${areaHa(p.pts).toFixed(2)} ha</b><span class="muted small">measured · label ${p.declaredHa} ha</span></div>
+        <div class="stat"><b>${zones.length}</b><span class="muted small">zones (${cult.length} cultivation)</span></div>
+        <div class="stat"><b>${alive}</b><span class="muted small">trees alive · ${dead} dead</span></div>
+        <div class="stat"><b>${species.length}</b><span class="muted small">species · H′ ${H.toFixed(2)}</span></div>
+        <div class="stat"><b>${fmt(lastW)}</b><span class="muted small">last watered</span></div>
+        <div class="stat"><b>${openTasks}</b><span class="muted small"><a href="tasks.html">open tasks</a></span></div>
+      </div>
+      <h3>Watering coverage (last 7 days)</h3>
+      <div class="bar" style="--c:var(--watered)"><i style="width:${coverage}%"></i></div>
+      <p class="muted small">${watered.length} of ${cult.length} cultivation zones (${coverage}%)${dry.length ? ` · needs water: ${dry.join(", ")}` : ""}</p>
+      <h3>Activity per week (last 8 weeks)</h3>
+      <svg viewBox="0 0 244 62" style="width:100%;height:70px">${bars}</svg>
+      <h3>Recent</h3>
+      <ul class="small">${recent}</ul>
+    </div>`;
+  }).join("");
+</script>
+</body></html>

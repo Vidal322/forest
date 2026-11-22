@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — mockups</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("index.html")</script>
+<main class="page">
+  <h1>Forest — UI mockups</h1>
+  <p class="muted">Static mockups for validation. Sample data only; the background is a generated fake aerial image, not the real field. All positions are local image units — no GPS.</p>
+
+  <div class="card"><h2 style="margin-top:0">Colour legend (same on every screen)</h2><div id="legend"></div></div>
+
+  <h2>Screens</h2>
+  <div class="grid">
+    <a class="card" href="map.html"><h3>Map</h3><p class="muted">Field photo with plots, zones coloured by status, task pins, layer toggles and "state as of" date.</p></a>
+    <a class="card" href="quick-log.html"><h3>Quick log ★</h3><p class="muted">The everyday flow: tap zones → Planted / Watered / Sowed → Save. 3 taps.</p></a>
+    <a class="card" href="draw-zone.html"><h3>Draw zone</h3><p class="muted">Click vertices to outline a zone, live area in ha, choose kind and plot.</p></a>
+    <a class="card" href="zone-detail.html"><h3>Zone detail</h3><p class="muted">Last watered, activity timeline, trees by species, open tasks.</p></a>
+    <a class="card" href="tasks.html"><h3>Tasks</h3><p class="muted">"Falta semear", "Melhorar caminho"… status, due dates, overdue highlight.</p></a>
+    <a class="card" href="species.html"><h3>Species</h3><p class="muted">Catalog of species with how many were planted.</p></a>
+    <a class="card" href="plot-stats.html"><h3>Plot stats</h3><p class="muted">Area, trees, species diversity, watering coverage, recent activity.</p></a>
+    <a class="card" href="field-setup.html"><h3>Field setup</h3><p class="muted">Upload the photo (metadata stripped), set the scale → fake coordinate frame.</p></a>
+  </div>
+</main>
+<script>document.getElementById("legend").innerHTML = legendHTML();</script>
+</body></html>

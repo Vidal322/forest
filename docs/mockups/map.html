@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Map</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("map.html")</script>
+<main class="page">
+  <div class="row"><h1>Quinta — field map</h1><span class="spacer"></span><a class="btn" href="draw-zone.html">＋ Draw zone</a></div>
+  <p class="muted">Tap a zone to open it, a red pin to see its task. Positions are local image units (0–1000 × 0–700), 1 unit = 0.48 m.</p>
+  <div class="split">
+    <div>
+      <div class="map pannable" id="map"></div>
+      <div class="card" style="margin-top:.75rem" id="legend"></div>
+    </div>
+    <aside>
+      <div class="card">
+        <h3 style="margin-top:0">Layers</h3>
+        <label class="check"><input type="checkbox" data-layer="plots" checked> Plots</label>
+        <label class="check"><input type="checkbox" data-layer="zones" checked> Zones</label>
+        <label class="check"><input type="checkbox" data-layer="tasks" checked> Tasks</label>
+        <label class="check"><input type="checkbox" data-layer="trees"> Trees</label>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Show state as of</h3>
+        <input type="date" id="asof" value="2026-11-22" min="2026-09-23" max="2026-11-22">
+        <input type="range" id="slider" min="0" max="60" value="60" style="margin-top:.5rem">
+        <p class="muted small" id="asof-hint"></p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Needs attention</h3>
+        <div id="attention"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+<a class="fab" href="quick-log.html">＋ Log activity</a>
+<script>
+  const svg = renderMap(document.getElementById("map"), {
+    layers: { trees: false },
+    onZoneClick: z => location.href = "zone-detail.html#" + z.id,
+  });
+  document.getElementById("legend").innerHTML = legendHTML();
+  document.querySelectorAll("[data-layer]").forEach(cb =>
+    cb.addEventListener("change", () => setLayer(svg, cb.dataset.layer, cb.checked)));
+
+  const slider = document.getElementById("slider"), asof = document.getElementById("asof"), hint = document.getElementById("asof-hint");
+  function show(date) {
+    colourZones(svg, date);
+    const back = daysBetween(date, FOREST.today);
+    hint.textContent = back
+      ? `${fmt(date)} (${back} days ago) — colours recomputed from the activity log and that season's watering rule (every ${intervalFor(date)} d).`
+      : `Today. Winter rule: water every ${intervalFor(date)} days. Drag back to see the field earlier.`;
+    const dry = FOREST.zones.filter(z => zoneStatus(z, date) === "needs-water").map(z => z.id);
+    const overdue = FOREST.tasks.filter(t => isOpen(t) && t.due && t.due < date);
+    document.getElementById("attention").innerHTML =
+      `<p><span class="badge zone--needs-water">${dry.length}</span> zones need water${dry.length ? ` (${dry.join(", ")})` : ""}</p>` +
+      `<p><span class="badge st-open">${overdue.length}</span> overdue task${overdue.length === 1 ? "" : "s"}${overdue.length ? ` — <a href="tasks.html">${overdue.map(t => t.title).join(", ")}</a>` : ""}</p>`;
+  }
+  slider.addEventListener("input", () => { asof.value = addDays(FOREST.today, slider.value - 60); show(asof.value); });
+  asof.addEventListener("change", () => { slider.value = 60 - daysBetween(asof.value, FOREST.today); show(asof.value); });
+  show(FOREST.today);
+</script>
+</body></html>

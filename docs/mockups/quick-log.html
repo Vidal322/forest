@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Quick log</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("quick-log.html")</script>
+<main class="page">
+  <h1>Log activity</h1>
+  <div class="taps"><span>① tap zones</span><span>② tap Watered</span><span>③ Save</span></div>
+  <div class="split" style="margin-top:.75rem">
+    <div>
+      <div class="map pannable" id="map"></div>
+      <div class="note" id="chooser" hidden></div>
+      <div class="row" style="margin-top:.5rem">
+        <button class="chip" id="repeat"></button>
+        <button class="chip" id="all-dry">Select all "needs water"</button>
+        <button class="chip" id="clear">Clear</button>
+      </div>
+    </div>
+    <aside class="card">
+      <p style="margin-top:0"><b id="count">0 zones selected</b><br><span class="muted small" id="names">Tap zones on the map</span></p>
+
+      <div class="actions3">
+        <button class="act zone--planted" data-act="planting"><span class="ico">🌱</span>Planted</button>
+        <button class="act zone--watered" data-act="watering"><span class="ico">💧</span>Watered</button>
+        <button class="act zone--sown"    data-act="sowing"><span class="ico">🕳️</span>Sowed</button>
+      </div>
+      <details style="margin-top:.4rem"><summary class="small">More… (Fertilized, Other)</summary>
+        <div class="row" style="margin-top:.4rem">
+          <button class="act zone--path" data-act="fertilizing" style="min-height:48px;flex:1">🧪 Fertilized</button>
+          <button class="act zone--path" data-act="other" style="min-height:48px;flex:1">• Other</button>
+        </div>
+      </details>
+
+      <div class="row" style="margin-top:.8rem">
+        <label class="chip is-on" style="margin:0;font-weight:400">📅 <span id="date-label">Today · 22 nov</span>
+          <input type="date" id="date" value="2026-11-22" max="2026-11-22" style="width:1.9rem;border:none;background:transparent;color:inherit;padding:0 0 0 .3rem;overflow:hidden" title="Change date">
+        </label>
+      </div>
+
+      <div id="qty" hidden>
+        <label id="qty-label">Quantity</label>
+        <div class="row"><input type="number" id="qty-all" placeholder="same for every zone" style="flex:1">
+          <button class="chip" id="per-zone-btn" type="button">Per zone…</button></div>
+        <div id="per-zone" hidden></div>
+      </div>
+      <div id="species" hidden>
+        <label>Species / seed mix</label>
+        <div class="row" id="species-chips"></div>
+        <p class="muted small" style="margin:.3rem 0 0">Tap to add; optional count per species.</p>
+      </div>
+      <details style="margin-top:.6rem"><summary class="small">Add notes</summary>
+        <textarea rows="2" placeholder="e.g. adubado também"></textarea>
+      </details>
+
+      <button class="btn btn-primary btn-big btn-block" id="save" style="margin-top:1rem" disabled>Save</button>
+      <p class="muted small" id="task-hint"></p>
+    </aside>
+  </div>
+</main>
+<script>
+  const selected = new Set();
+  let act = null;
+  const last = FOREST.activities.filter(a => a.type === "watering").sort((a, b) => b.date.localeCompare(a.date))[0];
+  const lastZones = Object.keys(last.zones);
+
+  const svg = renderMap(document.getElementById("map"), {
+    layers: { tasks: false, trees: false },
+    onZoneClick: (z, poly, pt) => {
+      // Zones may overlap: if the tap hits several, ask which one.
+      const hits = FOREST.zones.filter(o => inside(pt, o.pts));
+      if (hits.length > 1) return choose(hits);
+      toggle(z.id);
+    },
+  });
+  function choose(hits) {
+    const c = document.getElementById("chooser");
+    c.hidden = false;
+    c.innerHTML = `<b>Overlapping zones here — which one?</b><div class="row" style="margin-top:.4rem">` +
+      hits.map(h => `<button class="chip" data-z="${h.id}">${h.id} · ${h.label}</button>`).join("") +
+      `<button class="chip" data-z="*">Both</button></div>`;
+    c.querySelectorAll("[data-z]").forEach(b => b.onclick = () => {
+      (b.dataset.z === "*" ? hits.map(h => h.id) : [b.dataset.z]).forEach(id => toggle(id, true));
+      c.hidden = true;
+    });
+  }
+  function toggle(id, force) {
+    const on = force ?? !selected.has(id);
+    on ? selected.add(id) : selected.delete(id);
+    svg.querySelector(`polygon[data-id="${id}"]`).classList.toggle("is-selected", on);
+    update();
+  }
+  function update() {
+    document.getElementById("count").textContent = `${selected.size} zone${selected.size === 1 ? "" : "s"} selected`;
+    document.getElementById("names").textContent = [...selected].map(id => `${id} ${zoneById(id).label}`).join(" · ") || "Tap zones on the map";
+    const save = document.getElementById("save");
+    save.disabled = !(selected.size && act);
+    save.textContent = act && selected.size ? `Save — ${ACT[act].label} ${selected.size} zone${selected.size === 1 ? "" : "s"}` : "Save";
+    // per-zone quantity inputs
+    document.getElementById("per-zone").innerHTML = [...selected].map(id =>
+      `<div class="row" style="margin-top:.3rem"><span style="width:3.5rem">${id}</span><input type="number" placeholder="${zoneById(id).label}" style="flex:1"></div>`).join("");
+    // suggest closing matching open tasks
+    const kindFor = { sowing: "Sow", watering: "Water", fertilizing: "Fertilize", planting: "Plant" };
+    const match = FOREST.tasks.filter(t => isOpen(t) && selected.has(t.zone) && (t.kind === kindFor[act] || (act === "fertilizing" && t.title.includes("adubar"))));
+    document.getElementById("task-hint").innerHTML = match.length
+      ? `<label class="check"><input type="checkbox" checked> Also close task${match.length > 1 ? "s" : ""}: ${match.map(t => `"${t.title}"`).join(", ")}</label>` : "";
+  }
+  function setAct(a) {
+    act = a;
+    document.querySelectorAll(".act").forEach(x => x.classList.toggle("is-on", x.dataset.act === a));
+    document.getElementById("qty").hidden = !(a === "sowing" || a === "planting");
+    document.getElementById("qty-label").textContent = a === "sowing" ? "Covas (holes) per zone" : "Trees per zone";
+    document.getElementById("species").hidden = !(a === "sowing" || a === "planting");
+    update();
+  }
+  document.querySelectorAll(".act").forEach(b => b.addEventListener("click", () => setAct(b.dataset.act)));
+  document.getElementById("per-zone-btn").onclick = () => {
+    const pz = document.getElementById("per-zone"); pz.hidden = !pz.hidden;
+    document.getElementById("qty-all").disabled = !pz.hidden;
+  };
+  document.getElementById("species-chips").innerHTML = FOREST.species.slice(0, 5).map(s =>
+    `<span class="chip sp" data-s="${s.id}" style="cursor:pointer">${s.common}<input type="number" placeholder="#" hidden style="width:3.2rem;margin-left:.3rem;padding:.1rem .3rem"></span>`).join("");
+  document.querySelectorAll(".sp").forEach(c => c.addEventListener("click", e => {
+    if (e.target.tagName === "INPUT") return;
+    c.classList.toggle("is-on"); c.querySelector("input").hidden = !c.classList.contains("is-on");
+  }));
+
+  const repeat = document.getElementById("repeat");
+  repeat.textContent = `↻ Repeat last: Watered ${lastZones.join(", ")}`;
+  repeat.onclick = () => { [...selected].forEach(id => toggle(id, false)); lastZones.forEach(id => toggle(id, true)); setAct("watering"); };
+  document.getElementById("all-dry").onclick = () => FOREST.zones.filter(z => zoneStatus(z) === "needs-water").forEach(z => toggle(z.id, true));
+  document.getElementById("clear").onclick = () => [...selected].forEach(id => toggle(id, false));
+  document.getElementById("date").addEventListener("change", e => {
+    const v = e.target.value;
+    document.getElementById("date-label").textContent = v === FOREST.today ? "Today · 22 nov" : fmt(v);
+  });
+  document.getElementById("save").onclick = () => alert(`Mockup: would save "${ACT[act].label}" on ${[...selected].join(", ")} (queued offline if no signal)`);
+
+  // Deep link from zone detail: quick-log.html#Z3,watering
+  const [pre, preAct] = decodeURIComponent(location.hash.slice(1)).split(",");
+  if (pre && zoneById(pre)) toggle(pre, true);
+  if (preAct && ACT[preAct]) setAct(preAct);
+</script>
+</body></html>

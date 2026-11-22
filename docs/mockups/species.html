@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Species</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("species.html")</script>
+<main class="page">
+  <h1>Species catalog</h1>
+  <p class="muted">Picked when logging a planting or a sowing (seed mix).</p>
+  <div class="split">
+    <div class="card">
+      <input placeholder="🔍 Search species" style="margin-bottom:.6rem">
+      <table class="stack">
+        <thead><tr><th>Scientific name</th><th>Common name</th><th>Trees alive</th><th>Dead</th><th>Planted in</th><th>Sown in</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <aside class="card">
+      <h3 style="margin-top:0">Add species</h3>
+      <label>Scientific name</label><input placeholder="Betula alba">
+      <label>Common name</label><input placeholder="vidoeiro">
+      <label>Notes</label><textarea rows="2" placeholder="e.g. likes wet soil"></textarea>
+      <button class="btn btn-primary" style="margin-top:.6rem">Add</button>
+    </aside>
+  </div>
+</main>
+<script>
+  const uniq = a => [...new Set(a)];
+  document.getElementById("rows").innerHTML = FOREST.species.map(s => {
+    const t = FOREST.trees.filter(x => x.species === s.id);
+    const alive = t.reduce((n, x) => n + x.alive, 0), dead = t.reduce((n, x) => n + x.dead, 0);
+    const sown = uniq(FOREST.activities.filter(a => a.type === "sowing" && (a.species || []).includes(s.id)).flatMap(a => Object.keys(a.zones)));
+    return `<tr><td data-label="Scientific"><i>${s.sci}</i></td><td data-label="Common">${s.common}</td>
+      <td data-label="Alive">${alive}</td><td data-label="Dead">${dead}</td>
+      <td data-label="Planted in">${uniq(t.map(x => x.zone)).join(", ") || "—"}</td><td data-label="Sown in">${sown.join(", ") || "—"}</td></tr>`;
+  }).join("");
+</script>
+</body></html>

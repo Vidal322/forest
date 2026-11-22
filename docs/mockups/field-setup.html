@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Field setup</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("field-setup.html")</script>
+<main class="page">
+  <h1>Field setup</h1>
+  <div class="stepper"><span class="is-on">1 · Upload photo</span><span class="is-on">2 · Set scale</span><span>3 · Confirm</span></div>
+
+  <div class="split">
+    <div>
+      <div class="card">
+        <h2 style="margin-top:0">1 · Upload the field photo</h2>
+        <div class="dropzone">📷 Drop a screenshot / satellite image here<br><span class="muted small">PNG or JPG · cropped to your field</span></div>
+        <div class="note privacy">🔒 On upload we <b>strip all EXIF / GPS metadata</b> and keep only the pixels. Crop out any on-screen coordinates, elevation or place names before uploading.</div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0">2 · Set the scale</h2>
+        <p class="muted">Drag the two white handles onto the ends of something whose length you know (a path, a wall, the map's own scale bar).</p>
+        <div class="map" id="map"></div>
+        <div class="row" style="margin-top:.6rem">
+          <div style="flex:1"><label>Known distance (m)</label><input type="number" id="metres" value="150" min="1"></div>
+          <div style="flex:1"><label>Line length</label><input id="units" disabled></div>
+        </div>
+        <p><b id="result"></b></p>
+      </div>
+    </div>
+
+    <aside class="card">
+      <h2 style="margin-top:0">3 · What we store</h2>
+      <table>
+        <tr><td>Image</td><td>pixels only, 1000 × 700</td></tr>
+        <tr><td>Origin</td><td>(0, 0) = top-left corner</td></tr>
+        <tr><td>Axes</td><td>x → right, y ↓ down</td></tr>
+        <tr><td>Scale</td><td id="scale-row"></td></tr>
+        <tr><td>Shapes</td><td>polygons in image units</td></tr>
+        <tr><td>Latitude / longitude</td><td><b>never stored</b></td></tr>
+      </table>
+      <div class="note privacy">Nobody can place this field on a real map from the data: all positions are relative to the photo.</div>
+      <button class="btn btn-primary btn-block" style="margin-top:.6rem" id="save">Save field</button>
+    </aside>
+  </div>
+
+  <div class="grid wide" style="margin-top:1rem">
+    <div class="card">
+      <h2 style="margin-top:0">Watering rules by season</h2>
+      <p class="muted small">A zone "needs water" when nothing was watered, sown or planted there for longer than the rule in effect today. One month range per rule; ranges may wrap past December.</p>
+      <table>
+        <thead><tr><th>Season</th><th>Months</th><th>Water every</th></tr></thead>
+        <tbody id="rules"></tbody>
+        <tr><td colspan="2"><i>Any other month</i></td><td><input type="number" value="7" style="width:4.5rem"> days</td></tr>
+      </table>
+      <button class="btn" style="margin-top:.6rem">＋ Add rule</button>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Newer photo? Align it</h2>
+      <p class="muted small">Upload a new screenshot and click the same landmarks (rock, path bend, building) on the old and new photo — at least 3, ideally 4+. All zones and plots carry over; old photos stay available.</p>
+      <table>
+        <thead><tr><th>Photo</th><th>Uploaded</th><th>Fit</th><th></th></tr></thead>
+        <tr><td>Satellite · Jun 2026</td><td>22 nov</td><td>reference</td><td><span class="badge st-done">current</span></td></tr>
+      </table>
+      <button class="btn" style="margin-top:.6rem">📷 Upload & align new photo</button>
+    </div>
+  </div>
+</main>
+<script>
+  const M = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  document.getElementById("rules").innerHTML = FOREST.wateringRules.map(r =>
+    `<tr><td>${r.name}</td><td>${r.from === r.to ? M[r.from] : `${M[r.from]} – ${M[r.to]}`}</td><td><input type="number" value="${r.days}" style="width:4.5rem"> days</td></tr>`).join("");
+
+  const svg = renderMap(document.getElementById("map"), { layers: { zones: false, tasks: false, plots: false, trees: false }, scaleBar: false });
+  const ends = [[180, 640], [492, 620]];
+  const line = el("line", { stroke: "#fff", "stroke-width": 4, "stroke-dasharray": "10 6" }, svg);
+  const hs = ends.map(() => el("circle", { class: "handle", r: 11, style: "cursor:grab" }, svg));
+  let drag = null;
+  hs.forEach((h, i) => h.addEventListener("pointerdown", e => { drag = i; h.setPointerCapture(e.pointerId); }));
+  svg.addEventListener("pointermove", e => { if (drag !== null) { ends[drag] = svgPoint(svg, e); calc(); } });
+  svg.addEventListener("pointerup", () => drag = null);
+  function calc() {
+    line.setAttribute("x1", ends[0][0]); line.setAttribute("y1", ends[0][1]);
+    line.setAttribute("x2", ends[1][0]); line.setAttribute("y2", ends[1][1]);
+    hs.forEach((h, i) => { h.setAttribute("cx", ends[i][0]); h.setAttribute("cy", ends[i][1]); });
+    const units = Math.hypot(ends[1][0] - ends[0][0], ends[1][1] - ends[0][1]);
+    const m = +document.getElementById("metres").value;
+    document.getElementById("units").value = `${units.toFixed(0)} units`;
+    const ok = m > 0 && units > 5;
+    document.getElementById("save").disabled = !ok;
+    if (!ok) {
+      document.getElementById("result").textContent = "Uncalibrated — enter a distance above 0 and draw a longer line.";
+      document.getElementById("scale-row").textContent = "uncalibrated";
+      return;
+    }
+    const mpu = m / units;
+    document.getElementById("result").textContent = `1 unit = ${mpu.toFixed(3)} m  →  whole image ≈ ${(1000 * mpu).toFixed(0)} × ${(700 * mpu).toFixed(0)} m`;
+    document.getElementById("scale-row").textContent = `${mpu.toFixed(3)} m per unit`;
+  }
+  document.getElementById("metres").addEventListener("input", calc); calc();
+</script>
+</body></html>

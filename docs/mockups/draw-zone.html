@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest — Draw zone</title><link rel="stylesheet" href="style.css"><script src="map.js"></script></head>
+<body>
+<script>renderNav("draw-zone.html")</script>
+<main class="page">
+  <h1>Draw a zone</h1>
+  <p class="muted">Tap the map to place corners. Double-click (or "Finish") to close the shape. Zones may overlap other zones, but must sit inside one plot.</p>
+  <div class="split">
+    <div>
+      <div class="map pannable" id="map" style="cursor:crosshair"></div>
+      <div class="row" style="margin-top:.5rem">
+        <button id="undo">↶ Undo corner</button><button id="clear">Clear</button><button id="finish" class="btn-primary">✓ Finish</button>
+        <span class="spacer"></span><b id="area">0 corners</b>
+      </div>
+      <div class="note warn" id="warn" hidden></div>
+    </div>
+    <aside class="card">
+      <label>Label</label><input value="Nova faixa de sementeira">
+      <label>Kind</label>
+      <select><option>Cultivation (plant / sow / water)</option><option>Path</option><option>Other</option></select>
+      <label>Parent plot</label>
+      <select id="plot"><option value="1">Plot 1</option><option value="2">Plot 2</option></select>
+      <p class="muted small" id="plot-hint">Detected automatically from where you draw.</p>
+      <label>Notes</label><textarea rows="2"></textarea>
+      <label class="check"><input type="checkbox"> Also create a task for this zone</label>
+      <div class="row" style="margin-top:1rem">
+        <a class="btn" href="map.html">Cancel</a><span class="spacer"></span>
+        <button class="btn btn-primary" id="save">Save zone</button>
+      </div>
+    </aside>
+  </div>
+</main>
+<script>
+  const svg = renderMap(document.getElementById("map"), { layers: { tasks: false, trees: false } });
+  svg.querySelectorAll(".zone").forEach(z => z.style.pointerEvents = "none");
+  let pts = [[610, 470], [690, 455], [705, 560], [620, 590]];  // pre-filled example
+  let closed = false;
+  const draft = el("polygon", { class: "draft" }, svg);
+  const handles = el("g", {}, svg);
+  function draw() {
+    draft.setAttribute("points", pts.join(" "));
+    handles.innerHTML = "";
+    pts.forEach(([x, y]) => el("circle", { class: "handle", cx: x, cy: y, r: 6 }, handles));
+    const plot = FOREST.plots.find(p => pts.length && pts.every(pt => inside(pt, p.pts)));
+    const ok = !pts.length || !!plot;
+    draft.classList.toggle("is-bad", !ok);
+    const warn = document.getElementById("warn");
+    warn.hidden = ok;
+    warn.textContent = "This shape isn't inside a single plot. Move the corners so the whole zone is in one plot.";
+    if (plot) document.getElementById("plot").value = plot.id;
+    document.getElementById("save").disabled = !ok || pts.length < 3;
+    document.getElementById("area").textContent = pts.length < 3
+      ? `${pts.length} corners` : `${pts.length} corners · ${areaHa(pts).toFixed(2)} ha${closed ? " · closed" : ""}`;
+  }
+  svg.addEventListener("click", e => {
+    if (closed || e.detail > 1) return;        // second click of a double-click is ignored
+    pts.push(svgPoint(svg, e)); draw();
+  });
+  svg.addEventListener("dblclick", () => { closed = true; draw(); });
+  document.getElementById("finish").onclick = () => { closed = true; draw(); };
+  document.getElementById("undo").onclick = () => { closed = false; pts.pop(); draw(); };
+  document.getElementById("clear").onclick = () => { closed = false; pts = []; draw(); };
+  document.getElementById("save").onclick = () => alert("Mockup: zone saved");
+  draw();
+</script>
+</body></html>
