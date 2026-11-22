@@ -431,8 +431,8 @@ erDiagram
 | 5 | Total covas sown in Plot 1 during September | Yes | Sum of `activity_zone.quantity` (unit holes) for sowing activities in that date range and in zones of that plot |
 | 6 | Everything that happened in a zone, newest first | Yes | `activity_zone` → `activity` ordered by `performed_on` |
 | 7 | Open tasks for Plot 1, including tasks on its zones, by due date | Yes | `task` where `plot_id` = P or `zone.plot_id` = P, status open/in progress |
-| 8 | Which zone(s) a given tree stands in | Yes, if it has a position | `ST_Contains` (may be several, zones overlap); without a position it falls back to the planting activity's zones |
-| 9 | Trees that came from the 28 Sep planting | Yes | `tree.planting_activity_id` |
+| 8 | Which zone(s) a given tree stands in | Yes | Counted trees store their zone (`tree.zone_id`, migration 00012); a tree with a measured position: `ST_Contains` (may be several, zones overlap) |
+| 9 | Trees that came from the 28 Sep planting | Model only | `tree.planting_activity_id`; the app counts trees per zone and species and does not link counts to a planting yet |
 | 10 | Zones that have never been sown | Yes | Zones of kind cultivation with no sowing activity |
 | 11 | Parts of a plot not covered by any zone yet | Yes | `ST_Difference(plot.geom, COALESCE(ST_Union(zone.geom), 'POLYGON EMPTY'::geometry))` over live zones |
 | 12 | Zones that need water right now (field-wide) | Yes | `zone_status.needs_water` (already false/NULL for non-cultivation zones) |

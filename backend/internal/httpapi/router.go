@@ -4,6 +4,7 @@ package httpapi
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -17,6 +18,8 @@ type Deps struct {
 	Log    *slog.Logger
 	Store  *store.Store // nil only in tests that don't touch the database
 	Photos *photo.Dir   // where field photos are kept
+	// StaticDir, if set, is the built frontend (frontend/dist), served for every non-API path.
+	StaticDir string
 }
 
 // NewRouter returns the root handler with shared middleware and all routes.
@@ -27,9 +30,20 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(recoverer(d.Log)) // inside the logger, so panics are logged as 500s
 	r.Use(secureHeaders)
 
-	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
+	notFound := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
 	})
+	r.NotFound(notFound)
+	if d.StaticDir != "" {
+		app := staticApp(d.StaticDir)
+		r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+			if strings.HasPrefix(req.URL.Path, "/api/") {
+				notFound(w, req)
+				return
+			}
+			app.ServeHTTP(w, req)
+		})
+	}
 	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed for this endpoint")
 	})

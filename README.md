@@ -41,6 +41,28 @@ Checks before committing: `make check` (backend: lint + tests against the dev da
 transaction) and `pnpm check` (frontend: lint, types, tests). `pnpm build` produces the installable app in
 `frontend/dist` (service worker included; offline mode needs https or localhost).
 
+## Using it on your phone in the field
+
+**There is no login.** Anyone who can reach the API can read and change everything, so never expose it to the
+internet as-is. Offline mode also needs HTTPS (browsers only install service workers on secure origins), so
+`pnpm dev:lan` over plain http works on a phone but not offline.
+
+The simplest setup is one machine (a home server, a small VPS, a Raspberry Pi):
+
+1. Build the app and let the API serve it from the same address:
+   ```sh
+   cd frontend && pnpm build
+   cd ../backend && FOREST_STATIC_DIR=../frontend/dist make run
+   ```
+2. Put HTTPS and access control in front of `127.0.0.1:8080`, for example
+   - **Tailscale** (private, nothing public): `tailscale serve --bg 8080`, then open the `https://<machine>.<tailnet>.ts.net`
+     address on the phone (with the Tailscale app on), or
+   - **Caddy** with a password: `reverse_proxy 127.0.0.1:8080` plus `basic_auth` in a site block for your domain.
+3. Open the address on the phone and use *Add to Home Screen*. From then on it opens without signal; changes made
+   offline are sent when the connection comes back.
+
+Back up the database (`pg_dump`) and `backend/data/photos` — together they are the whole field record.
+
 ## Design
 
 - `docs/data-model.md` — the schema (source of truth) and the reasons behind it.

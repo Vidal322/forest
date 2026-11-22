@@ -59,7 +59,7 @@ func run() error {
 	}
 	log.Info("listening", "addr", ln.Addr().String())
 
-	handler := httpapi.NewRouter(httpapi.Deps{Log: log, Store: store.New(pool), Photos: photos})
+	handler := httpapi.NewRouter(httpapi.Deps{Log: log, Store: store.New(pool), Photos: photos, StaticDir: cfg.StaticDir})
 	// After the first signal, stop catching signals so a second Ctrl-C kills the process.
 	go func() { <-ctx.Done(); stop() }()
 	return serve(ctx, ln, handler, cfg.ShutdownTimeout, log)

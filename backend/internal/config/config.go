@@ -17,6 +17,7 @@ type Config struct {
 	ShutdownTimeout time.Duration // FOREST_SHUTDOWN_TIMEOUT, default 10s
 	DatabaseURL     string        // DATABASE_URL, required
 	DataDir         string        // FOREST_DATA_DIR, default "data": uploaded photos live in <dir>/photos
+	StaticDir       string        // FOREST_STATIC_DIR: the built frontend to serve (optional)
 }
 
 // Load reads the configuration from the environment.
@@ -34,6 +35,7 @@ func load(getenv func(string) string) (Config, error) {
 	if v := getenv("FOREST_DATA_DIR"); v != "" {
 		cfg.DataDir = v
 	}
+	cfg.StaticDir = getenv("FOREST_STATIC_DIR")
 
 	if v := getenv("FOREST_HTTP_ADDR"); v != "" {
 		cfg.HTTPAddr = v
