@@ -1,0 +1,13 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - noctx
+    - sloglint
+  exclusions:
+    rules:
+      # tests may use the short helpers (http.Get, net.Listen, httptest.NewRequest)
+      - path: _test\.go
+        linters: [noctx]
