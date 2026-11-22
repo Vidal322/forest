@@ -360,7 +360,7 @@ erDiagram
 - Every activity has ≥ 1 zone. A foreign key can't enforce that, so the API does (the activity and its join rows are written in one transaction).
 - A zone must lie inside its plot: checked by the API with `ST_Within(zone.geom, ST_Buffer(plot.geom, 1))` (1 unit tolerance). The same check applies to `tree.position` vs its plot. Cross-table CHECKs aren't possible in PostgreSQL.
 - Zones **may overlap** (e.g. re-sowing part of an old area); no exclusion constraint. Each zone belongs to exactly one plot, which is stored, not inferred from geometry.
-- Unique names ignore soft-deleted rows: partial unique indexes `plot (field_id, name) WHERE deleted_at IS NULL` and `species (lower(scientific_name)) WHERE deleted_at IS NULL` (case-insensitive).
+- Unique names ignore soft-deleted rows: partial unique indexes `plot (field_id, lower(name)) WHERE deleted_at IS NULL` and `species (lower(scientific_name)) WHERE deleted_at IS NULL` (both case-insensitive).
 - Geometry columns also `CHECK (ST_SRID(geom) = 0 AND NOT ST_IsEmpty(geom))` — `geometry(…, 0)` alone does not enforce SRID 0. The store writes `ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON($1)), 0)`.
 - Numeric measurements have an upper bound (e.g. `< 100000`), which also rejects `NaN`/`Infinity`.
 - `field`: `CHECK ((calibration_line IS NULL) = (calibration_length_m IS NULL))`, `CHECK (calibration_length_m > 0 AND ST_Length(calibration_line) > 0)`, `CHECK (default_water_interval_days > 0)`. `metres_per_unit` is `GENERATED ALWAYS AS (calibration_length_m / ST_Length(calibration_line)::numeric) STORED`.

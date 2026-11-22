@@ -99,6 +99,8 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, log *slog.Logger, e
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", ve.Field, ve.Message)
 	case errors.As(err, &ce):
 		writeFieldError(w, http.StatusConflict, "duplicate", ce.Field, ce.Message)
+	case errors.Is(err, store.ErrNoField):
+		writeError(w, http.StatusConflict, "no_field", "set up the field first")
 	case errors.Is(err, store.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", "no such entry")
 	case errors.Is(err, store.ErrDeleted):

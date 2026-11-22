@@ -120,7 +120,7 @@ func (h *handlers) readPhotoUpload(w http.ResponseWriter, r *http.Request) (name
 		_ = part.Close()
 	}
 	if data == nil {
-		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "photo", "choose a photo to upload")
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "photo", "is missing")
 		return "", nil, false
 	}
 	return name, data, true
