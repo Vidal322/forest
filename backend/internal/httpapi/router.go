@@ -54,6 +54,9 @@ func NewRouter(d Deps) http.Handler {
 			r.Post("/field", h.createField)
 			r.Put("/field", h.updateField)
 			r.Get("/photos/{key}", h.getPhoto)
+			r.Get("/field/photos", listHandler(h, h.store.ListPhotos))
+			r.Post("/field/photos", h.addPhoto)
+			r.Put("/field/photos/{id}/current", h.setCurrentPhoto)
 
 			listPlots, putPlot, deletePlot := h.plotRoutes()
 			r.Get("/plots", listPlots)

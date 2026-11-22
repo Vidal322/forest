@@ -2,9 +2,12 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -83,11 +86,18 @@ func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 
 // readPhotoUpload streams a multipart body with a "name" text part and a "photo" file part.
 func (h *handlers) readPhotoUpload(w http.ResponseWriter, r *http.Request) (name string, data []byte, ok bool) {
+	fields, data, ok := h.readUpload(w, r, "name")
+	return fields["name"], data, ok
+}
+
+// readUpload streams a multipart body: the named small text parts and a "photo" file part.
+func (h *handlers) readUpload(w http.ResponseWriter, r *http.Request, textParts ...string) (fields map[string]string, data []byte, ok bool) {
+	fields = map[string]string{}
 	r.Body = http.MaxBytesReader(w, r.Body, maxPhotoBytes+64<<10)
 	mr, err := r.MultipartReader()
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_upload", "expected a multipart/form-data upload")
-		return "", nil, false
+		return nil, nil, false
 	}
 	for {
 		part, err := mr.NextPart()
@@ -96,34 +106,34 @@ func (h *handlers) readPhotoUpload(w http.ResponseWriter, r *http.Request) (name
 		}
 		if err != nil {
 			h.writeUploadReadError(w, err)
-			return "", nil, false
+			return nil, nil, false
 		}
-		switch part.FormName() {
-		case "name":
-			b, err := photo.ReadLimited(part, 1000)
-			if errors.Is(err, photo.ErrFileTooLarge) {
-				writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "name", "is too long")
-				return "", nil, false
-			}
-			if err != nil {
-				h.writeUploadReadError(w, err)
-				return "", nil, false
-			}
-			name = strings.TrimSpace(string(b))
-		case "photo":
+		switch name := part.FormName(); {
+		case name == "photo":
 			data, err = photo.ReadLimited(part, maxPhotoBytes)
 			if err != nil {
 				h.writeUploadReadError(w, err)
-				return "", nil, false
+				return nil, nil, false
 			}
+		case slices.Contains(textParts, name):
+			b, err := photo.ReadLimited(part, 64<<10)
+			if errors.Is(err, photo.ErrFileTooLarge) {
+				writeFieldError(w, http.StatusUnprocessableEntity, "invalid", name, "is too long")
+				return nil, nil, false
+			}
+			if err != nil {
+				h.writeUploadReadError(w, err)
+				return nil, nil, false
+			}
+			fields[name] = strings.TrimSpace(string(b))
 		}
 		_ = part.Close()
 	}
 	if data == nil {
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "photo", "is missing")
-		return "", nil, false
+		return nil, nil, false
 	}
-	return name, data, true
+	return fields, data, true
 }
 
 func (h *handlers) writeUploadReadError(w http.ResponseWriter, err error) {
@@ -182,4 +192,93 @@ func (h *handlers) getPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeContent(w, r, key, st.ModTime(), f)
+}
+
+// POST /api/field/photos (multipart: photo, alignment = JSON [{photo:[x,y], frame:[x,y]}…],
+// captured_on optional): add a newer photo, aligned to the frame, as the current one.
+func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
+	if _, err := h.store.GetField(r.Context()); errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusConflict, "no_field", "set up the field first")
+		return
+	} else if err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Now().Add(slowTransfer))
+	_ = rc.SetWriteDeadline(time.Now().Add(slowTransfer))
+
+	fields, data, ok := h.readUpload(w, r, "alignment", "captured_on")
+	if !ok {
+		return
+	}
+	// cheap checks first: decoding a photo is slow
+	var in store.AlignmentInput
+	if err := json.Unmarshal([]byte(fields["alignment"]), &in); err != nil {
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", "is not a list of landmark pairs")
+		return
+	}
+	pairs, err := store.CheckAlignment(in)
+	if err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	var captured *string
+	if v := fields["captured_on"]; v != "" {
+		captured = &v
+	}
+	if err := store.CheckCapturedOn(captured); err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	clean, width, height, err := photo.Clean(data)
+	if err != nil {
+		h.writePhotoError(w, r, err)
+		return
+	}
+	// landmarks were tapped on the photo as the browser showed it: upright, same size
+	if err := store.CheckLandmarksOnPhoto(pairs, width, height); err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	affine, residual, err := photo.FitAffine(pairs, math.Hypot(float64(width), float64(height)))
+	if err != nil {
+		msg := "needs at least 3 landmarks spread over the photo, not on one line"
+		switch {
+		case errors.Is(err, photo.ErrMirrored):
+			msg = "seems to have landmarks swapped between the two photos: match them in the same order"
+		case errors.Is(err, photo.ErrDistorted):
+			msg = "doesn't fit together: check that each landmark is the same spot on both photos"
+		}
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", msg)
+		return
+	}
+	key := uuid.NewString() + ".jpg"
+	if err := h.photos.Save(key, clean); err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	p, err := h.store.AddPhoto(context.WithoutCancel(r.Context()), store.NewPhoto{
+		Key: key, Width: width, Height: height, Affine: affine, Points: pairs, Residual: residual, CapturedOn: captured,
+	})
+	if err != nil {
+		_ = h.photos.Remove(key)
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, p)
+}
+
+// PUT /api/field/photos/{id}/current
+func (h *handlers) setCurrentPhoto(w http.ResponseWriter, r *http.Request) {
+	id, ok := idParam(w, r)
+	if !ok {
+		return
+	}
+	p, err := h.store.SetCurrentPhoto(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
 }
