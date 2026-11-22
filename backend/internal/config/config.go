@@ -16,6 +16,7 @@ type Config struct {
 	LogLevel        slog.Level    // FOREST_LOG_LEVEL: debug|info|warn|error, default info
 	ShutdownTimeout time.Duration // FOREST_SHUTDOWN_TIMEOUT, default 10s
 	DatabaseURL     string        // DATABASE_URL, required
+	DataDir         string        // FOREST_DATA_DIR, default "data": uploaded photos live in <dir>/photos
 }
 
 // Load reads the configuration from the environment.
@@ -28,6 +29,10 @@ func load(getenv func(string) string) (Config, error) {
 		HTTPAddr:        ":8080",
 		LogLevel:        slog.LevelInfo,
 		ShutdownTimeout: 10 * time.Second,
+		DataDir:         "data",
+	}
+	if v := getenv("FOREST_DATA_DIR"); v != "" {
+		cfg.DataDir = v
 	}
 
 	if v := getenv("FOREST_HTTP_ADDR"); v != "" {

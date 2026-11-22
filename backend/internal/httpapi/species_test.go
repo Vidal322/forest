@@ -12,13 +12,18 @@ import (
 	"github.com/google/uuid"
 
 	"forest/internal/dbtest"
+	"forest/internal/photo"
 	"forest/internal/store"
 )
 
 // newDBRouter is a router backed by a rolled-back transaction.
 func newDBRouter(t *testing.T) http.Handler {
 	t.Helper()
-	return NewRouter(Deps{Log: slog.New(slog.DiscardHandler), Store: store.New(dbtest.Tx(t))})
+	photos, err := photo.NewDir(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return NewRouter(Deps{Log: slog.New(slog.DiscardHandler), Store: store.New(dbtest.Tx(t)), Photos: photos})
 }
 
 func send(t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {

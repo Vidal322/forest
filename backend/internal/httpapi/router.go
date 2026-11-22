@@ -7,14 +7,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"forest/internal/photo"
 	"forest/internal/store"
 )
 
 // Deps are the shared dependencies handlers need. It grows as slices are
 // added (database pool, storage, …) without changing NewRouter's signature.
 type Deps struct {
-	Log   *slog.Logger
-	Store *store.Store // nil only in tests that don't touch the database
+	Log    *slog.Logger
+	Store  *store.Store // nil only in tests that don't touch the database
+	Photos *photo.Dir   // where field photos are kept
 }
 
 // NewRouter returns the root handler with shared middleware and all routes.
@@ -37,13 +39,21 @@ func NewRouter(d Deps) http.Handler {
 	r.Head("/healthz", health)
 
 	if d.Store != nil {
-		h := &handlers{log: d.Log, store: d.Store}
+		if d.Photos == nil {
+			panic("httpapi: Deps.Photos is required with a Store")
+		}
+		h := &handlers{log: d.Log, store: d.Store, photos: d.Photos}
 		// Readiness: the database answers too.
 		r.Get("/readyz", h.ready)
 		r.Route("/api", func(r chi.Router) {
 			r.Get("/species", h.listSpecies)
 			r.Put("/species/{id}", h.putSpecies)
 			r.Delete("/species/{id}", h.deleteSpecies)
+
+			r.Get("/field", h.getField)
+			r.Post("/field", h.createField)
+			r.Put("/field", h.updateField)
+			r.Get("/photos/{key}", h.getPhoto)
 		})
 	}
 

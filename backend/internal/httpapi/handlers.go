@@ -4,12 +4,14 @@ import (
 	"log/slog"
 	"net/http"
 
+	"forest/internal/photo"
 	"forest/internal/store"
 )
 
 type handlers struct {
-	log   *slog.Logger
-	store *store.Store
+	log    *slog.Logger
+	store  *store.Store
+	photos *photo.Dir
 }
 
 func (h *handlers) ready(w http.ResponseWriter, r *http.Request) {

@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"forest/internal/config"
 	"forest/internal/db"
 	"forest/internal/httpapi"
+	"forest/internal/photo"
 	"forest/internal/store"
 )
 
@@ -46,13 +48,18 @@ func run() error {
 		return err
 	}
 
+	photos, err := photo.NewDir(filepath.Join(cfg.DataDir, "photos"))
+	if err != nil {
+		return err
+	}
+
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.HTTPAddr)
 	if err != nil {
 		return err
 	}
 	log.Info("listening", "addr", ln.Addr().String())
 
-	handler := httpapi.NewRouter(httpapi.Deps{Log: log, Store: store.New(pool)})
+	handler := httpapi.NewRouter(httpapi.Deps{Log: log, Store: store.New(pool), Photos: photos})
 	// After the first signal, stop catching signals so a second Ctrl-C kills the process.
 	go func() { <-ctx.Done(); stop() }()
 	return serve(ctx, ln, handler, cfg.ShutdownTimeout, log)
