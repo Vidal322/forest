@@ -9,4 +9,5 @@ export interface NavItem {
 export const NAV: NavItem[] = [
   { to: '/', label: 'Map', icon: '🗺️', tab: true },
   { to: '/species', label: 'Species', icon: '🌱' },
+  { to: '/field', label: 'Field setup', icon: '⚙️' },
 ]

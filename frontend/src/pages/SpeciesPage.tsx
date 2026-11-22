@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { friendlyError } from '../api/errors'
-import { Handoff, isWaiting } from '../api/outbox'
+import { SAVED_ON_PHONE } from '../api/outbox'
 import { useDeleteSpecies, useSaveSpecies, useSpeciesList, type Species } from '../api/species'
 import { Flash } from '../components/Flash'
 import { useFlash } from '../hooks/useFlash'
+import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
 
 type Editing = { mode: 'add' } | { mode: 'edit'; species: Species } | null
 
-/** Said when a change could not reach the server yet: it is kept and sent later. */
-export const SAVED_ON_PHONE = 'Saved on this phone. It will be sent when there is a connection.'
 
 /** The species catalogue: picked later when logging a planting or a sowing. */
 export function SpeciesPage() {
@@ -159,10 +158,10 @@ function SpeciesForm({
   onDone: (message: string) => void
   onCancel: () => void
 }) {
-  // While this form is open it shows the result of its own writes; see SyncStatus.
-  const [handoff] = useState(() => new Handoff())
-  const save = useSaveSpecies(handoff)
-  const del = useDeleteSpecies(handoff)
+  const save = useSaveSpecies()
+  const del = useDeleteSpecies()
+  const saveState = useOutboxWrite(save)
+  const delState = useOutboxWrite(del)
   const [scientific, setScientific] = useState(species?.scientific_name ?? '')
   const [common, setCommon] = useState(species?.common_name ?? '')
   const [notes, setNotes] = useState(species?.notes ?? '')
@@ -180,27 +179,11 @@ function SpeciesForm({
     firstInput.current?.form?.scrollIntoView?.({ block: 'nearest' })
   }, [species])
 
-  // The change couldn't reach the server: it's queued on the phone, so we're done here.
-  const saveWaiting = save.isPending && isWaiting(save)
-  const delWaiting = del.isPending && isWaiting(del)
+  // The change couldn't reach the server: it's kept on the phone and sent later, so we're done here.
+  const queued = saveState.waiting || delState.waiting
   useEffect(() => {
-    if (saveWaiting || delWaiting) {
-      handoff.release()
-      onDone(SAVED_ON_PHONE)
-    }
-  }, [saveWaiting, delWaiting, onDone, handoff])
-  // Leaving while a write is still on its way: the sync bar reports how it ends.
-  const busyRef = useRef(false)
-  const pending = save.isPending || del.isPending
-  useEffect(() => {
-    busyRef.current = pending
-  }, [pending])
-  useEffect(
-    () => () => {
-      if (busyRef.current) handoff.release()
-    },
-    [handoff],
-  )
+    if (queued) onDone(SAVED_ON_PHONE)
+  }, [queued, onDone])
 
   const serverError = save.error ?? del.error
   // Deleted elsewhere: nothing left to edit.
@@ -210,7 +193,7 @@ function SpeciesForm({
 
   const fieldError = serverError instanceof ApiError ? serverError.field : null
   const errorText = localError || (serverError ? friendlyError(serverError) : '')
-  const busy = save.isPending || del.isPending
+  const busy = saveState.busy || delState.busy
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -299,7 +282,7 @@ function SpeciesForm({
           </p>
           <div className="row">
             <button type="button" className="btn btn-danger" onClick={remove} disabled={busy}>
-              {del.isPending ? 'Deleting…' : 'Delete'}
+              {delState.busy ? 'Deleting…' : 'Delete'}
             </button>
             <button
               ref={keepButton}
@@ -318,7 +301,7 @@ function SpeciesForm({
       ) : (
         <div className="row form__actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {save.isPending ? 'Saving…' : species ? 'Save' : 'Add'}
+            {saveState.busy ? 'Saving…' : species ? 'Save' : 'Add'}
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>
             Cancel

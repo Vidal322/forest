@@ -1,11 +1,11 @@
 import { useMutationState, useQueryClient, type Mutation } from '@tanstack/react-query'
+import { useSyncExternalStore } from 'react'
 import { friendlyError } from '../api/errors'
-import { isWaiting, OUTBOX_SCOPE, type Handoff } from '../api/outbox'
+import { inlineErrors, isShownInline, isWaiting, OUTBOX_SCOPE } from '../api/outbox'
 
 type AnyMutation = Mutation<unknown, Error, unknown, unknown>
 
 const inOutbox = (m: AnyMutation) => m.options.scope?.id === OUTBOX_SCOPE.id
-const handedOff = (m: AnyMutation) => !(m.options.meta?.handoff as Handoff | undefined)?.inline
 
 /** Thin bar under the top bar: changes waiting to be sent, and queued changes the server refused. */
 export function SyncStatus() {
@@ -14,10 +14,11 @@ export function SyncStatus() {
     filters: { status: 'pending', predicate: inOutbox },
     select: (m) => isWaiting({ isPaused: m.state.isPaused, failureCount: m.state.failureCount, failureReason: m.state.failureReason }),
   }).filter(Boolean).length
+  useSyncExternalStore(inlineErrors.subscribe, inlineErrors.getSnapshot)
   const failed = useMutationState({
-    filters: { status: 'error', predicate: (m) => inOutbox(m) && handedOff(m) },
+    filters: { status: 'error', predicate: inOutbox },
     select: (m) => m,
-  })
+  }).filter((m) => !isShownInline(m.mutationId))
 
   if (waiting === 0 && failed.length === 0) return null
   return (

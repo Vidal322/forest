@@ -175,3 +175,40 @@ input[aria-invalid='true'] { border-color: var(--task); box-shadow: 0 0 0 1px va
 .btn-small { min-height: 36px; padding: 0.25rem 0.75rem; }
 .list__item:disabled { opacity: 0.55; cursor: default; }
 h1:focus { outline: none; }
+
+/* ---------- map overlays ---------- */
+/* .leaflet-marker-icon prefix: leaflet.css is loaded later and sets display: block */
+.leaflet-marker-icon.map-handle {
+  border-radius: 50%; border: 3px solid #fff; background: rgba(29, 28, 24, 0.25);
+  box-shadow: 0 0 0 2px rgba(29, 28, 24, 0.7); touch-action: none;
+}
+.map-handle i {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+  border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px var(--ink);
+}
+.map-handle span {
+  position: absolute; left: 38px; top: -14px; padding: 0 6px; border-radius: 6px;
+  background: #fff; color: var(--ink); font-weight: 800; font-size: 14px; line-height: 22px;
+}
+
+/* ---------- field setup ---------- */
+.setup-map { position: relative; height: min(60vh, 520px); border-radius: var(--radius); overflow: hidden; margin: 0.75rem 0; }
+.setup-map .fieldmap { position: absolute; inset: 0; }
+.photo-pick {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
+  min-height: 140px; padding: 1rem; text-align: center; cursor: pointer;
+  border: 2px dashed var(--sand); border-radius: var(--radius); background: #fbf8f1; font-weight: 600;
+}
+.photo-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.photo-pick:focus-within { outline: 3px solid var(--moss); outline-offset: 2px; }
+.photo-preview { display: block; max-width: 100%; max-height: 240px; margin: 0.5rem auto 0; border-radius: 8px; }
+.note.privacy { border-color: var(--moss); background: #eef3e8; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.75rem; margin: 0.5rem 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 600; }
+.input-row { display: flex; gap: 0.5rem; align-items: center; }
+.input-row input { max-width: 10rem; }
+.welcome { max-width: 520px; margin: 2rem auto; text-align: center; }
+.coords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 0.75rem; }
+details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--moss); font-weight: 600; }
+.label-like { font-size: 0.9rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }

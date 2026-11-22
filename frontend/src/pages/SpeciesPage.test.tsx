@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Species } from '../api/species'
 import { fakeApi } from '../test/fakeApi'
-import { SAVED_ON_PHONE } from './SpeciesPage'
+import { SAVED_ON_PHONE } from '../api/outbox'
 import { renderApp } from '../test/render'
 
 const suber: Species = {

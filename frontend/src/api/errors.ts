@@ -29,9 +29,17 @@ export function friendlyError(err: unknown): string {
       return err.field && FIELD_LABELS[err.field]
         ? `${FIELD_LABELS[err.field]} is already used by another entry.`
         : 'That name is already taken.'
-    case 'invalid':
+    case 'field_exists':
+      return 'This field is already set up.'
+    case 'no_field':
+      return 'Set up the field first (Field setup).'
     case 'not_an_image':
-    case 'too_large': {
+      return "That file isn't a photo the app can read. Use a PNG, JPG or WebP image."
+    case 'too_large':
+      return err.status === 413
+        ? 'The photo is too big to upload (max 30 MB).'
+        : 'The photo has too many pixels (max 12 000 per side, 40 megapixels). Make it smaller first.'
+    case 'invalid': {
       const label = err.field ? FIELD_LABELS[err.field] : undefined
       if (label && err.message) return sentence(`${label} ${err.message}`)
       return err.message ? sentence(`Please check this: ${err.message}`) : 'Please check what you typed.'

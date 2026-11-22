@@ -1,6 +1,6 @@
 import 'leaflet/dist/leaflet.css'
 import { Browser, type Map as LeafletMap } from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ImageOverlay, MapContainer } from 'react-leaflet'
 import { FRAME_CRS, fitZoom, frameBounds } from '../map/frame'
 
@@ -18,12 +18,21 @@ const MAX_ZOOM = 3
 
 /**
  * The field photo on its pixel coordinate frame, with pinch-zoom and pan.
- * Shapes (plots, zones, tasks) are drawn on top of it in later steps, using the same frame.
+ * Shapes (plots, zones, tasks) are passed as children, in the same frame (see map/frame.ts).
  *
  * Leaflet reads maxBounds and friends only once, so give this component a `key` that changes
  * with the photo's size: that recreates the map together with this component's state.
  */
-export function FieldMap({ photo }: { photo: FieldPhoto }) {
+export function FieldMap({
+  photo,
+  children,
+  wheelZoom = true,
+}: {
+  photo: FieldPhoto
+  children?: ReactNode
+  /** false for a map inside a scrolling page: the mouse wheel then scrolls the page. */
+  wheelZoom?: boolean
+}) {
   const { width, height } = photo
   const bounds = useMemo(() => frameBounds(width, height), [width, height])
   // Room to pan half a photo past each edge, so corners can be centred under a thumb.
@@ -70,8 +79,10 @@ export function FieldMap({ photo }: { photo: FieldPhoto }) {
         zoomSnap={0.25}
         zoomDelta={0.5}
         attributionControl={false}
+        scrollWheelZoom={wheelZoom}
       >
         <ImageOverlay url={photo.url} bounds={bounds} alt="Aerial photo of the field" />
+        {children}
       </MapContainer>
       <button
         type="button"

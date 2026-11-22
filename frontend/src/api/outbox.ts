@@ -8,6 +8,9 @@ import { ApiError } from './client'
  */
 export const OUTBOX_SCOPE = { id: 'outbox' }
 
+/** Said when a change could not reach the server yet: it is kept and sent later. */
+export const SAVED_ON_PHONE = 'Saved on this phone. It will be sent when there is a connection.'
+
 /** No answer at all (no signal, server down): keep the write and try again later. */
 export function isRetryable(err: unknown): boolean {
   return err instanceof ApiError && err.isOffline
@@ -34,15 +37,31 @@ export function pendingWrites(qc: QueryClient, key: readonly unknown[]): number 
   return qc.isMutating({ mutationKey: key })
 }
 
-/**
- * Set on a mutation's meta by the screen that started it. While `inline` is true the
- * screen shows the outcome itself; once the screen let go (closed because the change
- * was queued, or navigated away) this bar reports it instead.
+/*
+ * Which failed writes a screen is already showing next to its form. The sync bar
+ * reports every other failed write (e.g. one queued offline whose form is long
+ * closed), so each failure is shown exactly once.
  */
-export class Handoff {
-  inline = true
-  /** The screen closed or moved on: from now on the sync bar reports the outcome. */
-  release() {
-    this.inline = false
-  }
+const shownInline = new Set<number>()
+const listeners = new Set<() => void>()
+let version = 0
+
+export function markShownInline(mutationId: number) {
+  if (shownInline.has(mutationId)) return
+  shownInline.add(mutationId)
+  version++
+  listeners.forEach((l) => l())
+}
+
+export function isShownInline(mutationId: number): boolean {
+  return shownInline.has(mutationId)
+}
+
+/** For useSyncExternalStore: changes whenever a failure is marked as shown. */
+export const inlineErrors = {
+  subscribe(listener: () => void) {
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+  },
+  getSnapshot: () => version,
 }

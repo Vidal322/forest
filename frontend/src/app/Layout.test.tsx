@@ -6,17 +6,20 @@ import { renderApp } from '../test/render'
 
 describe('Layout', () => {
   it('opens on the map', () => {
-    fakeApi({})
+    fakeApi({ 'GET /api/field': () => ({ status: 404, body: { error: { code: 'no_field' } } }) })
     renderApp('/')
     expect(screen.getByRole('heading', { name: 'Field map' })).toBeInTheDocument()
   })
 
   it('reaches the species catalogue through More (phone tabs)', async () => {
-    fakeApi({ 'GET /api/species': () => ({ status: 200, body: [] }) })
+    fakeApi({
+      'GET /api/species': () => ({ status: 200, body: [] }),
+      'GET /api/field': () => ({ status: 404, body: { error: { code: 'no_field' } } }),
+    })
     const { router } = renderApp('/')
     const tabs = screen.getAllByRole('navigation', { name: 'Main' })[1]!
     await userEvent.click(within(tabs).getByRole('link', { name: /more/i }))
-    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: /species/i }))
+    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: 'Species' }))
     expect(router.state.location.pathname).toBe('/species')
     expect(await screen.findByRole('heading', { name: 'Species' })).toBeInTheDocument()
     expect(within(tabs).getByRole('link', { name: /more/i })).toHaveAttribute('aria-current', 'page')

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, type QueryClient } from '@tanstack/react-query'
 import { apiGet, apiSend } from './client'
-import { outboxDefaults, pendingWrites, type Handoff } from './outbox'
+import { outboxDefaults, pendingWrites } from './outbox'
 
 export interface Species {
   id: string
@@ -83,11 +83,10 @@ export function registerSpeciesMutations(qc: QueryClient) {
   })
 }
 
-/** `handoff` (see SyncStatus) says whether the calling screen shows the outcome itself. */
-export function useSaveSpecies(handoff?: Handoff) {
-  return useMutation<Species, Error, SaveSpeciesVars>({ mutationKey: saveKey, meta: { handoff } })
+export function useSaveSpecies() {
+  return useMutation<Species, Error, SaveSpeciesVars>({ mutationKey: saveKey })
 }
 
-export function useDeleteSpecies(handoff?: Handoff) {
-  return useMutation<void, Error, string>({ mutationKey: deleteKey, meta: { handoff } })
+export function useDeleteSpecies() {
+  return useMutation<void, Error, string>({ mutationKey: deleteKey })
 }
