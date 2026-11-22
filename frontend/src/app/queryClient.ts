@@ -3,6 +3,7 @@ import { registerFieldMutations } from '../api/field'
 import { activities } from '../api/activities'
 import { plots, zones } from '../api/plots'
 import { species } from '../api/species'
+import { wateringRules } from '../api/stats'
 import { tasks } from '../api/tasks'
 
 export function newQueryClient(options: { retry?: boolean } = {}) {
@@ -23,6 +24,7 @@ export function newQueryClient(options: { retry?: boolean } = {}) {
   zones.register(qc)
   activities.register(qc)
   tasks.register(qc)
+  wateringRules.register(qc)
   registerFieldMutations(qc)
   return qc
 }

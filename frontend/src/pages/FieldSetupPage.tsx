@@ -17,6 +17,7 @@ import { SAVED_ON_PHONE } from '../api/outbox'
 import { Flash } from '../components/Flash'
 import { FieldMap } from '../components/FieldMap'
 import { useFlash, type FlashState } from '../hooks/useFlash'
+import { WateringRules } from '../components/WateringRules'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { CalibrationLine } from '../map/CalibrationLine'
 import type { FramePoint } from '../map/frame'
@@ -173,6 +174,7 @@ function FieldSettings({ field, flash }: { field: Field; flash: FlashState }) {
     <>
       <ScaleForm field={field} flash={flash} />
       <DetailsForm field={field} flash={flash} />
+      <WateringRules defaultDays={field.default_water_interval_days} onMessage={flash.show} />
       <section className="card" aria-labelledby="frame-facts">
         <h2 id="frame-facts">What is stored</h2>
         <dl className="facts">
@@ -398,8 +400,8 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
         <span>days</span>
       </div>
       <p className="muted small">
-        A zone “needs water” when nothing was watered, sown or planted there for this long. Seasonal rules come
-        later.
+        A zone “needs water” when nothing was watered, sown or planted there for this long — unless a season
+        below says otherwise.
       </p>
       {error && (
         <p id={ids.err} className="form__error" role="alert">

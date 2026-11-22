@@ -1,4 +1,4 @@
-import { useMutation, useQuery, type QueryClient, type QueryKey } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import { apiGet, apiSend } from './client'
 import { outboxDefaults, pendingWrites } from './outbox'
 
@@ -55,16 +55,13 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
 
   const isCode = (err: unknown, code: string) => (err as { code?: string } | null)?.code === code
 
-  // versions our own successful writes produced, by id (see `versioned`), per client
-  const ownVersionsByClient = new WeakMap<QueryClient, Map<string, number>>()
-  const ownVersions = (qc: QueryClient) => {
-    let m = ownVersionsByClient.get(qc)
-    if (!m) ownVersionsByClient.set(qc, (m = new Map()))
-    return m
-  }
+  // Versions our own successful writes produced, by id (see `versioned`). Kept in the
+  // query cache so it is saved on the phone and survives a reload between queued edits.
+  const ownKey = ['own-versions', opts.name] as const
+  const ownVersion = (qc: QueryClient, id: string) => qc.getQueryData<Record<string, number>>(ownKey)?.[id]
   const rebase = (qc: QueryClient, id: string, input: In): In => {
     const base = (input as { base_version?: number | null }).base_version
-    const own = ownVersions(qc).get(id)
+    const own = ownVersion(qc, id)
     if (!opts.versioned || base == null || own === undefined || own <= base) return input
     return { ...input, base_version: own }
   }
@@ -83,7 +80,7 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
       },
       onSuccess: (saved: T) => {
         const v = (saved as { version?: number }).version
-        if (opts.versioned && v !== undefined) ownVersions(qc).set(saved.id, v)
+        if (opts.versioned && v !== undefined) qc.setQueryData<Record<string, number>>(ownKey, (m) => ({ ...m, [saved.id]: v }))
         replace(qc, saved.id, saved)
       },
       onError: (err, { id }: SaveVars<In>, ctx) => {
@@ -114,10 +111,36 @@ export function defineEntity<T extends Entity, In>(opts: EntityOptions<T, In>) {
     })
   }
 
+  /** Lay the outbox's pending saves and deletes of this kind over fresh server data. */
+  function withPendingWrites(qc: QueryClient, list: T[]): T[] {
+    let out = list
+    for (const m of qc.getMutationCache().getAll()) {
+      if (m.state.status !== 'pending') continue
+      const key = m.options.mutationKey
+      if (key?.[0] !== opts.name) continue
+      if (key[1] === 'save') {
+        const { id, input } = m.state.variables as SaveVars<In>
+        out = [...out.filter((x) => x.id !== id), opts.optimistic(id, input, out.find((x) => x.id === id))]
+      } else if (key[1] === 'delete') {
+        const id = m.state.variables as string
+        out = out.filter((x) => x.id !== id)
+      }
+    }
+    return out === list ? list : [...out].sort(opts.sort)
+  }
+
   return {
     listKey,
     register,
-    useList: () => useQuery({ queryKey: listKey, queryFn: ({ signal }) => apiGet<T[]>(path, { signal }) }),
+    useList: () => {
+      const qc = useQueryClient()
+      return useQuery({
+        queryKey: listKey,
+        // keep showing changes still waiting in the outbox (after a restart, or a
+        // refresh racing the queue): the server doesn't have them yet
+        queryFn: async ({ signal }) => withPendingWrites(qc, await apiGet<T[]>(path, { signal })),
+      })
+    },
     useSave: () => useMutation<T, Error, SaveVars<In>>({ mutationKey: saveKey }),
     useDelete: () => useMutation<void, Error, string>({ mutationKey: deleteKey }),
   }

@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { ApiError } from './client'
+import { isApiError } from './client'
 
 /**
  * Every write (create, edit, delete) goes through one queue: TanStack mutations
@@ -14,7 +14,7 @@ export const DELETED_ON_PHONE = 'Deleted on this phone. The server will be told 
 
 /** No answer at all (no signal, server down): keep the write and try again later. */
 export function isRetryable(err: unknown): boolean {
-  return err instanceof ApiError && err.isOffline
+  return isApiError(err) && (err.code === 'network' || err.code === 'timeout')
 }
 
 export const outboxDefaults = {

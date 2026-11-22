@@ -53,7 +53,7 @@ export const plots = defineEntity<Plot, PlotInput>({
     area_ha: before && JSON.stringify(before.geom) === JSON.stringify(input.geom) ? before.area_ha : null,
     updated_at: new Date().toISOString(),
   }),
-  alsoRefresh: [['zones']],
+  alsoRefresh: [['zones'], ['plot-stats']],
   // deleting a plot deletes its zones: hide them at once too (also while offline)
   onDeleteOptimistic: (qc, id) => {
     const before = qc.getQueryData<Zone[]>(['zones'])
@@ -67,6 +67,7 @@ export const plots = defineEntity<Plot, PlotInput>({
 
 export const zones = defineEntity<Zone, ZoneInput>({
   name: 'zones',
+  alsoRefresh: [['plot-stats']],
   sort: (a, b) => a.id.localeCompare(b.id), // drawing order is decided by FieldLayers
   optimistic: (id, input, before) => ({
     // a new zone has no history yet; an edited one keeps its derived state

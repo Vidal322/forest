@@ -83,7 +83,7 @@ export const tasks = defineEntity<Task, TaskInput>({
     }
   },
   versioned: true,
-  alsoRefresh: [['zones']], // open task counts
+  alsoRefresh: [['zones'], ['plot-stats']], // open task counts
 })
 
 /** Where a task is: "Clareira · Plot 1" or "Plot 2". */

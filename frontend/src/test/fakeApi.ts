@@ -21,6 +21,8 @@ export function fakeApi(routes: Record<string, Handler>) {
         return res.status === 204 ? new Response(null, { status: 204 }) : json(res.status, res.body)
       }
     }
+    // lists that screens load on the side default to empty
+    if (method === 'GET' && path === '/api/watering-rules') return json(200, [])
     return json(404, { error: { code: 'not_found' } })
   })
   vi.stubGlobal('fetch', fetchMock)

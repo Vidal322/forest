@@ -1,3 +1,4 @@
+import { useIsRestoring } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { Link, matchPath, NavLink, Outlet, useLocation } from 'react-router'
 import { ServerStatus } from '../components/ServerStatus'
@@ -7,6 +8,7 @@ import { NAV } from './nav'
 /** Top bar (all links on wide screens) + bottom tabs on phones, around the current page. */
 export function Layout() {
   const tabs = NAV.filter((n) => n.tab)
+  const restoring = useIsRestoring()
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
   // <main> is the scroller and outlives page changes: start every page at the top.
@@ -33,7 +35,8 @@ export function Layout() {
       </header>
       <SyncStatus />
       <main className="main" ref={main}>
-        <Outlet />
+        {/* saved data and queued changes come back first: no screen runs before (no write can jump the queue) */}
+        {restoring ? <p className="page muted">Opening…</p> : <Outlet />}
       </main>
       <nav className="tabs" aria-label="Main">
         {tabs.map((n) => (

@@ -1,4 +1,4 @@
-import { ApiError } from './client'
+import { isApiError } from './client'
 
 /** How each API input field is called on screen, for error sentences. */
 const FIELD_LABELS: Record<string, string> = {
@@ -31,7 +31,7 @@ function sentence(s: string): string {
 
 /** A sentence a person in the field can act on, for any error thrown by the API layer. */
 export function friendlyError(err: unknown): string {
-  if (!(err instanceof ApiError)) return 'Something went wrong. Please try again.'
+  if (!isApiError(err)) return 'Something went wrong. Please try again.'
   switch (err.code) {
     case 'network':
       return 'No connection to the server. Check your signal and try again.'

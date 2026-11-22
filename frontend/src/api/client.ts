@@ -31,6 +31,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * ApiError, also after a round trip through JSON (a change restored from the
+ * phone's storage carries a plain object, not an ApiError instance).
+ */
+export function isApiError(err: unknown): err is Pick<ApiError, 'status' | 'code' | 'requestId' | 'field' | 'message'> {
+  return typeof err === 'object' && err !== null && (err as { name?: unknown }).name === 'ApiError' && typeof (err as { code?: unknown }).code === 'string'
+}
+
 export type RequestOptions = RequestInit & { timeoutMs?: number }
 
 const DEFAULT_TIMEOUT_MS = 10_000

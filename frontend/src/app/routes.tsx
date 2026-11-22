@@ -6,6 +6,7 @@ import { MapPage } from '../pages/MapPage'
 import { MorePage } from '../pages/MorePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { SpeciesPage } from '../pages/SpeciesPage'
+import { StatsPage } from '../pages/StatsPage'
 import { TasksPage } from '../pages/TasksPage'
 import { ZonePage } from '../pages/ZonePage'
 import { Layout } from './Layout'
@@ -18,6 +19,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <MapPage /> },
       { path: 'log', element: <LogPage /> },
       { path: 'species', element: <SpeciesPage /> },
+      { path: 'stats', element: <StatsPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'zones/:id', element: <ZonePage /> },
       { path: 'field', element: <FieldSetupPage /> },

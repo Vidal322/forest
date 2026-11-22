@@ -4,6 +4,7 @@ import {
   ACTIVITY,
   activities,
   UNIT_LABEL,
+  ZONE_UNITS,
   zonesPhrase,
   type ActivitySpecies,
   type ActivityType,
@@ -304,7 +305,7 @@ export function LogPage() {
           {!perZone ? (
             <div className="input-row">
               <input id={ids.count} inputMode="numeric" value={sameCount} onChange={(e) => setSameCount(e.target.value)} placeholder="e.g. 100" />
-              <UnitSelect value={effectiveUnit} onChange={setUnit} />
+              <UnitSelect type={type} value={effectiveUnit} onChange={setUnit} />
               {chosen.length > 1 && (
                 <button type="button" className="btn-link" onClick={() => setPerZone(Object.fromEntries(chosen.map((z) => [z.id, sameCount])))}>
                   Per zone…
@@ -327,7 +328,7 @@ export function LogPage() {
                 </label>
               ))}
               <div className="row">
-                <UnitSelect value={effectiveUnit} onChange={setUnit} />
+                <UnitSelect type={type} value={effectiveUnit} onChange={setUnit} />
                 <button type="button" className="btn-link" onClick={() => setPerZone(null)}>
                   Same for all
                 </button>
@@ -415,11 +416,11 @@ export function LogPage() {
   )
 }
 
-function UnitSelect({ value, onChange }: { value: QuantityUnit | null; onChange: (u: QuantityUnit) => void }) {
+function UnitSelect({ type, value, onChange }: { type: ActivityType; value: QuantityUnit | null; onChange: (u: QuantityUnit) => void }) {
   return (
     <select aria-label="Unit" value={value ?? ''} onChange={(e) => onChange(e.target.value as QuantityUnit)} className="unit-select">
       {value === null && <option value="">unit…</option>}
-      {(Object.keys(UNIT_LABEL) as QuantityUnit[]).map((u) => (
+      {ZONE_UNITS[type].map((u) => (
         <option key={u} value={u}>
           {UNIT_LABEL[u]}
         </option>
