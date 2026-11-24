@@ -98,7 +98,7 @@ Acceptance:
 - A test with the fake API offline shows the count change before the outbox flushes.
 
 ### M4 · Map: needs-attention summary
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (map page)
 Parallel: ok
 Acceptance:

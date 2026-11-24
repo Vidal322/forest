@@ -1,7 +1,7 @@
 import { onlineManager } from '@tanstack/react-query'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Browser } from 'leaflet'
+import { Browser, Map as LeafletMap, latLng, latLngBounds, type LatLng, type LatLngBounds } from 'leaflet'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Zone } from '../api/plots'
 import type { Task } from '../api/tasks'
@@ -65,6 +65,64 @@ describe('MapPage', () => {
     expect(heading).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('heading', { name: 'Clareira' })).not.toBeInTheDocument()
+  })
+
+  it('sums up what needs attention, collapsed, and opens a zone from it', async () => {
+    mapApi()
+    renderApp('/')
+    const pill = await screen.findByRole('button', { name: /1 zone needs attention/ })
+    expect(pill).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('region', { name: /Need water/ })).not.toBeInTheDocument()
+    await userEvent.click(pill)
+    const water = screen.getByRole('region', { name: 'Need water: 1' })
+    await userEvent.click(within(water).getByRole('button', { name: /Clareira/ }))
+    expect(await screen.findByRole('heading', { name: 'Clareira' })).toHaveFocus()
+    expect(screen.queryByRole('region', { name: /Need water/ })).not.toBeInTheDocument()
+  })
+
+  it('centres a zone picked from the list above the sheet, even at the bottom edge of the field', async () => {
+    // the field is 1000 × 700: this zone is in its bottom-right corner, where the sheet covers it
+    const corner = { ...testZone, id: '20000000-0000-4000-8000-0000000000c1', label: 'Canto', last_sown_on: null,
+      geom: { type: 'Polygon' as const, coordinates: [[[900, 600], [1000, 600], [1000, 700], [900, 700], [900, 600]]] } }
+    mapApi({ 'GET /api/zones': () => ({ status: 200, body: [testZone, corner] }) })
+    const setView = vi.spyOn(LeafletMap.prototype, 'setView')
+    renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: /2 zones need attention/ }))
+    setView.mockClear()
+    await userEvent.click(within(screen.getByRole('region', { name: 'Not sown yet: 1' })).getByRole('button', { name: /Canto/ }))
+    expect(await screen.findByRole('heading', { name: 'Canto' })).toHaveFocus()
+    expect(setView).toHaveBeenCalledTimes(1)
+    const map = setView.mock.contexts[0] as LeafletMap
+    const [target, zoom] = setView.mock.calls[0] as [LatLng, number]
+    // the 800 × 600 map is covered by a 360 px sheet: the zone's centre lands in the middle of the 240 px above it
+    const at = map.project(latLng(650, 950), zoom).subtract(map.project(target, zoom)).add(map.getSize().divideBy(2))
+    expect(at.x).toBeCloseTo(400, 0)
+    expect(at.y).toBeCloseTo(120, 0)
+    // and the pan limits let the map go there
+    const half = map.getSize().divideBy(2)
+    const p = map.project(target, zoom)
+    const view = latLngBounds(map.unproject(p.subtract(half), zoom), map.unproject(p.add(half), zoom))
+    expect((map.options.maxBounds as LatLngBounds).contains(view)).toBe(true)
+    // closing the sheet puts the limits back, and the pill with it
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('heading', { name: 'Canto' })).not.toBeInTheDocument()
+    expect((map.options.maxBounds as LatLngBounds).contains(view)).toBe(false)
+    expect(screen.getByRole('button', { name: /2 zones need attention/ })).toBeInTheDocument()
+  })
+
+  it('hides the attention pill while a zone’s sheet is open', async () => {
+    mapApi()
+    renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
+    await screen.findByRole('heading', { name: 'Clareira' })
+    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+  })
+
+  it('says so when nothing needs attention', async () => {
+    mapApi({ 'GET /api/zones': () => ({ status: 200, body: [{ ...testZone, kind: 'path' }] }) })
+    renderApp('/')
+    expect(await screen.findByRole('button', { name: /Nothing needs attention/ })).toBeInTheDocument()
   })
 
   it('has a legend for the colours', async () => {

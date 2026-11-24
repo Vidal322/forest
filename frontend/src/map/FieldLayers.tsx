@@ -1,4 +1,4 @@
-import { DomEvent, type Polygon as LeafletPolygon, type PathOptions } from 'leaflet'
+import { DomEvent, latLngBounds, type LatLngBounds, type Polygon as LeafletPolygon, type PathOptions } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Polygon, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import { formatHa, type Plot, type Polygon as Geom, type Zone } from '../api/plots'
@@ -40,6 +40,7 @@ export function FieldLayers({
   zones,
   today,
   selectedId,
+  centreSelected = false,
   selectedIds,
   onSelectZone,
   onBackgroundClick,
@@ -49,6 +50,11 @@ export function FieldLayers({
   zones: Zone[]
   today: string
   selectedId?: string | null
+  /**
+   * Centre the selected zone in the part of the map above the sheet (picked from a list, opened by a link).
+   * Otherwise the map only moves when the zone's centre is hidden.
+   */
+  centreSelected?: boolean
   /** several selected zones (quick log); drawn like the selected one */
   selectedIds?: ReadonlySet<string>
   onSelectZone?: (z: Zone) => void
@@ -78,15 +84,40 @@ export function FieldLayers({
   useEffect(() => {
     for (const id of selectionKey ? selectionKey.split(',') : []) layerRefs.current.get(id)?.bringToFront()
   }, [selectionKey, zones])
+  // The pan limits (FieldMap's maxBounds) while a selection has widened them, to put back afterwards.
+  const ownBounds = useRef<LatLngBounds | null>(null)
+  useEffect(() => {
+    if (selected || !ownBounds.current) return
+    map.setMaxBounds(ownBounds.current) // springs back inside the field
+    ownBounds.current = null
+  }, [selected, map])
   useEffect(() => {
     if (!selected) return
     layerRefs.current.get(selected.id)?.bringToFront()
     // keep the zone visible above the sheet that covers the bottom of the screen
     const size = map.getSize()
+    if (size.x === 0 || size.y === 0) return
     const sheet = size.x < 900 ? Math.round(size.y * 0.6) : 0
     const c = corners(selected.geom)
-    const center: FramePoint = [c.reduce((s, p) => s + p[0], 0) / c.length, c.reduce((s, p) => s + p[1], 0) / c.length]
-    map.panInside(toLatLng(center), { paddingTopLeft: [20, 20], paddingBottomRight: [20, sheet + 20] })
+    const center = toLatLng([c.reduce((s, p) => s + p[0], 0) / c.length, c.reduce((s, p) => s + p[1], 0) / c.length])
+    const at = map.latLngToContainerPoint(center)
+    const visible = at.x >= 20 && at.x <= size.x - 20 && at.y >= 20 && at.y <= size.y - sheet - 20
+    if (!centreSelected && visible) return
+    // the map's centre that puts the zone in the middle of the strip above the sheet
+    const zoom = map.getZoom()
+    const target = map.unproject(map.project(center, zoom).add([0, sheet / 2]), zoom)
+    // A zone near the bottom edge needs the view to go past the pan limits: widen them while it is selected.
+    const half = size.divideBy(2)
+    const p = map.project(target, zoom)
+    const view = latLngBounds(map.unproject(p.subtract(half), zoom), map.unproject(p.add(half), zoom))
+    // FieldMap always passes a LatLngBounds
+    const limits = ownBounds.current ?? (map.options.maxBounds as LatLngBounds | undefined) ?? null
+    if (limits) {
+      ownBounds.current = limits
+      // a copy: extend() changes the bounds in place, and FieldMap's must stay as they are
+      map.setMaxBounds(latLngBounds(limits.getSouthWest(), limits.getNorthEast()).extend(view))
+    }
+    map.setView(target, zoom, { animate: !prefersReducedMotion() })
     // only when the selection changes, not on every edit of the zone
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, map])
@@ -138,4 +169,8 @@ export function FieldLayers({
       })}
     </>
   )
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }

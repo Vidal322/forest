@@ -41,6 +41,12 @@ export function needsWater(z: ZoneState, today: string): boolean | null {
   return daysBetween(last, today) >= z.current_interval_days
 }
 
+/** Days since the zone last got water (watering, sowing or planting); null when it never did. */
+export function daysDry(z: ZoneState, today: string): number | null {
+  const last = latest(z.last_watered_on, z.last_sown_on, z.last_planted_on)
+  return last === null ? null : daysBetween(last, today)
+}
+
 export function zoneStatus(z: ZoneState, today: string): ZoneStatus {
   if (z.kind !== 'cultivation') return 'path'
   if (latest(z.last_watered_on, z.last_sown_on, z.last_planted_on) === null) return 'unsown'

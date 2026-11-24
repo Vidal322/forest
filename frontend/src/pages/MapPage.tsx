@@ -6,9 +6,11 @@ import { plots as plotsApi, zones as zonesApi } from '../api/plots'
 import { FieldMap } from '../components/FieldMap'
 import { DrawMenu } from '../components/DrawMenu'
 import { Legend } from '../components/Legend'
+import { NeedsAttention } from '../components/NeedsAttention'
 import { ShapeEditor } from '../components/ShapeEditor'
 import { ZoneList } from '../components/ZoneList'
 import { ZoneSheet } from '../components/ZoneSheet'
+import { attention, attentionLabel } from '../domain/attention'
 import { useFieldToday } from '../hooks/useFieldToday'
 import { checkDraft, editDraft, withCorners, type Draft } from '../map/draft'
 import { DrawLayer } from '../map/DrawLayer'
@@ -21,7 +23,9 @@ export function MapPage() {
   // ?zone=<id> opens a zone's sheet, ?edit=<id> its outline editor (links from the zone page)
   const [params, setParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(() => params.get('zone'))
-  const [panel, setPanel] = useState<'legend' | 'zones' | null>(null)
+  // a zone opened from a list or a link is centred on the map; a tapped one is already in sight
+  const [centreSelected, setCentreSelected] = useState(true)
+  const [panel, setPanel] = useState<'legend' | 'zones' | 'attention' | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -57,13 +61,18 @@ export function MapPage() {
   const finishDraft = useCallback((message: string, selectZoneId?: string) => {
     setDraft(null)
     setToast((t) => ({ text: message, n: (t?.n ?? 0) + 1 }))
-    if (selectZoneId) setSelectedId(selectZoneId)
+    if (selectZoneId) {
+      setCentreSelected(false)
+      setSelectedId(selectZoneId)
+    }
   }, [])
 
-  const select = useCallback((z: { id: string }) => {
+  const select = useCallback((z: { id: string }, centre = false) => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setCentreSelected(centre)
     setSelectedId(z.id)
   }, [])
+  const tapZone = useCallback((z: { id: string }) => select(z), [select])
   const closeSheet = useCallback(() => {
     setSelectedId(null)
     // a closed sheet must not come back on reload or Back
@@ -81,6 +90,7 @@ export function MapPage() {
     const selected = zones.data?.find((z) => z.id === selectedId)
     const empty = plots.data?.length === 0
     const failed = (plots.isError && !plots.data) || (zones.isError && !zones.data)
+    const needs = zones.data?.length ? attention(zones.data, today) : null
     return (
       <div className="fieldmap-page">
         <h1 className="visually-hidden">Field map</h1>
@@ -90,7 +100,8 @@ export function MapPage() {
             zones={(zones.data ?? []).filter((z) => !(draft?.kind === 'zone' && z.id === draft.id))}
             today={today}
             selectedId={draft ? null : selectedId}
-            onSelectZone={draft ? undefined : select}
+            centreSelected={centreSelected}
+            onSelectZone={draft ? undefined : tapZone}
             onBackgroundClick={draft ? undefined : closeSheet}
             interactive={!draft}
           />
@@ -142,12 +153,43 @@ export function MapPage() {
                 today={today}
                 onPick={(z) => {
                   setPanel(null)
-                  select(z)
+                  select(z, true)
                 }}
               />
             </div>
           )}
         </div>
+        )}
+        {/* not over the zone's sheet (its list would run under it), nor over the error note */}
+        {!draft && !selected && !failed && needs && (
+          <div className="map-overlay map-overlay--attention">
+            <button
+              type="button"
+              className={`map-btn${needs.total > 0 ? ' map-btn--attention' : ''}`}
+              aria-expanded={panel === 'attention'}
+              aria-controls="map-attention"
+              onClick={() => setPanel((p) => (p === 'attention' ? null : 'attention'))}
+            >
+              {attentionLabel(needs.total)}
+              <span className="map-btn__chevron" aria-hidden="true">
+                {panel === 'attention' ? '▴' : '▾'}
+              </span>
+            </button>
+            {panel === 'attention' && (
+              <div className="map-panel map-panel--scroll">
+                <NeedsAttention
+                  id="map-attention"
+                  plots={plots.data ?? []}
+                  summary={needs}
+                  today={today}
+                  onPick={(z) => {
+                    setPanel(null)
+                    select(z, true)
+                  }}
+                />
+              </div>
+            )}
+          </div>
         )}
         {failed && (
           <div className="map-overlay map-overlay--top note warn" role="alert">

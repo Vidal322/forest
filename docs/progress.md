@@ -175,3 +175,27 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: no zones flicker while task writes are still queued (finding 1, with a
   quick log + reconnect test); exact undo and no cancel before the first zone load (findings 2-3); a 409 rollback test;
   make `preview.sh` start without an old service worker.
+
+## 2026-11-24 · M4 Map: needs-attention summary — merged (squash of branch commits d55160e + 277269c, rebased)
+- Change: frontend only. A small button under the map's zoom buttons says "N zones need attention ▾" (orange border)
+  or "✓ Nothing needs attention". It starts closed and opens a list grouped as "Need water" (driest first, "dry N
+  days"), "Not sown yet" and "Open tasks" (most tasks first), each with a count; the total counts each zone once. Tapping
+  a zone closes the list, opens its sheet and pans the zone into view above the sheet. It shares the open/closed state
+  with Legend and Zones, is hidden while drawing, while a sheet is open and when there are no zones, and the list
+  scrolls between the zoom and bottom buttons. Status comes from `zoneStatus` + `useFieldToday`, so it works offline.
+  New `src/domain/attention.ts`, `src/components/NeedsAttention.tsx`; `FieldLayers.tsx` centres a list pick above the
+  sheet (pan limits widened on a copy, restored when the selection clears). Task counts use `open_task_count`, so
+  plot-wide tasks are not counted. The mockup's "overdue tasks" line was replaced by open tasks, as the acceptance asks.
+- Review: round 1 findings fixed in the second branch commit (centring above the sheet). Four minor findings left as
+  is: (1) closing the sheet does not return to the view from before the pick, the map only springs back inside the
+  padded field limits (same as before); (2) `prefersReducedMotion()` in `FieldLayers.tsx` duplicates the one in
+  `FieldMap.tsx`; (3) the centring estimates the sheet as 60% of the map instead of measuring it, so the zone sits a bit
+  high and a tapped zone in the band between estimated and real sheet top now moves; (4) no test for the map-tap rule
+  (move only when the zone's centre is hidden).
+- Browser check: Pixel 7 emulation on the preview, 16 zones in a 4x4 grid (some watered 20 Oct / 5 Nov, two never
+  sown, 3 open tasks). Pill closed with "7 zones need attention" and orange border; list with counts and dry-days text,
+  scrolling inside its space; picking Z16 opened its sheet with Z16 above it and hid the pill; closing brought the pill
+  back closed; tapping Z6 on the map opened its sheet. A stale service worker had to be unregistered again.
+- Follow-ups: these could become new items: restore the pre-pick view when the sheet closes; share
+  `prefersReducedMotion`; measure the real sheet top; test the map-tap pan rule; an "overdue tasks" group if wanted.
+  Rebased onto M10 (import-only conflict in `MapPage.test.tsx`); `pnpm check` passed after the rebase (168 tests).
