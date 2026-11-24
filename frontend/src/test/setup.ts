@@ -9,4 +9,5 @@ configure({ reactStrictMode: true })
 afterEach(() => {
   cleanup()
   forgetRemembered()
+  localStorage.clear() // settings kept on the device (map layers)
 })

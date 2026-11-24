@@ -199,3 +199,29 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: restore the pre-pick view when the sheet closes; share
   `prefersReducedMotion`; measure the real sheet top; test the map-tap pan rule; an "overdue tasks" group if wanted.
   Rebased onto M10 (import-only conflict in `MapPage.test.tsx`); `pnpm check` passed after the rebase (168 tests).
+
+## 2026-11-24 · M5 Map: task pins and layer toggles — merged (squash of branch commit ed4d019)
+- Change: frontend only. Open and in-progress tasks show as red pins at their zone's centre (plot-wide tasks at the
+  plot's centre), just under the zone's name. All open tasks of one place share a pin: one task shows its kind icon
+  (and its title when zoomed in), several show a count. Tapping a pin opens a bottom sheet (`TaskSheet.tsx`) with that
+  place's open tasks, each with the big tick and Undo; a ticked task stays struck through until the sheet closes, and
+  the pin updates at once, also offline (outbox path of `useTaskToggle`). The sheet links to "History & tasks" (zone)
+  or "All tasks" (plot); tapping a zone swaps sheets. Pins are hidden while drawing. The Legend button became "Layers":
+  Plots / Zones / Tasks checkboxes, then the colours (new "Open task" entry), saved on the phone
+  (`forest.map.layers`, new `app/device.ts`), with a dot and "Layers, N off" when something is off; an unreadable
+  saved choice shows everything. With Zones off a zone picked from the list still shows, and drawing shows all
+  outlines. One merged button instead of the mockup's two cards, because a third button hit "＋ Draw" on a phone.
+  `TaskRow`'s edit action is now optional. Leaflet only sets a pin's title once, so it is updated by hand (tested).
+- Review: no blocking findings. Four minor findings left as is: (1) a plot-wide pin at the plot's centre can look like
+  it belongs to a zone, or sit exactly on a zone pin when the zone is centred (mockup puts it under the plot's name);
+  (2) the pin is drawn below the centre, so on a small zoomed-out zone it falls outside the zone; (3) no test for pins
+  hidden while drawing with Zones off, for closing the sheet with a map tap, or for ticking offline (checked by hand);
+  (4) with Zones off the "N zones need attention" button still shows.
+- Browser check: Pixel 7 emulation on the preview, 1 plot, 3 zones, 5 tasks (two on one zone, one overdue, one
+  plot-wide, one done). Shared pin "2", single pins with icon and title, no pin for the done task; sheet with both
+  tasks; offline tick kept the row struck through and the pin became "Task: Semear", Undo brought it back, the outbox
+  replayed correctly when back online; layers off survived a reload with "Layers, 2 off"; drawing with Zones off
+  showed 0 pins and all 3 outlines.
+- Follow-ups: these could become new items: pin plot-wide tasks under the plot's name; anchor the pin on the centre
+  when the zone is small on screen; tests for drawing with layers off and closing the sheet with a map tap; hint
+  "zones hidden" on the attention button when Zones is off.

@@ -107,7 +107,7 @@ Acceptance:
 - Collapsible, does not cover the map by default on a phone.
 
 ### M5 · Map: task pins and layer toggles
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (map page, map/)
 Parallel: ok
 Acceptance:

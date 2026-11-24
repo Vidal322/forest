@@ -21,6 +21,10 @@ export function Legend({ id }: { id?: string }) {
           {STATUS_LABEL[s]}
         </li>
       ))}
+      <li>
+        <i className="swatch swatch--pin" aria-hidden="true" />
+        Open task
+      </li>
     </ul>
   )
 }

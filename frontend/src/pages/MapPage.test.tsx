@@ -19,7 +19,7 @@ afterAll(() => {
   browser.any3d = realAny3d
 })
 
-function mapApi(over: Record<string, () => { status: number; body?: unknown }> = {}) {
+function mapApi(over: Parameters<typeof fakeApi>[0] = {}) {
   vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(800)
   vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(600)
   return fakeApi({
@@ -125,10 +125,10 @@ describe('MapPage', () => {
     expect(await screen.findByRole('button', { name: /Nothing needs attention/ })).toBeInTheDocument()
   })
 
-  it('has a legend for the colours', async () => {
+  it('has a legend for the colours, with the layers', async () => {
     mapApi()
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Legend' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Layers' }))
     expect(screen.getByRole('list', { name: 'Map colours' })).toHaveTextContent('Needs water')
   })
 
@@ -136,6 +136,148 @@ describe('MapPage', () => {
     mapApi({ 'GET /api/plots': () => ({ status: 200, body: [] }), 'GET /api/zones': () => ({ status: 200, body: [] }) })
     renderApp('/')
     expect(await screen.findByText(/No plots yet/)).toBeInTheDocument()
+  })
+})
+
+const openTask: Task = {
+  id: '40000000-0000-4000-8000-0000000000a1',
+  plot_id: null,
+  zone_id: testZone.id,
+  title: 'Regar',
+  description: null,
+  kind: 'water',
+  status: 'open',
+  due_on: null,
+  completed_at: null,
+  resolved_by_activity_id: null,
+  version: 1,
+  created_at: '2026-11-01T10:00:00Z',
+  updated_at: '2026-11-01T10:00:00Z',
+}
+
+describe('task pins', () => {
+  it('pins open tasks at their zone or plot; a pin lists its tasks, each ticked done in one tap', async () => {
+    const plotTask: Task = { ...openTask, id: '40000000-0000-4000-8000-0000000000a2', zone_id: null, plot_id: testPlot.id, title: 'Refazer caminho', kind: 'improve_path' }
+    const closed: Task = { ...openTask, id: '40000000-0000-4000-8000-0000000000a3', title: 'Já feito', status: 'done' }
+    let tasks = [openTask, plotTask, closed]
+    const puts: unknown[] = []
+    mapApi({
+      'GET /api/tasks': () => ({ status: 200, body: tasks }),
+      'PUT /api/tasks/[^/]+': ({ path, body }) => {
+        puts.push(body)
+        const b = body as Task & { base_version: number }
+        const saved = { ...tasks.find((t) => path.endsWith(t.id))!, ...b, version: b.base_version + 1 }
+        tasks = tasks.map((t) => (t.id === saved.id ? saved : t))
+        return { status: 200, body: saved }
+      },
+    })
+    renderApp('/')
+    const pin = await screen.findByRole('button', { name: 'Task: Regar' })
+    expect(screen.getByRole('button', { name: 'Task: Refazer caminho' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Task: Já feito' })).not.toBeInTheDocument()
+
+    fireEvent.click(pin)
+    const sheet = await screen.findByRole('region', { name: 'Clareira' })
+    expect(within(sheet).getByRole('heading', { name: 'Clareira' })).toHaveFocus()
+    expect(sheet).toHaveTextContent('Tasks in this zone · Plot 1')
+    expect(sheet).not.toHaveTextContent('Já feito')
+    // not over the sheet
+    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Done: Regar' }))
+    expect(within(sheet).getByText(/Done: Regar\./)).toBeInTheDocument()
+    // stays in the sheet, ticked, so it can be undone
+    expect(within(sheet).getByRole('button', { name: 'Done: Regar' })).toHaveAttribute('aria-pressed', 'true')
+    await waitFor(() => expect(puts).toEqual([expect.objectContaining({ status: 'done', base_version: 1 })]))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument())
+
+    // the plot's own pin: tasks for the whole plot
+    fireEvent.click(screen.getByRole('button', { name: 'Task: Refazer caminho' }))
+    const plotSheet = await screen.findByRole('region', { name: 'Plot 1' })
+    expect(plotSheet).toHaveTextContent('Tasks for the whole plot')
+    expect(within(plotSheet).getByRole('link', { name: 'All tasks' })).toHaveAttribute('href', '/tasks')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Plot 1' })).not.toBeInTheDocument()
+  })
+
+  it('puts the tasks of one zone under one pin', async () => {
+    const second: Task = { ...openTask, id: '40000000-0000-4000-8000-0000000000a4', title: 'Semear', kind: 'sow' }
+    let tasks = [openTask, second]
+    mapApi({
+      'GET /api/tasks': () => ({ status: 200, body: tasks }),
+      'PUT /api/tasks/[^/]+': ({ body }) => {
+        tasks = [{ ...openTask, ...(body as object), version: 2 }, second]
+        return { status: 200, body: tasks[0] }
+      },
+    })
+    renderApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: '2 tasks: Clareira' }))
+    const sheet = await screen.findByRole('region', { name: 'Clareira' })
+    const rows = () => within(sheet).getAllByRole('listitem').map((li) => li.textContent)
+    expect(rows()).toEqual([expect.stringContaining('Regar'), expect.stringContaining('Semear')])
+    // a ticked task keeps its row, so the next tap doesn't land on another one
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Done: Regar' }))
+    expect(rows()).toEqual([expect.stringContaining('Regar'), expect.stringContaining('Semear')])
+    // the pin now stands for the one task left
+    expect(await screen.findByRole('button', { name: 'Task: Semear' })).toBeInTheDocument()
+  })
+
+  it('tapping a zone after a pin swaps the pin’s sheet for the zone’s', async () => {
+    mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
+    const { container } = renderApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Task: Regar' }))
+    expect(await screen.findByText('Tasks in this zone · Plot 1')).toBeInTheDocument()
+    await userEvent.click(container.querySelector('path.map-zone')!)
+    expect(await screen.findByRole('link', { name: /Log activity/ })).toBeInTheDocument()
+    expect(screen.queryByText('Tasks in this zone · Plot 1')).not.toBeInTheDocument()
+  })
+})
+
+describe('layers', () => {
+  it('switches plots, zones and tasks off and on, remembered on the phone', async () => {
+    mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
+    const first = renderApp('/')
+    await screen.findByRole('button', { name: 'Task: Regar' })
+    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
+    const group = screen.getByRole('group', { name: 'Show on the map' })
+    await userEvent.click(within(group).getByRole('checkbox', { name: 'Tasks' }))
+    await userEvent.click(within(group).getByRole('checkbox', { name: 'Zones' }))
+    expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument()
+    expect(first.container.querySelector('path.map-zone')).toBeNull()
+    expect(screen.getByText('Plot 1 · 3.69 ha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Layers, 2 off' })).toBeInTheDocument()
+    first.unmount()
+
+    // next time the app opens
+    const again = renderApp('/')
+    expect(await screen.findByText('Plot 1 · 3.69 ha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Layers, 2 off' })).toBeInTheDocument()
+    expect(again.container.querySelector('path.map-zone')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument()
+
+    // a zone picked from the list still shows with zones off
+    await userEvent.click(screen.getByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
+    await screen.findByRole('heading', { name: 'Clareira' })
+    expect(again.container.querySelectorAll('path.map-zone')).toHaveLength(1)
+    await userEvent.keyboard('{Escape}')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Layers, 2 off' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Plots' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tasks' }))
+    expect(screen.queryByText('Plot 1 · 3.69 ha')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Task: Regar' })).toBeInTheDocument()
+    expect(again.container.querySelector('path.map-zone')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Layers, 1 off' })).toBeInTheDocument()
+  })
+
+  it('shows everything when the stored choice is unreadable', async () => {
+    localStorage.setItem('forest.map.layers', '{not json')
+    mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
+    renderApp('/')
+    expect(await screen.findByRole('button', { name: 'Task: Regar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Layers' })).toBeInTheDocument()
   })
 })
 

@@ -3,11 +3,14 @@ import { Link, useSearchParams } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
 import { plots as plotsApi, zones as zonesApi } from '../api/plots'
+import { tasks as tasksApi } from '../api/tasks'
+import { useDeviceSetting } from '../app/device'
 import { FieldMap } from '../components/FieldMap'
 import { DrawMenu } from '../components/DrawMenu'
 import { Legend } from '../components/Legend'
 import { NeedsAttention } from '../components/NeedsAttention'
 import { ShapeEditor } from '../components/ShapeEditor'
+import { TaskSheet } from '../components/TaskSheet'
 import { ZoneList } from '../components/ZoneList'
 import { ZoneSheet } from '../components/ZoneSheet'
 import { attention, attentionLabel } from '../domain/attention'
@@ -15,17 +18,24 @@ import { useFieldToday } from '../hooks/useFieldToday'
 import { checkDraft, editDraft, withCorners, type Draft } from '../map/draft'
 import { DrawLayer } from '../map/DrawLayer'
 import { FieldLayers } from '../map/FieldLayers'
+import { LAYER_LABEL, parseLayers, type MapLayers } from '../map/layers'
+import { TaskPins } from '../map/TaskPins'
+import { taskSpots } from '../map/taskSpots'
 
 export function MapPage() {
   const field = useField()
   const plots = plotsApi.useList()
   const zones = zonesApi.useList()
+  const tasks = tasksApi.useList()
+  const [layers, setLayers] = useDeviceSetting<MapLayers>('map.layers', parseLayers)
+  // the task pin whose sheet is open: "zone:<id>" or "plot:<id>"
+  const [taskAt, setTaskAt] = useState<string | null>(null)
   // ?zone=<id> opens a zone's sheet, ?edit=<id> its outline editor (links from the zone page)
   const [params, setParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(() => params.get('zone'))
   // a zone opened from a list or a link is centred on the map; a tapped one is already in sight
   const [centreSelected, setCentreSelected] = useState(true)
-  const [panel, setPanel] = useState<'legend' | 'zones' | 'attention' | null>(null)
+  const [panel, setPanel] = useState<'zones' | 'layers' | 'attention' | null>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -56,6 +66,7 @@ export function MapPage() {
     setMenuOpen(false)
     setPanel(null)
     setSelectedId(null)
+    setTaskAt(null)
     setDraft(d)
   }
   const finishDraft = useCallback((message: string, selectZoneId?: string) => {
@@ -69,11 +80,12 @@ export function MapPage() {
 
   const select = useCallback((z: { id: string }, centre = false) => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setTaskAt(null)
     setCentreSelected(centre)
     setSelectedId(z.id)
   }, [])
   const tapZone = useCallback((z: { id: string }) => select(z), [select])
-  const closeSheet = useCallback(() => {
+  const dropZone = useCallback(() => {
     setSelectedId(null)
     // a closed sheet must not come back on reload or Back
     setParams((p) => {
@@ -82,29 +94,60 @@ export function MapPage() {
       next.delete('zone')
       return next
     }, { replace: true })
+  }, [setParams])
+  const closeSheet = useCallback(() => {
+    dropZone()
     const back = returnFocus.current
     if (back?.isConnected) requestAnimationFrame(() => back.focus())
-  }, [setParams])
+  }, [dropZone])
+  const pickTasks = useCallback(
+    (spot: { key: string }) => {
+      // a pin tapped while a zone's sheet is open: focus goes back where it was before that sheet
+      if (!selectedId) returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      dropZone()
+      setPanel(null)
+      setTaskAt(spot.key)
+    },
+    [selectedId, dropZone],
+  )
+  const closeTasks = useCallback(() => {
+    setTaskAt(null)
+    const back = returnFocus.current
+    if (back?.isConnected) requestAnimationFrame(() => back.focus())
+  }, [])
+  const tapBackground = useCallback(() => {
+    if (taskAt) closeTasks()
+    else closeSheet()
+  }, [taskAt, closeTasks, closeSheet])
 
   if (photo) {
     const selected = zones.data?.find((z) => z.id === selectedId)
     const empty = plots.data?.length === 0
     const failed = (plots.isError && !plots.data) || (zones.isError && !zones.data)
     const needs = zones.data?.length ? attention(zones.data, today) : null
+    // while drawing, every outline is shown (to see what the new one may overlap) and no pins (taps place corners)
+    const show: MapLayers = draft ? { plots: true, zones: true, tasks: false } : layers
+    const spots = show.tasks ? taskSpots(tasks.data ?? [], plots.data ?? [], zones.data ?? []) : []
+    const hidden = (Object.keys(layers) as (keyof MapLayers)[]).filter((k) => !layers[k]).length
+    const sheetOpen = Boolean(selected) || taskAt !== null
     return (
       <div className="fieldmap-page">
         <h1 className="visually-hidden">Field map</h1>
         <FieldMap key={`${photo.width}x${photo.height}`} photo={photo}>
           <FieldLayers
-            plots={(plots.data ?? []).filter((p) => !(draft?.kind === 'plot' && p.id === draft.id))}
-            zones={(zones.data ?? []).filter((z) => !(draft?.kind === 'zone' && z.id === draft.id))}
+            plots={show.plots ? (plots.data ?? []).filter((p) => !(draft?.kind === 'plot' && p.id === draft.id)) : []}
+            // with zones switched off, the one whose sheet is open still shows
+            zones={(zones.data ?? []).filter(
+              (z) => !(draft?.kind === 'zone' && z.id === draft.id) && (show.zones || z.id === selectedId),
+            )}
             today={today}
             selectedId={draft ? null : selectedId}
             centreSelected={centreSelected}
             onSelectZone={draft ? undefined : tapZone}
-            onBackgroundClick={draft ? undefined : closeSheet}
+            onBackgroundClick={draft ? undefined : tapBackground}
             interactive={!draft}
           />
+          {spots.length > 0 && <TaskPins spots={spots} selectedKey={taskAt} onPick={pickTasks} />}
           {draft && (
             <DrawLayer
               corners={draft.corners}
@@ -120,14 +163,17 @@ export function MapPage() {
         {!draft && (
         <div className="map-overlay map-overlay--bottom-left">
           <div className="row">
+            {/* what is shown and what the colours mean, in one panel: two buttons stay clear of “＋ Draw” on a phone */}
             <button
               type="button"
               className="map-btn"
-              aria-expanded={panel === 'legend'}
-              aria-controls="map-legend"
-              onClick={() => setPanel((p) => (p === 'legend' ? null : 'legend'))}
+              aria-expanded={panel === 'layers'}
+              aria-controls="map-layers"
+              aria-label={hidden > 0 ? `Layers, ${hidden} off` : undefined}
+              onClick={() => setPanel((p) => (p === 'layers' ? null : 'layers'))}
             >
-              Legend
+              Layers
+              {hidden > 0 && <span className="map-btn__dot" aria-hidden="true" />}
             </button>
             <button
               type="button"
@@ -139,9 +185,23 @@ export function MapPage() {
               Zones
             </button>
           </div>
-          {panel === 'legend' && (
-            <div className="map-panel">
-              <Legend id="map-legend" />
+          {panel === 'layers' && (
+            <div id="map-layers" className="map-panel map-panel--scroll">
+              <fieldset className="layers">
+                <legend>Show on the map</legend>
+                {(Object.keys(LAYER_LABEL) as (keyof MapLayers)[]).map((k) => (
+                  <label key={k} className="layers__opt">
+                    <input
+                      type="checkbox"
+                      checked={layers[k]}
+                      onChange={(e) => setLayers({ ...layers, [k]: e.target.checked })}
+                    />
+                    {LAYER_LABEL[k]}
+                  </label>
+                ))}
+              </fieldset>
+              <h3 className="layers__key">Colours</h3>
+              <Legend />
             </div>
           )}
           {panel === 'zones' && (
@@ -161,7 +221,7 @@ export function MapPage() {
         </div>
         )}
         {/* not over the zone's sheet (its list would run under it), nor over the error note */}
-        {!draft && !selected && !failed && needs && (
+        {!draft && !sheetOpen && !failed && needs && (
           <div className="map-overlay map-overlay--attention">
             <button
               type="button"
@@ -206,7 +266,7 @@ export function MapPage() {
             </button>
           </div>
         )}
-        {empty && !selected && !draft && (
+        {empty && !sheetOpen && !draft && (
           <p className="map-overlay map-overlay--top note">No plots yet. Tap “＋ Draw” to outline your first plot.</p>
         )}
         {/* always present, so screen readers hear each new message */}
@@ -237,6 +297,18 @@ export function MapPage() {
             </div>
           </ZoneSheet>
         )}
+        {taskAt && !selected && !draft && (
+          <TaskSheet
+            // ticked tasks stay listed until the sheet closes or another pin is tapped
+            key={taskAt}
+            at={taskAt}
+            tasks={tasks.data ?? []}
+            plots={plots.data ?? []}
+            zones={zones.data ?? []}
+            today={today}
+            onClose={closeTasks}
+          />
+        )}
         {draft && (
           <ShapeEditor
             draft={draft}
@@ -247,7 +319,7 @@ export function MapPage() {
             onDone={finishDraft}
           />
         )}
-        {!draft && !selected && !menuOpen && (
+        {!draft && !sheetOpen && !menuOpen && (
           <button type="button" className="fab" onClick={() => setMenuOpen(true)}>
             ＋ Draw
           </button>
