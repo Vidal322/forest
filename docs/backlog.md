@@ -142,7 +142,7 @@ Acceptance:
   `species.html`).
 
 ### M9 · Plot page
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (new page, routes), maybe backend
 Area: plot-page, routes
 Acceptance:
@@ -207,3 +207,11 @@ Acceptance:
 - `make purge` treats only `dry=1` as a dry run; a comment in `store/purge.go` explains its lock order (tombstones
   only, Postgres rolls back on deadlock) or the README says to run it with the API stopped.
 - `backup-check` cleanup can never drop `<db>_old_*` copies, whatever the database name length.
+
+### M12 · Plot page: per-plot activity query and tap-overlap check
+Status: todo
+Touches: backend (activity list), frontend
+Area: plot-page, map
+Acceptance:
+- The plot page's recent activity no longer depends on the 500-entry global log cap (per-plot query or `plot_id` filter).
+- On a phone, tapping a zone right next to a plot name on the map still opens the zone, not the plot page.

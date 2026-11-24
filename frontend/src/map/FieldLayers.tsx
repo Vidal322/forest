@@ -43,6 +43,7 @@ export function FieldLayers({
   centreSelected = false,
   selectedIds,
   onSelectZone,
+  onSelectPlot,
   onBackgroundClick,
   interactive = true,
 }: {
@@ -58,6 +59,8 @@ export function FieldLayers({
   /** several selected zones (quick log); drawn like the selected one */
   selectedIds?: ReadonlySet<string>
   onSelectZone?: (z: Zone) => void
+  /** A tap on a plot's name (on the map, to open the plot's page). */
+  onSelectPlot?: (p: Plot) => void
   /** A tap on the map outside any zone (e.g. to close the zone's sheet). */
   onBackgroundClick?: () => void
   /** false while drawing: taps must land on the map, not open a zone. */
@@ -124,14 +127,27 @@ export function FieldLayers({
 
   return (
     <>
-      {plots.map((p) => (
-        <Polygon key={p.id} positions={ringLatLngs(p.geom)} interactive={false} pathOptions={{ color: PLOT_COLOR, weight: 3, fill: false }}>
-          <Tooltip permanent direction="right" offset={[6, 14]} position={toLatLng(topCorner(p.geom))} className="map-label map-label--plot">
-            {p.name}
-            {p.area_ha !== null ? ` · ${formatHa(p.area_ha)}` : ''}
-          </Tooltip>
-        </Polygon>
-      ))}
+      {plots.map((p) => {
+        const tappable = interactive && onSelectPlot !== undefined
+        return (
+          <Polygon key={p.id} positions={ringLatLngs(p.geom)} interactive={false} pathOptions={{ color: PLOT_COLOR, weight: 3, fill: false }}>
+            <Tooltip
+              // `interactive` is read by Leaflet only once: remount when it changes
+              key={String(tappable)}
+              permanent
+              interactive={tappable}
+              direction="right"
+              offset={[6, 14]}
+              position={toLatLng(topCorner(p.geom))}
+              className={`map-label map-label--plot${tappable ? ' map-label--link' : ''}`}
+              eventHandlers={tappable ? { click: () => onSelectPlot(p) } : undefined}
+            >
+              {p.name}
+              {p.area_ha !== null ? ` · ${formatHa(p.area_ha)}` : ''}
+            </Tooltip>
+          </Polygon>
+        )
+      })}
       {ordered.map((z) => {
         const status = zoneStatus(z, today)
         const isSelected = z.id === selectedId || Boolean(selectedIds?.has(z.id))

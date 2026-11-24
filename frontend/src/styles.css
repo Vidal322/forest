@@ -252,6 +252,8 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .leaflet-tooltip.map-label::before { display: none; }
 .map-label--plot { font-size: 14px; color: #eaffd9; }
 .map-label--zone { font-size: 12px; }
+/* a plot's name opens its page: underlined, with room around it for a thumb */
+.leaflet-tooltip.map-label--link { padding: 10px 8px; margin: -10px -8px; text-decoration: underline; text-underline-offset: 3px; }
 
 /* corners of the outline being drawn: 44 px to grab, a small dot marks the exact point */
 .leaflet-marker-icon.map-corner { border-radius: 50%; touch-action: none; }
@@ -289,7 +291,7 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .zone-list h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 0.5rem 0 0.25rem; }
 .zone-list button .status-badge { flex-shrink: 0; white-space: nowrap; }
 .zone-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
-.zone-list button {
+.zone-list button, .zone-list__item {
   width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
   padding: 0.35rem 0.6rem; font: inherit; text-align: left; cursor: pointer;
   background: var(--card); border: 1px solid var(--line); border-radius: 8px; color: var(--ink);
@@ -398,6 +400,9 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
   display: flex; flex-direction: column; gap: 0.1rem; padding: 0.5rem 0.75rem;
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
 }
+a.timeline__item { text-decoration: none; box-sizing: border-box; }
+a.zone-list__item { text-decoration: none; box-sizing: border-box; }
+.zone-list h3 a { color: inherit; display: inline-block; padding: 0.4rem 0; }
 .timeline__title { font-weight: 600; }
 .timeline__meta { font-size: 0.88rem; color: var(--muted); }
 .timeline__item.is-target { border-color: var(--moss); box-shadow: 0 0 0 2px var(--moss); }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
 import { plots as plotsApi, useZonesAsOf, withStateOf, zones as zonesApi } from '../api/plots'
@@ -34,6 +34,7 @@ export function MapPage() {
   const [taskAt, setTaskAt] = useState<string | null>(null)
   // ?zone=<id> opens a zone's sheet, ?edit=<id> its outline editor (links from the zone page)
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const [selectedId, setSelectedId] = useState<string | null>(() => params.get('zone'))
   // a zone opened from a list or a link is centred on the map; a tapped one is already in sight
   const [centreSelected, setCentreSelected] = useState(true)
@@ -162,6 +163,7 @@ export function MapPage() {
             selectedId={draft ? null : selectedId}
             centreSelected={centreSelected}
             onSelectZone={draft ? undefined : tapZone}
+            onSelectPlot={draft ? undefined : (p) => navigate(`/plots/${p.id}`)}
             onBackgroundClick={draft ? undefined : tapBackground}
             interactive={!draft}
           />

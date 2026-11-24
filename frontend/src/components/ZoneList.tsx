@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { zoneName, type Plot, type Zone } from '../api/plots'
 import { byNeed, NEED_ORDER_HINT, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
@@ -28,7 +29,11 @@ export function ZoneList({
         if (own.length === 0) return null
         return (
           <section key={p.id} aria-label={p.name}>
-            <h3>{p.name}</h3>
+            <h3>
+              <Link to={`/plots/${p.id}`}>
+                {p.name} <span aria-hidden="true">›</span>
+              </Link>
+            </h3>
             <ul>
               {own.map((z) => {
                 const s = zoneStatus(z, today)

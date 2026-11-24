@@ -257,3 +257,16 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   or the failed-load banner; (4) the as-of limits above, left as documented.
 - Browser check: e2e map-as-of and smoke passed; phone screenshots show the banner on one row, 44 px targets.
 - Follow-ups: M11 added; the panel size and slider e2e could be tidied later.
+
+## 2026-11-24 · M9 Plot page — merged (squash of branch commit 2a09765, rebased)
+- Change: new page `/plots/:id` with the plot's name, measured area, area on the old map, zone count, a link to its
+  stats card, its zones by urgency (status badge, open tasks), its open tasks (tick, undo, edit, add) and recent
+  activity (10 at first, "Show more", totals only for this plot's zones). "Plot not found" for an unknown plot.
+  Reached from the plot name on the map (underlined, big tap area, off while drawing), the plot headings in the zone
+  list, and each plot name on the stats page.
+- Review: no blocking findings. Minor: (1) the e2e has one plot, so the stats-page scroll to the right card is not
+  really tested; (2) recent activity uses the 500-entry log list, so very old entries can be missing; (3) the label's
+  tap area may overlap zone polygons. After the rebase the plot test fixture needed the new stats fields from the
+  coverage change; fixed.
+- Browser check: e2e plot-page, map and smoke passed; phone screenshots read well.
+- Follow-ups: M12 added (per-plot activity query, tap-overlap check).

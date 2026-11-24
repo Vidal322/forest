@@ -1,5 +1,6 @@
 import { useIsMutating } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { useEffect, useRef } from 'react'
+import { Link, useLocation } from 'react-router'
 import { OUTBOX_SCOPE } from '../api/outbox'
 import { friendlyError } from '../api/errors'
 import { formatHa } from '../api/plots'
@@ -15,6 +16,15 @@ export function StatsPage() {
   const pending = useIsMutating({ predicate: (m) => m.options.scope?.id === OUTBOX_SCOPE.id })
   const today = useFieldToday()
   const offline = stats.isPending && stats.fetchStatus === 'paused'
+  // "#plot-<id>" (from a plot's page): bring that plot's card into view once it is there
+  const location = useLocation()
+  const shownFor = useRef<string | null>(null)
+  const loaded = stats.data !== undefined
+  useEffect(() => {
+    if (!loaded || !location.hash.startsWith('#plot-') || shownFor.current === location.key) return
+    shownFor.current = location.key
+    requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView?.({ block: 'start' }))
+  }, [loaded, location.hash, location.key])
   const totals = (stats.data ?? []).reduce(
     (t, p) => ({ area: t.area + (p.area_ha ?? 0), holes: t.holes + p.holes_sown, trees: t.trees + p.trees_planted, dry: t.dry + p.zones_need_water }),
     { area: 0, holes: 0, trees: 0, dry: 0 },
@@ -75,7 +85,11 @@ function PlotCard({ p, today }: { p: PlotStats; today: string }) {
   const diff = p.area_ha !== null && p.declared_area_ha ? ((p.area_ha - p.declared_area_ha) / p.declared_area_ha) * 100 : null
   return (
     <section className="card" aria-labelledby={`plot-${p.plot_id}`}>
-      <h2 id={`plot-${p.plot_id}`}>{p.name}</h2>
+      <h2 id={`plot-${p.plot_id}`}>
+        <Link to={`/plots/${p.plot_id}`}>
+          {p.name} <span aria-hidden="true">›</span>
+        </Link>
+      </h2>
       <p className="muted">
         {p.area_ha !== null ? `${formatHa(p.area_ha)} measured` : 'Area not measured yet'}
         {p.declared_area_ha !== null && ` · ${formatHa(p.declared_area_ha)} on the old map`}
