@@ -236,3 +236,14 @@ Area: plot-page, map
 Acceptance:
 - The plot page's recent activity no longer depends on the 500-entry global log cap (per-plot query or `plot_id` filter).
 - On a phone, tapping a zone right next to a plot name on the map still opens the zone, not the plot page.
+
+### T2 · Make the plot-page e2e test reliable
+Status: todo
+Touches: frontend/e2e (plot page spec), maybe the stats page scroll-to-card
+Area: plot-page, e2e
+Acceptance:
+- The plot-page e2e test passes 10 runs in a row (`.claude/loop/e2e.sh <spec> --repeat-each=10`), with no fixed
+  sleeps: wait on what the user would see (the card in view, `toBeInViewport`).
+- If the flake is a real app bug (scrolling to the card is unreliable on a phone), fix the app, not only the test.
+- The whole e2e suite passes 3 runs in a row.
+
