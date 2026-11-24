@@ -339,3 +339,11 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Browser check: e2e suite passed (11 tests), including the new desktop-more test at 1280px and 641px; 641px
   screenshot read.
 - Follow-ups: none that matter for correctness.
+
+## 2026-11-24 · M11 Zone sheet on a past day: no misleading actions — merged (squash of branch commit 29dc888)
+- Change: when the map shows a past day, the zone sheet says "Logging and editing act on today." and the actions read
+  "＋ Log for today" and "✎ Edit zone today". After "Back to today" the line goes and the usual labels return.
+- Review: no blocking findings. Minor, left as is: the sheet is tall on a past day (actions wrap to two rows); the
+  plot-page e2e test failed once and passed on rerun (looks flaky, unrelated).
+- Browser check: e2e map-as-of passed on the phone-sized browser; screenshot read, line and buttons legible.
+- Follow-ups: none that matter for correctness; the plot-page e2e flakiness could be looked at separately.

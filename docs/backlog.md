@@ -150,7 +150,7 @@ Acceptance:
 - Reachable by tapping a plot label on the map and from the stats page.
 
 ### M11 · Zone sheet on a past day: no misleading actions
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (map page, zone sheet)
 Area: map
 Acceptance:

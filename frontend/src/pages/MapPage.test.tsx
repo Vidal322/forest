@@ -157,10 +157,18 @@ describe('MapPage', () => {
     expect(sheet).toHaveTextContent(`On ${formatDay(day)}:`)
     expect(sheet).toHaveTextContent('Sown')
     expect(sheet).not.toHaveTextContent('Needs water')
+    // its actions act on today, and say so
+    expect(sheet).toHaveTextContent('Logging and editing act on today.')
+    expect(within(sheet).getByRole('link', { name: '＋ Log for today' })).toHaveAttribute('href', `/log?zone=${testZone.id}`)
+    expect(within(sheet).getByRole('button', { name: '✎ Edit zone today' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: '＋ Log activity' })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Back to today' }))
     expect(screen.queryByText(/Viewing/)).not.toBeInTheDocument()
     expect(sheet).toHaveTextContent('Needs water')
+    expect(sheet).not.toHaveTextContent('act on today')
+    expect(within(sheet).getByRole('link', { name: '＋ Log activity' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: '✎ Edit zone' })).toBeInTheDocument()
   })
 
   it('says so when a past day cannot be loaded', async () => {

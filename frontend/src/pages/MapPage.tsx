@@ -318,15 +318,17 @@ export function MapPage() {
             asOf={pastState ? statusDay : undefined}
             onClose={closeSheet}
           >
+            {/* looking back: logging and editing still act on today, so they say so */}
+            {pastState && <p className="muted">Logging and editing act on today.</p>}
             <div className="row form__actions">
               <Link className="btn btn-primary" to={`/log?zone=${selected.id}`}>
-                ＋ Log activity
+                {pastState ? '＋ Log for today' : '＋ Log activity'}
               </Link>
               <Link className="btn" to={`/zones/${selected.id}`}>
                 History & tasks
               </Link>
               <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
-                ✎ Edit zone
+                {pastState ? '✎ Edit zone today' : '✎ Edit zone'}
               </button>
             </div>
           </ZoneSheet>
