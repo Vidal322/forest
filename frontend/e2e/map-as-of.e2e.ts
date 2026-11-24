@@ -20,7 +20,9 @@ test('the map shows the zones as they were on a past day, and goes back to today
   expect(res.ok()).toBeTruthy()
 
   await page.goto('/')
-  const zone = page.locator('path.map-zone').first()
+  // its outline, found through its label (the field may hold other zones: the walkthrough's)
+  const labelId = await page.locator('.map-label--zone', { hasText: 'Old sowing' }).getAttribute('id')
+  const zone = page.locator(`path.map-zone[aria-describedby="${labelId}"]`)
   // sown 20 days ago, never watered: dry today
   await expect(zone).toHaveAttribute('fill', '#d9822b')
 
@@ -40,8 +42,10 @@ test('the map shows the zones as they were on a past day, and goes back to today
   await expect(zone).toHaveAttribute('fill', '#efe7d6')
   await page.getByRole('button', { name: 'Layers' }).click()
 
-  await zone.click()
-  await expect(page.getByRole('region', { name: 'Old sowing' })).toContainText('Nothing logged here yet')
+  // near its corner: the walkthrough's smaller zone lies over its middle (and gave the field a scale, so the sheet
+  // shows the area instead of "Nothing logged here yet")
+  await zone.click({ position: { x: 6, y: 6 } })
+  await expect(page.getByRole('region', { name: 'Old sowing' })).toContainText('Nothing yet')
   await shot(page, 'map-as-of-sheet')
   await page.getByRole('button', { name: 'Back to today' }).click()
   await expect(page.getByText(/^Viewing /)).toHaveCount(0)

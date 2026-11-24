@@ -175,6 +175,7 @@ input[aria-invalid='true'] { border-color: var(--task); box-shadow: 0 0 0 1px va
 .sync { background: #fbf5e1; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
 .sync p, .sync output { margin: 0; padding: 0.4rem max(1rem, env(safe-area-inset-left)); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .sync__failed { background: #fbeae7; color: var(--ink); }
+.sync .sync__waiting { flex-wrap: nowrap; align-items: baseline; } /* the hourglass stays beside its text */
 .btn-small { min-height: 36px; padding: 0.25rem 0.75rem; }
 .list__item:disabled { opacity: 0.55; cursor: default; }
 h1:focus { outline: none; }
@@ -221,6 +222,8 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .map-overlay { position: absolute; z-index: 1000; }
 .map-overlay--bottom-left { left: max(10px, env(safe-area-inset-left)); bottom: 10px; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 0.5rem; }
 .map-overlay--top { top: 64px; left: 50%; transform: translateX(-50%); width: min(92%, 420px); margin: 0; }
+/* on a phone the note would cover the zoom-out button: it goes below the zoom buttons, like the attention pill */
+@media (max-width: 640px) { .map-overlay--top { top: 112px; } }
 .map-btn {
   min-height: 44px; padding: 0 1rem; border-radius: var(--radius); font: inherit; font-weight: 600; cursor: pointer;
   border: 2px solid rgba(0, 0, 0, 0.2); background: var(--card); color: var(--ink);
@@ -279,7 +282,8 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
   background: var(--moss); color: #fff; font: inherit; font-weight: 700; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 .menu-sheet ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
-.menu-sheet li > button { width: 100%; justify-content: flex-start; min-height: 52px; }
+/* one flowing line of text (as flex items, a long hint split the label into columns) */
+.menu-sheet li > button { width: 100%; display: block; text-align: left; min-height: 52px; }
 .status-badge {
   display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.6rem 0.15rem 0.4rem;
   border-radius: 999px; background: #fff; border: 1px solid var(--line); font-size: 0.85rem; font-weight: 700; color: var(--ink);

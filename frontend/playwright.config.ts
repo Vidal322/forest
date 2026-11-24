@@ -19,4 +19,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
+  // The walkthrough sets the field up through the UI, so it needs the empty database a preview starts with:
+  // it runs first, the other specs (which only make sure a field exists) after it.
+  projects: [
+    { name: 'walkthrough', testMatch: 'walkthrough.e2e.ts' },
+    { name: 'specs', testIgnore: 'walkthrough.e2e.ts', dependencies: ['walkthrough'] },
+  ],
 })

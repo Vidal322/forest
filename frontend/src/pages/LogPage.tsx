@@ -68,7 +68,12 @@ export function LogPage() {
   const del = activities.useDelete()
   // the last message, with an Undo for the entry just logged (a wrong tap is fixed in one more)
   const [toast, setToast] = useState<Toast | null>(null)
-  const say = useCallback((text: string, undo?: () => void) => setToast((t) => ({ text, n: (t?.n ?? 0) + 1, undo })), [])
+  const form = useRef<HTMLFormElement>(null)
+  const say = useCallback((text: string, undo?: () => void) => {
+    setToast((t) => ({ text, n: (t?.n ?? 0) + 1, undo }))
+    // Save sits at the bottom, the message at the top: bring it into sight (the form is cleared for the next entry)
+    requestAnimationFrame(() => form.current?.querySelector('.flash')?.scrollIntoView?.({ block: 'nearest' }))
+  }, [])
   // how to undo the entry being saved: delete it and reopen the tasks it closed
   const undoPending = useRef<(() => void) | undefined>(undefined)
   // " Done: <titles>." for the tasks the entry being saved closes ('' when none)
@@ -244,7 +249,7 @@ export function LogPage() {
   }
 
   return (
-    <form className="page log" onSubmit={submit} noValidate>
+    <form ref={form} className="page log" onSubmit={submit} noValidate>
       <h1>Log activity</h1>
       <p className="muted small">① tap zones · ② tap what you did · ③ Save</p>
       <ToastLine

@@ -160,7 +160,7 @@ Acceptance:
 ## Field readiness
 
 ### F1 · Phone walkthrough of the main flows
-Status: todo
+Status: done (2026-11-24)
 Touches: none at first (finds problems)
 Parallel: alone
 Acceptance:

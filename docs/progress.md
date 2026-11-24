@@ -270,3 +270,18 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   coverage change; fixed.
 - Browser check: e2e plot-page, map and smoke passed; phone screenshots read well.
 - Follow-ups: M12 added (per-plot activity query, tap-overlap check).
+
+## 2026-11-24 · F1 Phone walkthrough of the main flows — merged (squash of branch commit e02571e)
+- Change: new e2e `frontend/e2e/walkthrough.e2e.ts`, all through the UI: field photo and typed scale, a plot and a zone,
+  a watering, offline sowing (waiting bar), sync, a task added and closed. It runs first (two Playwright projects).
+  Screenshots in `frontend/e2e-results/`: walkthrough-01-welcome, 02-field-photo, 03-field-scale, 04-draw-menu,
+  05-plot-outline, 06-plot-details, 07-zone-outline, 08-zone-sheet, 09-log-watering, 10-logged, 11-offline-sowing,
+  12-synced-history, 13-task-form, 14-task-added, 15-task-done, 16-task-closed.
+  Fixed: "No plots yet" note covered the zoom-out button; Draw menu hint split into a narrow column; hourglass on its
+  own line in the waiting bar; log confirmation off-screen after Save (now scrolled into view). `map-as-of.e2e.ts`
+  adjusted because the walkthrough's zone and scale stay in the shared DB.
+- Review: no blocking findings. Minor, left as is: draw-menu text and hourglass fixes have no assertion (only in
+  screenshots); no unit test for the LogPage scrollIntoView; map-as-of is now coupled to the walkthrough.
+- Browser check: screenshots 04, 05, 11 looked at; all 6 e2e specs pass.
+- Follow-ups: rough edges left: area shown instead of "Nothing logged here yet" once a scale exists; plot name label on
+  the plot's top edge; duplicate confirmation and waiting bar offline; A/B handle dragging is not tested.
