@@ -68,6 +68,16 @@ func (in ZoneInput) normalize() (ZoneInput, error) {
 	return in, nil
 }
 
+// zoneSelectOn is zoneSelect with the state as it stood on day $1 (zone_status_on).
+const zoneSelectOn = `
+	SELECT z.id, z.plot_id, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
+	       (ST_Area(z.geom) * f.metres_per_unit ^ 2 / 10000)::float8, z.updated_at,
+	       to_char(st.last_sown_on, 'YYYY-MM-DD'), to_char(st.last_planted_on, 'YYYY-MM-DD'),
+	       to_char(st.last_watered_on, 'YYYY-MM-DD'), st.current_interval_days, st.open_task_count, st.needs_water
+	  FROM zone z
+	  JOIN zone_status_on($1::date) st ON st.zone_id = z.id
+	  JOIN field f ON f.id = st.field_id`
+
 const zoneSelect = `
 	SELECT z.id, z.plot_id, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
 	       (ST_Area(z.geom) * f.metres_per_unit ^ 2 / 10000)::float8, z.updated_at,
@@ -89,6 +99,28 @@ func scanZone(row pgx.Row) (Zone, error) {
 // ListZones returns every live zone (of live plots) with its derived state.
 func (s *Store) ListZones(ctx context.Context) ([]Zone, error) {
 	rows, err := s.db.Query(ctx, zoneSelect+` ORDER BY z.created_at, z.id`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Zone, error) { return scanZone(r) })
+}
+
+// ListZonesOn returns every live zone with its state as it stood on day
+// (YYYY-MM-DD): only activities performed up to that day count, with that day's
+// watering interval. Today or a past day; a future day is rejected.
+func (s *Store) ListZonesOn(ctx context.Context, day string) ([]Zone, error) {
+	d, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return nil, invalid("as_of", "must be a date like 2026-10-12")
+	}
+	var future bool
+	if err := s.db.QueryRow(ctx, `SELECT $1::date > field_today()`, d.Format(time.DateOnly)).Scan(&future); err != nil {
+		return nil, err
+	}
+	if future {
+		return nil, invalid("as_of", "can't be in the future")
+	}
+	rows, err := s.db.Query(ctx, zoneSelectOn+` ORDER BY z.created_at, z.id`, d.Format(time.DateOnly))
 	if err != nil {
 		return nil, err
 	}

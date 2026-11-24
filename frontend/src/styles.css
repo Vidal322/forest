@@ -487,3 +487,23 @@ table.trees th { font-size: 0.8rem; text-transform: uppercase; color: var(--mute
 .layers__opt input { width: 22px; height: 22px; margin: 0; accent-color: var(--moss); }
 .task__body--static { cursor: default; }
 .layers__key { font-size: 0.9rem; margin: 0.6rem 0 0.35rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+
+/* ---------- map: show state as of a past day ---------- */
+.asof { border: 0; padding: 0.6rem 0 0; margin: 0.6rem 0 0; min-width: 0; border-top: 1px solid var(--line); display: grid; gap: 0.4rem; }
+.asof legend { float: left; width: 100%; font-size: 0.9rem; font-weight: 600; padding: 0; margin-bottom: 0.25rem; }
+.asof__date { min-height: 44px; font: inherit; width: 100%; box-sizing: border-box; }
+.asof__slider { width: 100%; min-height: 44px; margin: 0; accent-color: var(--moss); }
+.asof__hint { margin: 0; font-size: 0.85rem; }
+.asof-banner {
+  display: flex; align-items: center; gap: 0.6rem;
+  max-width: min(360px, calc(100vw - 24px)); padding: 0.4rem 0.4rem 0.4rem 0.8rem;
+  background: var(--card); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.asof-banner--warn { border-color: var(--needs-water); }
+.asof-banner__text { flex: 1 1 auto; min-width: 0; }
+.asof-banner__text strong, .asof-banner__ago { display: block; }
+.asof-banner__ago { font-size: 0.9rem; }
+.asof-banner__error { display: block; font-size: 0.85rem; }
+.asof-banner__today { min-height: 44px; flex: none; }
+.sheet .sheet__asof { margin: 0 0 0.25rem; font-weight: 600; }

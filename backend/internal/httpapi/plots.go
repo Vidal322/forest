@@ -60,5 +60,16 @@ func (h *handlers) plotRoutes() (list, put, del http.HandlerFunc) {
 }
 
 func (h *handlers) zoneRoutes() (list, put, del http.HandlerFunc) {
-	return listHandler(h, h.store.ListZones), putHandler[store.ZoneInput](h, h.store.PutZone), deleteHandler(h, h.store.DeleteZone)
+	return h.listZones, putHandler[store.ZoneInput](h, h.store.PutZone), deleteHandler(h, h.store.DeleteZone)
+}
+
+// GET /api/zones lists the zones with today's state; ?as_of=YYYY-MM-DD gives the
+// state as it stood on that day (the map's "show state as of").
+func (h *handlers) listZones(w http.ResponseWriter, r *http.Request) {
+	day := r.URL.Query().Get("as_of")
+	if day == "" {
+		listHandler(h, h.store.ListZones)(w, r)
+		return
+	}
+	listHandler(h, func(ctx context.Context) ([]store.Zone, error) { return h.store.ListZonesOn(ctx, day) })(w, r)
 }

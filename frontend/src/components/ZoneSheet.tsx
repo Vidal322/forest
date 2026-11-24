@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { formatHa, KIND_LABEL, zoneName, type Plot, type Zone } from '../api/plots'
-import { relativeDay } from '../domain/dates'
+import { formatDay, relativeDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
 
@@ -9,12 +9,16 @@ export function ZoneSheet({
   zone,
   plot,
   today,
+  asOf,
   onClose,
   children,
 }: {
   zone: Zone
   plot: Plot | undefined
+  /** the day the state is for: today, or the past day the map shows */
   today: string
+  /** set when the map shows a past day (`today` is then that day) */
+  asOf?: string
   onClose: () => void
   children?: ReactNode
 }) {
@@ -50,6 +54,7 @@ export function ZoneSheet({
           ✕
         </button>
       </div>
+      {asOf && <p className="sheet__asof">On {formatDay(asOf)}:</p>}
       <p className="row">
         <StatusBadge status={status} label={STATUS_LABEL[status]} />
         {plot && <span className="muted">{plot.name}</span>}

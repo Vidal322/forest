@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
-import { plots as plotsApi, zones as zonesApi } from '../api/plots'
+import { plots as plotsApi, useZonesAsOf, withStateOf, zones as zonesApi } from '../api/plots'
 import { tasks as tasksApi } from '../api/tasks'
 import { useDeviceSetting } from '../app/device'
+import { AsOfBanner, AsOfControl } from '../components/AsOf'
 import { FieldMap } from '../components/FieldMap'
 import { DrawMenu } from '../components/DrawMenu'
 import { Legend } from '../components/Legend'
@@ -14,6 +15,7 @@ import { TaskSheet } from '../components/TaskSheet'
 import { ZoneList } from '../components/ZoneList'
 import { ZoneSheet } from '../components/ZoneSheet'
 import { attention, attentionLabel } from '../domain/attention'
+import { useDebounced } from '../hooks/useDebounced'
 import { useFieldToday } from '../hooks/useFieldToday'
 import { checkDraft, editDraft, withCorners, type Draft } from '../map/draft'
 import { DrawLayer } from '../map/DrawLayer'
@@ -42,6 +44,21 @@ export function MapPage() {
   const [toast, setToast] = useState<{ text: string; n: number } | null>(null)
   const photo = field.data ? fieldPhoto(field.data) : null
   const today = useFieldToday()
+  // "show state as of": a past day whose colours the map shows (null = today)
+  const [asOf, setAsOf] = useState<string | null>(null)
+  const viewing = asOf !== null && asOf < today ? asOf : null
+  const past = useZonesAsOf(useDebounced(viewing, 250)) // not one request per step of a dragged slider
+  const pastExact = viewing !== null && past.data?.day === viewing
+  const pastFailed =
+    viewing !== null && !pastExact && (past.isError || past.fetchStatus === 'paused')
+      ? past.isError
+        ? friendlyError(past.error)
+        : 'No signal: showing today until there is.'
+      : null
+  // while the next day loads, the last one stays; if it can't load, today's colours (the banner says so)
+  const pastState = viewing !== null && !pastFailed ? (past.data ?? null) : null
+  const mapZones = zones.data && pastState ? withStateOf(zones.data, pastState.zones) : zones.data
+  const statusDay = pastState?.day ?? today
 
   const editId = params.get('edit')
   const [handledEdit, setHandledEdit] = useState<string | null>(null)
@@ -63,6 +80,7 @@ export function MapPage() {
   }, [toast])
 
   const startDraft = (d: Draft) => {
+    setAsOf(null) // drawing is about the field now
     setMenuOpen(false)
     setPanel(null)
     setSelectedId(null)
@@ -121,7 +139,7 @@ export function MapPage() {
   }, [taskAt, closeTasks, closeSheet])
 
   if (photo) {
-    const selected = zones.data?.find((z) => z.id === selectedId)
+    const selected = mapZones?.find((z) => z.id === selectedId)
     const empty = plots.data?.length === 0
     const failed = (plots.isError && !plots.data) || (zones.isError && !zones.data)
     const needs = zones.data?.length ? attention(zones.data, today) : null
@@ -137,10 +155,10 @@ export function MapPage() {
           <FieldLayers
             plots={show.plots ? (plots.data ?? []).filter((p) => !(draft?.kind === 'plot' && p.id === draft.id)) : []}
             // with zones switched off, the one whose sheet is open still shows
-            zones={(zones.data ?? []).filter(
+            zones={(mapZones ?? []).filter(
               (z) => !(draft?.kind === 'zone' && z.id === draft.id) && (show.zones || z.id === selectedId),
             )}
-            today={today}
+            today={statusDay}
             selectedId={draft ? null : selectedId}
             centreSelected={centreSelected}
             onSelectZone={draft ? undefined : tapZone}
@@ -200,6 +218,7 @@ export function MapPage() {
                   </label>
                 ))}
               </fieldset>
+              <AsOfControl asOf={viewing} today={today} onChange={setAsOf} />
               <h3 className="layers__key">Colours</h3>
               <Legend />
             </div>
@@ -220,8 +239,20 @@ export function MapPage() {
           )}
         </div>
         )}
+        {/* a past day replaces "needs attention" (which is about today): which day, and the way back */}
+        {viewing && !draft && (
+          <div className="map-overlay map-overlay--attention">
+            <AsOfBanner
+              asOf={viewing}
+              today={today}
+              loading={!pastExact}
+              failed={pastFailed}
+              onToday={() => setAsOf(null)}
+            />
+          </div>
+        )}
         {/* not over the zone's sheet (its list would run under it), nor over the error note */}
-        {!draft && !sheetOpen && !failed && needs && (
+        {!viewing && !draft && !sheetOpen && !failed && needs && (
           <div className="map-overlay map-overlay--attention">
             <button
               type="button"
@@ -281,7 +312,8 @@ export function MapPage() {
           <ZoneSheet
             zone={selected}
             plot={plots.data?.find((p) => p.id === selected.plot_id)}
-            today={today}
+            today={statusDay}
+            asOf={pastState ? statusDay : undefined}
             onClose={closeSheet}
           >
             <div className="row form__actions">

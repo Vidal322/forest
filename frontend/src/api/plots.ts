@@ -1,4 +1,5 @@
-import type { QueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, type QueryClient } from '@tanstack/react-query'
+import { apiGet } from './client'
 import { defineEntity } from './entity'
 
 export type Ring = [number, number][]
@@ -83,6 +84,40 @@ export const zones = defineEntity<Zone, ZoneInput>({
     updated_at: before?.updated_at ?? new Date().toISOString(),
   }),
 })
+
+/**
+ * The zones' state as it stood on a past day (the map's "show state as of"), from
+ * the server's activity log. Under ['zones'], so whatever refreshes the zones
+ * (a back-dated log entry, a deleted zone) refreshes this too. While the next day
+ * loads, the previous one stays shown (no flash of today's colours).
+ */
+export function useZonesAsOf(day: string | null) {
+  return useQuery({
+    queryKey: ['zones', 'as-of', day],
+    // the day travels with the answer: while the next day loads, the shown colours are still this one's
+    queryFn: async ({ signal }) => ({ day: day!, zones: await apiGet<Zone[]>(`/api/zones?as_of=${day}`, { signal }) }),
+    enabled: day !== null,
+    placeholderData: keepPreviousData,
+    gcTime: 5 * 60_000, // a look back, not something to keep on the phone
+  })
+}
+
+/** Today's zones (outlines, names) with the derived state of `past` (same zones on an earlier day). */
+export function withStateOf(zones: Zone[], past: Zone[]): Zone[] {
+  const byId = new Map(past.map((z) => [z.id, z]))
+  return zones.map((z) => {
+    const p = byId.get(z.id)
+    if (!p) return z
+    return {
+      ...z,
+      last_sown_on: p.last_sown_on,
+      last_planted_on: p.last_planted_on,
+      last_watered_on: p.last_watered_on,
+      current_interval_days: p.current_interval_days,
+      needs_water: p.needs_water,
+    }
+  })
+}
 
 /** The zone's label, or a description for unlabelled zones. */
 export function zoneName(z: Zone): string {

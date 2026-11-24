@@ -245,3 +245,15 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   keeping both; checks passed afterwards.
 - Browser check: e2e plot-stats and smoke passed; phone screenshot fits the width, no horizontal scroll.
 - Follow-ups: none.
+
+## 2026-11-24 · M6 Map: show state as of a date — merged (squash of branch commits d0bbfb8 + f4b8b70)
+- Change: the Layers panel has "Show state as of" (date box plus a 60-day slider). Zones are recoloured by their status
+  on that day; a banner "Viewing <date> · N days ago" with "Back to today" replaces the needs-attention pill. The zone
+  sheet shows "On <date>:". Backend: migration 00013 adds `zone_status_on(day)` (the `zone_status` view is now that
+  function for today), `GET /api/zones?as_of=YYYY-MM-DD` (422 for a bad or future date). Limits (documented): today's
+  zones and today's open task count are shown, since outlines and task status keep no history.
+- Review: no blocking findings. Minor: (1) the sheet still offers Log activity / Edit zone on a past day (new item M11);
+  (2) the Layers panel covers most of the map on a phone while dragging the slider; (3) e2e does not cover the slider
+  or the failed-load banner; (4) the as-of limits above, left as documented.
+- Browser check: e2e map-as-of and smoke passed; phone screenshots show the banner on one row, 44 px targets.
+- Follow-ups: M11 added; the panel size and slider e2e could be tidied later.

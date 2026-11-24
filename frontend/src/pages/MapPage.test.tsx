@@ -5,7 +5,7 @@ import { Browser, Map as LeafletMap, latLng, latLngBounds, type LatLng, type Lat
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Zone } from '../api/plots'
 import type { Task } from '../api/tasks'
-import { fieldToday } from '../domain/dates'
+import { addDays, fieldToday, formatDay } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
 import { testField, testPlot, testZone } from '../test/fixtures'
 import { renderApp } from '../test/render'
@@ -130,6 +130,46 @@ describe('MapPage', () => {
     renderApp('/')
     await userEvent.click(await screen.findByRole('button', { name: 'Layers' }))
     expect(screen.getByRole('list', { name: 'Map colours' })).toHaveTextContent('Needs water')
+  })
+
+  it('shows the zones as they were on a past day, with a clear way back to today', async () => {
+    const day = addDays(fieldToday(), -3)
+    const { calls } = mapApi({
+      // that day the zone had just been sown: fine, not dry
+      'GET /api/zones\\?as_of=.*': () => ({ status: 200, body: [{ ...testZone, last_sown_on: day, needs_water: false }] }),
+    })
+    renderApp('/')
+    await screen.findByRole('button', { name: /1 zone needs attention/ })
+    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: day } })
+    expect(await screen.findByText(`Viewing ${formatDay(day)}`)).toBeInTheDocument()
+    expect(screen.getByText(/3 days ago/)).toBeInTheDocument()
+    // "needs attention" is about today: not shown while looking back
+    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+    await waitFor(() => expect(calls.some((c) => c.path === `/api/zones?as_of=${day}`)).toBe(true))
+    await waitFor(() => expect(screen.queryByText(/loading/)).not.toBeInTheDocument())
+
+    // the zone's sheet tells that day's state
+    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
+    const sheet = await screen.findByRole('region', { name: 'Clareira' })
+    expect(sheet).toHaveTextContent(`On ${formatDay(day)}:`)
+    expect(sheet).toHaveTextContent('Sown')
+    expect(sheet).not.toHaveTextContent('Needs water')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to today' }))
+    expect(screen.queryByText(/Viewing/)).not.toBeInTheDocument()
+    expect(sheet).toHaveTextContent('Needs water')
+  })
+
+  it('says so when a past day cannot be loaded', async () => {
+    mapApi({ 'GET /api/zones\\?as_of=.*': () => ({ status: 500, body: { error: { code: 'internal', message: 'boom' } } }) })
+    renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: 'Layers' }))
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: addDays(fieldToday(), -10) } })
+    expect(await screen.findByText(/Viewing/)).toBeInTheDocument()
+    await waitFor(() => expect(document.querySelector('.asof-banner--warn')).not.toBeNull(), { timeout: 5000 })
   })
 
   it('invites you to draw when there are no plots yet', async () => {

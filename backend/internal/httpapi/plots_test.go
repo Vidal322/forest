@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -56,5 +57,49 @@ func TestPlotsAndZonesAPI(t *testing.T) {
 	rec = send(t, h, http.MethodGet, "/api/zones", "")
 	if err := json.NewDecoder(rec.Body).Decode(&zones); err != nil || len(zones) != 0 {
 		t.Fatalf("zones after plot delete: %d %v", len(zones), err)
+	}
+}
+
+func TestZonesAsOfAPI(t *testing.T) {
+	h := newFieldRouter(t)
+	if rec := upload(t, h, "Quinta", pngBytes(t, 300, 200)); rec.Code != http.StatusCreated {
+		t.Fatalf("setup: %d", rec.Code)
+	}
+	plotID, zoneID := uuid.NewString(), uuid.NewString()
+	send(t, h, http.MethodPut, "/api/plots/"+plotID, `{"name":"P","geom":`+squareJSON+`}`)
+	if rec := send(t, h, http.MethodPut, "/api/zones/"+zoneID, `{"plot_id":"`+plotID+`","geom":{"type":"Polygon","coordinates":[[[10,10],[30,10],[30,30],[10,30]]]}}`); rec.Code != 201 {
+		t.Fatalf("zone: %d %s", rec.Code, rec.Body)
+	}
+	loc, _ := time.LoadLocation("Europe/Lisbon")
+	now := time.Now().In(loc)
+	day := func(offset int) string { return now.AddDate(0, 0, offset).Format(time.DateOnly) }
+	if rec := send(t, h, http.MethodPut, "/api/activities/"+uuid.NewString(),
+		`{"type":"sowing","performed_on":"`+day(-3)+`","zones":[{"zone_id":"`+zoneID+`"}]}`); rec.Code != 201 {
+		t.Fatalf("sowing: %d %s", rec.Code, rec.Body)
+	}
+
+	lastSown := func(query string) *string {
+		t.Helper()
+		rec := send(t, h, http.MethodGet, "/api/zones"+query, "")
+		var zones []store.Zone
+		if err := json.NewDecoder(rec.Body).Decode(&zones); rec.Code != 200 || err != nil || len(zones) != 1 {
+			t.Fatalf("%s: %d %v %s", query, rec.Code, err, rec.Body)
+		}
+		return zones[0].LastSownOn
+	}
+	if s := lastSown(""); s == nil || *s != day(-3) {
+		t.Fatalf("today: %v", s)
+	}
+	if s := lastSown("?as_of=" + day(-3)); s == nil || *s != day(-3) {
+		t.Fatalf("day of sowing: %v", s)
+	}
+	if s := lastSown("?as_of=" + day(-4)); s != nil {
+		t.Fatalf("before sowing: %v", *s)
+	}
+	for _, bad := range []string{day(3), "yesterday"} {
+		rec := send(t, h, http.MethodGet, "/api/zones?as_of="+bad, "")
+		if code, field := decodeFieldError(t, rec); rec.Code != 422 || code != "invalid" || field != "as_of" {
+			t.Fatalf("%s: %d %s %s", bad, rec.Code, code, field)
+		}
 	}
 }

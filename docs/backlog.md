@@ -115,7 +115,7 @@ Acceptance:
 - Layer toggles Plots / Zones / Tasks as in the mockup, remembered on the device.
 
 ### M6 · Map: show state as of a date
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (zone status as of), frontend (map page)
 Area: map, zone-status
 Acceptance:
@@ -148,6 +148,14 @@ Area: plot-page, routes
 Acceptance:
 - `/plots/:id`: plot name, area, its zones (sorted by need), open tasks, recent activity, link to its stats.
 - Reachable by tapping a plot label on the map and from the stats page.
+
+### M11 · Zone sheet on a past day: no misleading actions
+Status: todo
+Touches: frontend (map page, zone sheet)
+Area: map
+Acceptance:
+- While a past day is shown ("On 30 Oct:"), "Log activity" and "Edit zone" either are hidden or say clearly that they
+  act on today. A unit test covers it.
 
 ## Field readiness
 
