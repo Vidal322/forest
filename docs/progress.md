@@ -377,3 +377,17 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Review: no findings.
 - Browser check: not needed (backend query only).
 - Follow-ups: none.
+
+## 2026-11-24 · T2 Make the plot-page e2e test reliable — merged (squash of branch commit 8006ad9)
+- Change: a real app bug, not just a weak test. The `.visually-hidden` labels in the stats weekly chart are absolutely
+  positioned and nothing above them was, so the document grew taller than the screen and scrolling a card into view
+  also scrolled the whole app (top bar and tabs slid up, blank space below). `.main` is now `position: relative` and
+  html/body use `overflow: clip` (`hidden` as fallback). The e2e now also checks the top bar link and the tabs' bottom
+  edge after the card is in view; it failed 4 of 4 runs without the CSS fix.
+- Review: no blocking findings. Minor, left as is: after scrolling, the card's top edge is just off screen (a
+  `scroll-margin-top` would fix it, cosmetic); the tabs-bottom assertion compares with the exact viewport height, which
+  could break if a safe-area inset is added.
+- Browser check: plot-page spec --repeat-each=10 passed 11/11 (2/11 failed before); whole e2e suite 13/13 three times;
+  stats screenshot read at phone size. Repeating the whole suite with --repeat-each=3 collides on fixed names in other
+  specs ("Display zone", "Old sowing"); not touched.
+- Follow-ups: optional `scroll-margin-top` on stats cards; e2e specs that reuse fixed names break under repeat-each.

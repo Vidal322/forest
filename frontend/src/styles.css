@@ -28,8 +28,9 @@
 }
 
 * { box-sizing: border-box; }
-/* only <main> scrolls: the top bar and tabs never move (also when a form scrolls into view) */
-html, body { height: 100%; overflow: hidden; }
+/* only <main> scrolls: the top bar and tabs never move (also when a form scrolls into view). clip, unlike hidden, also
+   stops scripts (scrollIntoView) from scrolling the document; hidden stays as the fallback for older browsers */
+html, body { height: 100%; overflow: hidden; overflow: clip; }
 body { margin: 0; }
 h1 { font-size: 1.35rem; margin: 0 0 0.25rem; }
 a { color: var(--moss); }
@@ -54,7 +55,9 @@ code { font-size: 0.9em; background: #ebe5d8; padding: 0.05em 0.3em; border-radi
 }
 
 /* ---------- app shell: top bar, scrolling main, bottom tabs on phones ---------- */
-.main { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+/* position: relative keeps absolutely placed bits of a page (.visually-hidden text, …) inside <main>'s scroll: without it
+   they made the document taller, and scrolling a card into view slid the whole app (top bar, tabs) up off the screen */
+.main { position: relative; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .page {
   width: 100%; max-width: 900px; margin: 0 auto;
   padding: 1rem max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left));

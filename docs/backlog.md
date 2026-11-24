@@ -238,7 +238,7 @@ Acceptance:
 - On a phone, tapping a zone right next to a plot name on the map still opens the zone, not the plot page.
 
 ### T2 · Make the plot-page e2e test reliable
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend/e2e (plot page spec), maybe the stats page scroll-to-card
 Area: plot-page, e2e
 Acceptance:
