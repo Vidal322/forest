@@ -176,3 +176,17 @@ Touches: backend (stats), frontend (stats page)
 Parallel: alone
 Acceptance:
 - Stats page can show covas (planting holes) and trees planted between two dates, per plot and per species.
+
+## Tidy-ups (low priority)
+
+### T1 · Purge and backup loose ends
+Status: todo
+Touches: README, docs/data-model.md, backend/Makefile, backend/internal/store (comment + test only)
+Parallel: ok
+Acceptance:
+- README: the "Old deletions" section moves below the Backups **Restore** block.
+- docs/data-model.md says a late *edit* (with `base_version`) of a purged activity or task gets 410 while a plain
+  create makes a new row — whichever the code does — and a store/API test pins that behaviour.
+- `make purge` treats only `dry=1` as a dry run; a comment in `store/purge.go` explains its lock order (tombstones
+  only, Postgres rolls back on deadlock) or the README says to run it with the API stopped.
+- `backup-check` cleanup can never drop `<db>_old_*` copies, whatever the database name length.
