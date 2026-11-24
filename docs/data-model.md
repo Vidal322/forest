@@ -383,6 +383,7 @@ erDiagram
   - `task (status)`, `task (plot_id)`, `task (zone_id)`
   - GiST on every `geom`/`position`
 - Foreign keys use `ON DELETE RESTRICT`, because rows are soft-deleted rather than removed. The exceptions, used only when purging old tombstones: `activity_zone` and `activity_species` cascade from `activity`; `tree.planting_activity_id` and `task.resolved_by_activity_id` are set to `NULL`.
+- **Purging tombstones** (`make purge days=90`, `store.PurgeTombstones`): one transaction hard-deletes rows of `activity`, `task`, `tree`, `zone`, `plot`, `species` and `watering_rule` soft-deleted more than N days ago (at least 30, default 90), children before parents so a whole deleted plot goes in one run. A tombstone that any row still references through a RESTRICT key (a deleted species with live trees, a deleted zone in a live activity's history) is skipped and reported, never forced. `field` and `field_image` are never purged (the app doesn't delete them, and an image row owns a photo file). `make purge dry=1` reports without changing anything.
 - One field for now, so nothing checks that an activity's zones belong to `activity.field_id`; add that check in the API when multiple fields arrive.
 
 ## 4. Design decisions
@@ -403,7 +404,9 @@ erDiagram
 
 *Update (migration 00012):* trees recorded as counts on a zone ("12 alive, 2 dead sobreiros here") have no measured position, so their zone is stored in `tree.zone_id` (and `position` stays NULL). A made-up point would put them in every overlapping zone. Trees with a real position keep `zone_id` NULL and their zone is still derived. Counts are set as targets (idempotent for the offline queue); deleting a zone or plot retires its counted trees.
 
-**Soft delete everywhere (rejected: hard delete for activities and tasks).** Referenced entities (`plot`, `zone`, `species`, `tree`, …) must survive so history stays intact: removing a zone must not erase what was sown there. Activities and tasks are soft-deleted too, because offline sync needs **tombstones**: if a delete reaches the server before a late, queued create or edit of the same id, the tombstone makes the server reject it instead of resurrecting the entry. Tombstones older than a few months can be purged.
+**Soft delete everywhere (rejected: hard delete for activities and tasks).** Referenced entities (`plot`, `zone`, `species`, `tree`, …) must survive so history stays intact: removing a zone must not erase what was sown there. Activities and tasks are soft-deleted too, because offline sync needs **tombstones**: if a delete reaches the server before a late, queued create or edit of the same id, the tombstone makes the server reject it (410) instead of resurrecting the entry. Tombstones older than 90 days can be purged (`make purge`).
+
+*Decision (purge):* a late write to a **purged** id is accepted as a new row — there is no tombstone left to answer 410. Keeping every id forever would avoid that, but 90 days is far longer than any phone stays offline (the outbox sends its queue as soon as there is signal), so in practice nothing queued can still arrive. `make purge` refuses fewer than 30 days.
 
 **Seasonal watering rules (rejected: one fixed interval).** Summer needs watering far more often than winter. A small `watering_rule` table (month range → interval) per field keeps the rule data, not code, and the view picks the one in effect today. A per-zone override can be added later as a nullable column on `zone` if newly sown areas need it.
 
@@ -416,7 +419,7 @@ erDiagram
 - Each queue item is a whole aggregate — an activity together with its `activity_zone` and `activity_species` rows — applied in one transaction.
 - Queue order is kept, so a zone or species created offline is synced before the activity that uses it.
 - Edits carry the `version` they were based on (optimistic concurrency). If the server's version moved on, the server rejects the edit and the app shows both versions to pick from. With one person using the app this should be rare.
-- Deletes leave tombstones (see *Soft delete everywhere*), and a create or edit for a tombstoned id is rejected.
+- Deletes leave tombstones (see *Soft delete everywhere*), and a create or edit for a tombstoned id is rejected. Once a tombstone is purged (after ≥ 90 days), a write to its id is a plain create again.
 
 **Users later, not now (rejected: modelling auth today).** Every table chains up to `field`, either directly or through `plot`/`activity`. Multi-user support later is therefore one `app_user` table plus `field.owner_id` (or a `field_member` table), with each query scoped by field. `species` is a global catalogue for now and could gain a nullable `owner_id` later. Adding `created_by` columns at that point is a non-breaking migration.
 

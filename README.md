@@ -94,6 +94,20 @@ To back up a different database, put the override after `make`: `make backup DAT
 
 Then copy `backups/` elsewhere (another machine, a USB disk, `rsync`, a cloud drive) as often as you can afford to lose.
 
+### Old deletions
+
+Deleted entries stay in the database as *tombstones*, so a phone that was offline can't bring them back by sending an
+old edit. After a few months nothing queued can still arrive, and they can go for good:
+
+```sh
+cd backend
+make purge dry=1    # what would go, nothing changed
+make purge          # hard-delete entries deleted more than 90 days ago (days=120 for another age; at least 30)
+```
+
+It runs in one transaction and prints a count per table. Deleted entries that something still points at (a deleted
+species with trees, a deleted zone in the watering history) are kept and listed. Take a backup first.
+
 **Restore**
 
 ```sh

@@ -47,7 +47,7 @@ Acceptance:
 - README says backups always use the compose `db` service, and that a forced restore leaves newer photo files in place.
 
 ### B3 · Purge old tombstones
-Status: todo
+Status: done (2026-11-24)
 Touches: backend/internal/store, backend/cmd, backend/Makefile
 Parallel: alone
 Acceptance:

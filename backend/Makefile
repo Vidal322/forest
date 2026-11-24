@@ -7,7 +7,7 @@ export
 need-db-url = $(if $(DATABASE_URL),,$(error DATABASE_URL is not set — run: cp .env.example .env))
 GOOSE = $(need-db-url)GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" GOOSE_MIGRATION_DIR=internal/db/migrations goose
 
-.PHONY: help db-up db-down db-smoke backup restore backup-check migrate migrate-down migrate-status migration run test lint check
+.PHONY: help db-up db-down db-smoke backup restore backup-check purge migrate migrate-down migrate-status migration run test lint check
 
 help: ## list targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -29,6 +29,9 @@ restore: ## restore a backup: make restore from=backups/<timestamp> db=<name> da
 
 backup-check: ## prove backups restore: back up, restore into a scratch database, compare row counts + photos
 	$(need-db-url)scripts/backup-check.sh
+
+purge: ## hard-delete tombstones older than N days: make purge [days=90] [dry=1]
+	$(need-db-url)go run ./cmd/purge -days=$(or $(days),90) $(if $(dry),-dry-run)
 
 migrate: ## apply all pending migrations
 	$(GOOSE) up

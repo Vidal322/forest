@@ -60,3 +60,26 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: possible items: make `backup-check` use a short fixed check name (or drop only the exact `_old_` name
   restore printed), grep the refusal message, and hold a connection (`pg_sleep`) during the forced restore. shellcheck
   is not in the dev shell, so the scripts are not linted.
+
+## 2026-11-24 · B3 Purge old tombstones — merged (squash of branch commit 165ef92)
+- Change: new `make purge [days=90] [dry=1]` in backend/ (`cmd/purge`, `store/purge.go`). It hard-deletes rows
+  soft-deleted more than N days ago, in one transaction, in the order activity, task, tree, zone, plot, species,
+  watering_rule. The existing foreign keys do the cascades (join tables from activity; `tree.planting_activity_id` and
+  `task.resolved_by_activity_id` set to NULL), so the schema did not change. Each row is deleted in its own savepoint:
+  a tombstone still referenced through a RESTRICT key is kept and reported under the constraint name, never forced.
+  The command prints one line per table (purged, kept and why, join rows and links removed). It refuses fewer than
+  30 days. `dry=1` prints the counts and rolls back. `field` and `field_image` are never purged, because an image row
+  owns a photo file. Clearing `resolved_by_activity_id` on a live task bumps that task's version, so a phone editing
+  that task gets one 409. docs/data-model.md records the decision that a late write to a purged id makes a new row.
+  README has an "Old deletions" section.
+- Review: no blocking findings. Four minor ones left as is: (1) the README "Old deletions" heading sits between the
+  Backups text and its **Restore** block, so the restore steps now appear under the wrong heading; (2) the docs say a
+  late write to a purged id becomes a new row, but a late *edit* (with `base_version`) of a purged activity or task
+  still gets 410; that is safer, but it is not documented or tested; (3) the purge locks activity, then task/tree,
+  then zone, then plot, the reverse of the store's plot → zone → task order. It only touches tombstones plus the
+  SET NULL updates, and Postgres would roll back on a deadlock, but no comment explains this; (4) `make purge dry=0`
+  still does a dry run (any non-empty value counts).
+- Browser check: not needed (admin command and docs only).
+- Follow-ups: these could become new items: move the README "Old deletions" section below Restore; document (and
+  test) that a late edit of a purged activity or task gets 410; add a comment on the lock order (or say to run purge
+  with the API stopped); accept only `dry=1`.
