@@ -89,7 +89,7 @@ Acceptance:
 - The order is explained in one short line in the UI.
 
 ### M10 · Offline task changes update zone badges right away
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (api/tasks.ts, zone status/list queries)
 Parallel: ok
 Acceptance:

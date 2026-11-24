@@ -1,7 +1,11 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { onlineManager } from '@tanstack/react-query'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Browser } from 'leaflet'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
+import type { Zone } from '../api/plots'
+import type { Task } from '../api/tasks'
+import { fieldToday } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
 import { testField, testPlot, testZone } from '../test/fixtures'
 import { renderApp } from '../test/render'
@@ -220,5 +224,84 @@ describe('drawing', () => {
     expect(screen.getByRole('group', { name: 'Confirm delete' })).toHaveTextContent('Delete Clareira with its 1 open task?')
     await userEvent.click(screen.getByRole('button', { name: 'Delete zone' }))
     await waitFor(() => expect(queryClient.getQueryData(['tasks'])).toEqual([]))
+  })
+
+  it('offline: closing or reopening a task moves its zone in the list at once, and the server has the last word', async () => {
+    const today = fieldToday()
+    // both watered today; Clareira only comes first for its open task
+    const clareira: Zone = { ...testZone, last_watered_on: today }
+    const alto: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000002', label: 'Alto', last_watered_on: today }
+    const task: Task = {
+      id: '40000000-0000-4000-8000-000000000001',
+      plot_id: null,
+      zone_id: clareira.id,
+      title: 'Regar',
+      description: null,
+      kind: 'water',
+      status: 'open',
+      due_on: null,
+      completed_at: null,
+      resolved_by_activity_id: null,
+      version: 1,
+      created_at: '2026-11-01T10:00:00Z',
+      updated_at: '2026-11-01T10:00:00Z',
+    }
+    let tasks: Task[] = [task]
+    const puts: string[] = []
+    const count = (z: Zone) => tasks.filter((t) => t.zone_id === z.id && (t.status === 'open' || t.status === 'in_progress')).length
+    const api = mapApi({
+      'GET /api/zones': () => ({ status: 200, body: [clareira, alto].map((z) => ({ ...z, open_task_count: count(z) })) }),
+      'GET /api/tasks': () => ({ status: 200, body: tasks }),
+      'GET /api/activities.*': () => ({ status: 200, body: [] }),
+    })
+    api.fetchMock.mockImplementation(
+      ((real) => async (input, init) => {
+        const path = String(input)
+        if (init?.method === 'PUT' && path.startsWith('/api/tasks/')) {
+          puts.push(path)
+          const body = JSON.parse(String(init.body)) as Task & { base_version: number }
+          const saved = { ...task, ...body, id: path.split('/').pop()!, version: body.base_version + 1 }
+          tasks = [...tasks.filter((t) => t.id !== saved.id), saved]
+          return new Response(JSON.stringify(saved), { status: 200 })
+        }
+        return real(input, init)
+      })(api.fetchMock.getMockImplementation()!),
+    )
+    // the tasks and the map were both seen online before
+    const { router, queryClient } = renderApp('/tasks')
+    await screen.findByRole('button', { name: 'Done: Regar' })
+    await act(() => router.navigate('/'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    const order = () =>
+      within(screen.getByRole('region', { name: testPlot.name }))
+        .getAllByRole('button')
+        .map((b) => b.textContent)
+    expect(order()).toEqual([expect.stringMatching(/^Clareira · 1 open task/), expect.stringMatching(/^Alto/)])
+
+    onlineManager.setOnline(false)
+    onTestFinished(() => onlineManager.setOnline(true))
+    await act(() => router.navigate('/tasks'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Done: Regar' }))
+    expect(await screen.findByText('Done: Regar.')).toBeInTheDocument()
+    await act(() => router.navigate('/'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    // nothing left to do in Clareira: back in name order, before the outbox is sent
+    expect(order()).toEqual([expect.stringMatching(/^Alto/), expect.stringMatching(/^Clareira$|^Clareira[^·]/)])
+    expect(puts).toEqual([])
+
+    // reopened, still offline: counted again
+    await act(() => router.navigate('/tasks'))
+    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Done: Regar' }))
+    await act(() => router.navigate('/'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    expect(order()[0]).toMatch(/^Clareira · 1 open task/)
+
+    // meanwhile a second task was added there elsewhere: once synced, the server's count wins
+    tasks = [...tasks, { ...task, id: '40000000-0000-4000-8000-000000000009', title: 'Semear' }]
+    onlineManager.setOnline(true)
+    await waitFor(() => expect(puts).toHaveLength(2))
+    await waitFor(() => expect(order()[0]).toMatch(/^Clareira · 2 open tasks/))
+    expect(queryClient.getQueryData<Zone[]>(['zones'])!.find((z) => z.id === clareira.id)!.open_task_count).toBe(2)
   })
 })

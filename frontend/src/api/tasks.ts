@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query'
 import { formatDay, relativeDay } from '../domain/dates'
 import { ACTIVITY, type Activity } from './activities'
 import { defineEntity } from './entity'
@@ -86,7 +87,39 @@ export const tasks = defineEntity<Task, TaskInput>({
   },
   versioned: true,
   alsoRefresh: [['zones'], ['plot-stats']], // open task counts
+  onSaveOptimistic: (qc, input, before) => recountZones(qc, before, input),
+  onDeleteOptimistic: (qc, _id, before) => recountZones(qc, before, undefined),
 })
+
+type Counted = Pick<Task, 'zone_id' | 'status'>
+
+/**
+ * Keep the zones' open task counts (badges, the zone list's order) right at once,
+ * also offline, when a task is added, closed, reopened, moved or deleted: one less
+ * where it was open, one more where it is open now. The server's zone list
+ * replaces this once the write is through. Returns how to undo it.
+ */
+async function recountZones(qc: QueryClient, before: Counted | undefined, after: Counted | undefined) {
+  const delta = new Map<string, number>()
+  const add = (t: Counted | undefined, n: number) => {
+    if (t?.zone_id && isOpen(t)) delta.set(t.zone_id, (delta.get(t.zone_id) ?? 0) + n)
+  }
+  add(before, -1)
+  add(after, +1)
+  for (const [id, n] of delta) if (n === 0) delta.delete(id)
+  if (delta.size === 0) return () => {}
+  // a zone list already on its way would bring the old counts back
+  await qc.cancelQueries({ queryKey: ['zones'] })
+  const shift = (sign: number) =>
+    qc.setQueryData<Zone[]>(['zones'], (zones) =>
+      zones?.map((z) => {
+        const n = delta.get(z.id)
+        return n ? { ...z, open_task_count: Math.max(0, z.open_task_count + sign * n) } : z
+      }),
+    )
+  shift(+1)
+  return () => shift(-1)
+}
 
 /** The plot a task counts under: its own, or its zone's (undefined if the zone isn't known here). */
 export function taskPlotId(t: Pick<Task, 'plot_id' | 'zone_id'>, zones: Zone[]): string | undefined {

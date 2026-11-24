@@ -1,8 +1,10 @@
+import { onlineManager } from '@tanstack/react-query'
 import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import type { Activity } from '../api/activities'
-import type { Task } from '../api/tasks'
+import type { Zone } from '../api/plots'
+import { isOpen, type Task } from '../api/tasks'
 import { addDays, fieldToday } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
 import { testPlot, testZone } from '../test/fixtures'
@@ -52,7 +54,14 @@ function taskApi(list: Task[] = [base, later], delayMs = 0, twoPlots = false) {
     'GET /api/tree-counts': () => ({ status: 200, body: [] }),
     'GET /api/tasks': () => ({ status: 200, body: db }),
     'GET /api/plots': () => ({ status: 200, body: twoPlots ? [testPlot, plot2] : [testPlot] }),
-    'GET /api/zones': () => ({ status: 200, body: twoPlots ? [testZone, zone2] : [testZone] }),
+    // with the open task counts the server works out
+    'GET /api/zones': () => ({
+      status: 200,
+      body: (twoPlots ? [testZone, zone2] : [testZone]).map((z) => ({
+        ...z,
+        open_task_count: db.filter((t) => t.zone_id === z.id && isOpen(t)).length,
+      })),
+    }),
     'PUT /api/tasks/[^/]+': ({ path, body }) => {
       const b = body as Partial<Task> & { base_version: number | null }
       const id = path.split('/').pop()!
@@ -210,6 +219,26 @@ describe('TasksPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true))
     expect(api.calls.find((c) => c.method === 'PUT')!.body).toMatchObject({ status: 'done', resolved_by_activity_id: sowing.id })
+  })
+
+  it('offline: moving or deleting a task changes its zones’ open task counts at once', async () => {
+    taskApi([base, inZone2], 0, true)
+    const { queryClient } = renderApp('/tasks')
+    await screen.findByRole('button', { name: /Edit: .*Falta semear/ })
+    const counts = () => Object.fromEntries(queryClient.getQueryData<Zone[]>(['zones'])!.map((z) => [z.label, z.open_task_count]))
+    await waitFor(() => expect(counts()).toEqual({ Clareira: 1, Ribeira: 1 }))
+    onlineManager.setOnline(false)
+    onTestFinished(() => onlineManager.setOnline(true))
+
+    await userEvent.click(screen.getByRole('button', { name: /Edit: .*Falta semear/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Where'), `zone:${zone2.id}`)
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(counts()).toEqual({ Clareira: 0, Ribeira: 2 }))
+
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Regar ribeira/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(counts()).toEqual({ Clareira: 0, Ribeira: 1 }))
   })
 
   describe('plot filter', () => {

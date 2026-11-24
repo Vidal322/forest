@@ -150,3 +150,28 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: preselect the chosen plot in Add task (or switch back to All plots after
   adding elsewhere); wait for plots and zones before applying or dropping the remembered choice; test the deleted-plot
   fallback.
+
+## 2026-11-24 · M10 Offline task changes update zone badges right away — merged (squash of branch commit 62cd754)
+- Change: frontend only. Closing, reopening, moving or deleting a task (tasks page, zone page, quick log all use the
+  same save) changes its zone's open-task count in the cached zone list at once, offline too, so the zone badge and its
+  place in the zone list update immediately. `recountZones` in `src/api/tasks.ts` takes 1 off the zone the task was
+  open in and adds 1 to the zone it is open in now, cancels an in-flight zone-list fetch first, and puts the counts
+  back if the write fails; `entity.ts` now awaits the save hook like the delete hook. After sync the server's zone list
+  replaces the local count. Plot stats counts still only update after sync. Tests: MapPage (offline close moves the
+  zone down with no write sent, reopen puts it back, server count wins after flush) and TasksPage (offline move to
+  another zone and delete update both zones).
+- Review: no blocking findings. Five minor ones left as is: (1) during sync of a quick log the activity write's zones
+  refresh runs while the task-close PUT is still queued, so the server's old count briefly comes back and the list
+  jumps until the task write lands (fix: overlay queued task writes on refetched zones, or hold the zones refresh while
+  task writes are pending; add a quick log + reconnect test); (2) the undo is not exact when a count was already 0
+  (the clamp), fixed by the next refresh; (3) `cancelQueries(['zones'])` also runs while the zone list's first load is
+  in progress, which can leave it unloaded until the next write or remount; (4) no test for the rollback on a rejected
+  write (409/410) nor for the zone page / quick log paths (checked by hand); (5) tooling: a stale service worker on the
+  preview origin served an old bundle.
+- Browser check: Pixel 7 emulation on the preview with 1 plot, 3 sown and watered zones and an open task in Zone 3.
+  Offline: closing it on /tasks moved Zone 3 from first to last, reopening on the zone page put it back on top, a new
+  water task for Zone 1 counted at once, quick log "closes 1 task" dropped it again, a reload kept the state. Online:
+  all writes synced and the server's counts ended up correct, with the brief flicker from finding (1).
+- Follow-ups: these could become new items: no zones flicker while task writes are still queued (finding 1, with a
+  quick log + reconnect test); exact undo and no cancel before the first zone load (findings 2-3); a 409 rollback test;
+  make `preview.sh` start without an old service worker.
