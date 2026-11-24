@@ -29,3 +29,9 @@ backend/data/
 
 # playwright mcp screenshots / traces
 .playwright-mcp/
+
+# backlog loop: worktrees, preview runs, usage snapshot, backups
+.claude/worktrees/
+.claude/loop/run/
+.claude/loop/usage/
+backups/

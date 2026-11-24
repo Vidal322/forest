@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(docker compose down -v:*)",
+      "Bash(dropdb:*)",
+      "mcp__claude_ai_Gmail",
+      "mcp__claude_ai_Resend",
+      "mcp__claude_ai_Supabase"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/git-guard.py",
+            "timeout": 1800
+          }
+        ]
+      }
+    ]
+  }
+}
