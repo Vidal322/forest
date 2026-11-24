@@ -214,6 +214,26 @@ func TestPurgeTombstones(t *testing.T) {
 		t.Errorf("late write to a purged id: created=%v err=%v, want a new row", created, err)
 	}
 
+	// For the versioned kinds a late *edit* (it carries base_version) of a purged
+	// id is still refused: the server can't have lost a row it never had. A plain
+	// create (no base_version) of that id makes a new row.
+	lateActivity := store.ActivityInput{Type: "watering", PerformedOn: "2020-01-01", Zones: []store.ActivityZone{{ZoneID: liveZone}}}
+	lateTask := store.TaskInput{ZoneID: &liveZone, Title: "Test purge late", Kind: "water"}
+	editActivity, editTask := lateActivity, lateTask
+	editActivity.BaseVersion, editTask.BaseVersion = ptr(1), ptr(1)
+	if _, _, err := s.PutActivity(ctx, oldActivity, editActivity); !errors.Is(err, store.ErrDeleted) {
+		t.Errorf("late edit of a purged activity: %v, want ErrDeleted", err)
+	}
+	if _, _, err := s.PutTask(ctx, oldTask, editTask); !errors.Is(err, store.ErrDeleted) {
+		t.Errorf("late edit of a purged task: %v, want ErrDeleted", err)
+	}
+	if _, created, err := s.PutActivity(ctx, oldActivity, lateActivity); err != nil || !created {
+		t.Errorf("late create of a purged activity: created=%v err=%v, want a new row", created, err)
+	}
+	if _, created, err := s.PutTask(ctx, oldTask, lateTask); err != nil || !created {
+		t.Errorf("late create of a purged task: created=%v err=%v, want a new row", created, err)
+	}
+
 	// Nothing left to do on a second run.
 	res, err = s.PurgeTombstones(ctx, purgeCutoff, false)
 	if err != nil {

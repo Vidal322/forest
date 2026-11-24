@@ -211,7 +211,7 @@ Acceptance:
 ## Tidy-ups (low priority)
 
 ### T1 · Purge and backup loose ends
-Status: todo
+Status: done (2026-11-24)
 Touches: README, docs/data-model.md, backend/Makefile, backend/internal/store (comment + test only)
 Area: backup-purge
 Acceptance:

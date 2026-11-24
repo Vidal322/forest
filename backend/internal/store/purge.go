@@ -50,7 +50,20 @@ var errPurgeDryRun = errors.New("dry run")
 // with live trees, a deleted zone in a live activity's history) is skipped and
 // counted in Kept, never forced.
 //
-// Once a tombstone is purged, a late write to its id is a plain create again.
+// Once a tombstone is purged, a late create of its id makes a new row; a late
+// edit of a purged activity or task (it has a base_version) still gets
+// ErrDeleted, because PutActivity / PutTask refuse an edit of a missing row.
+//
+// Lock order: this visits tables child first (activity → task → tree → zone →
+// plot), the reverse of the store's plot → zone → task/trees, which is what
+// lets a whole deleted plot go in one run. It selects only tombstones FOR
+// UPDATE, but deleting them also locks live rows (the foreign key checks, and
+// the live trees and tasks whose planting / resolving activity it clears), so
+// an edit running at the same moment can deadlock with it. Postgres then
+// aborts one of the two: if it is the purge, the whole transaction rolls back
+// (nothing half done) and it can be run again; if it is the edit, that write
+// fails with a server error and the phone shows it. So `make purge` is meant
+// to run with the API stopped (the README says so).
 func (s *Store) PurgeTombstones(ctx context.Context, cutoff time.Time, dryRun bool) ([]PurgedTable, error) {
 	var out []PurgedTable
 	err := s.inTx(ctx, func(tx *Store) error {

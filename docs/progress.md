@@ -316,3 +316,15 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   (per-plot totals do); (2) no "nothing logged" hint when every total is 0 (left as is).
 - Browser check: e2e 7/7 including planted-range; phone screenshot looked right, no sideways scroll.
 - Follow-ups: new item F6 (species trees follow live zones).
+
+## 2026-11-24 · T1 Purge and backup loose ends — merged (squash of branch commit ed8f3bc, rebased)
+- Change: README "Old deletions" now follows the Restore block and says to back up and stop the API while purging.
+  `make purge` is a dry run only for `dry=1`; other odd values stop with an error. `store/purge.go` documents the lock
+  order (child-first, can deadlock with a concurrent edit; purge rolls back, the edit gets a 5xx). Late writes to
+  purged rows are documented in `docs/data-model.md` and pinned by a test (edit with `base_version` gets 410, plain
+  create makes a new row). `backup-check.sh` now uses `restore_check_<26 chars>` and an exact old-copy pattern, so it
+  can no longer drop the live database's `_old_*` copies.
+- Review: no blocking findings. Minor, left as is: the guard in backup-check.sh does not reject a database literally
+  named `restore_check_*` (harmless, cleanup is exact).
+- Browser check: not needed (docs, script, Makefile, comment, test).
+- Follow-ups: none.

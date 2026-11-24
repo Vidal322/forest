@@ -411,7 +411,7 @@ erDiagram
 
 **Soft delete everywhere (rejected: hard delete for activities and tasks).** Referenced entities (`plot`, `zone`, `species`, `tree`, …) must survive so history stays intact: removing a zone must not erase what was sown there. Activities and tasks are soft-deleted too, because offline sync needs **tombstones**: if a delete reaches the server before a late, queued create or edit of the same id, the tombstone makes the server reject it (410) instead of resurrecting the entry. Tombstones older than 90 days can be purged (`make purge`).
 
-*Decision (purge):* a late write to a **purged** id is accepted as a new row — there is no tombstone left to answer 410. Keeping every id forever would avoid that, but 90 days is far longer than any phone stays offline (the outbox sends its queue as soon as there is signal), so in practice nothing queued can still arrive. `make purge` refuses fewer than 30 days.
+*Decision (purge):* a late *create* of a **purged** id is accepted as a new row — there is no tombstone left to answer 410. A late *edit* of a purged `activity` or `task` (it carries `base_version`) still gets 410: the server has no row with that id, so it can only have been deleted. Unversioned kinds (`plot`, `zone`, `species`, …) can't tell an edit from a create, so any write to a purged id makes a new row. Keeping every id forever would avoid that, but 90 days is far longer than any phone stays offline (the outbox sends its queue as soon as there is signal), so in practice nothing queued can still arrive. `make purge` refuses fewer than 30 days.
 
 **Seasonal watering rules (rejected: one fixed interval).** Summer needs watering far more often than winter. A small `watering_rule` table (month range → interval) per field keeps the rule data, not code, and the view picks the one in effect today. A per-zone override can be added later as a nullable column on `zone` if newly sown areas need it.
 
@@ -424,7 +424,7 @@ erDiagram
 - Each queue item is a whole aggregate — an activity together with its `activity_zone` and `activity_species` rows — applied in one transaction.
 - Queue order is kept, so a zone or species created offline is synced before the activity that uses it.
 - Edits carry the `version` they were based on (optimistic concurrency). If the server's version moved on, the server rejects the edit and the app shows both versions to pick from. With one person using the app this should be rare.
-- Deletes leave tombstones (see *Soft delete everywhere*), and a create or edit for a tombstoned id is rejected. Once a tombstone is purged (after ≥ 90 days), a write to its id is a plain create again.
+- Deletes leave tombstones (see *Soft delete everywhere*), and a create or edit for a tombstoned id is rejected. Once a tombstone is purged (after ≥ 90 days), a create for its id makes a new row again; an edit with `base_version` of a purged activity or task is still rejected (410).
 
 **Users later, not now (rejected: modelling auth today).** Every table chains up to `field`, either directly or through `plot`/`activity`. Multi-user support later is therefore one `app_user` table plus `field.owner_id` (or a `field_member` table), with each query scoped by field. `species` is a global catalogue for now and could gain a nullable `owner_id` later. Adding `created_by` columns at that point is a non-breaking migration.
 

@@ -30,8 +30,10 @@ restore: ## restore a backup: make restore from=backups/<timestamp> db=<name> da
 backup-check: ## prove backups restore: back up, restore into a scratch database, compare row counts + photos
 	$(need-db-url)scripts/backup-check.sh
 
-purge: ## hard-delete tombstones older than N days: make purge [days=90] [dry=1]
-	$(need-db-url)go run ./cmd/purge -days=$(or $(days),90) $(if $(dry),-dry-run)
+# Only dry=1 is a dry run; dry= / dry=0 purge for real, and anything else (dry=yes, dry=true) is refused rather than guessed.
+purge-dry = $(if $(filter 1,$(dry)),-dry-run,$(if $(filter-out 0,$(dry)),$(error dry=$(dry): use dry=1 for a dry run, or leave it out)))
+purge: ## hard-delete tombstones older than N days, with the API stopped: make purge [days=90] [dry=1]
+	$(need-db-url)go run ./cmd/purge -days=$(or $(days),90) $(purge-dry)
 
 migrate: ## apply all pending migrations
 	$(GOOSE) up
