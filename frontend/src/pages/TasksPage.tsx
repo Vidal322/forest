@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { activities as activitiesApi } from '../api/activities'
 import { friendlyError } from '../api/errors'
 import { plots as plotsApi, zones as zonesApi } from '../api/plots'
-import { isOpen, taskPlace, tasks as tasksApi, type Task } from '../api/tasks'
+import { isOpen, resolvedLink, taskPlace, tasks as tasksApi, type Task } from '../api/tasks'
 import { TaskForm } from '../components/TaskForm'
 import { TaskRow, ToastLine } from '../components/TaskRow'
 import { daysBetween } from '../domain/dates'
@@ -14,6 +15,7 @@ export function TasksPage() {
   const list = tasksApi.useList()
   const plots = plotsApi.useList()
   const zones = zonesApi.useList()
+  const entries = activitiesApi.useList()
   const today = useFieldToday()
   const [editing, setEditing] = useState<Editing>(null)
   const [formKey, setFormKey] = useState(0)
@@ -59,6 +61,7 @@ export function TasksPage() {
     task: t,
     place: taskPlace(t, p, z),
     today,
+    resolvedBy: resolvedLink(t, entries.data ?? [], z, today),
     onEdit: () => edit(t),
     onToggle: () => toggle(t),
   })

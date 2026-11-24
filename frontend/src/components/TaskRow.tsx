@@ -1,4 +1,5 @@
-import { isOpen, TASK_KIND, type Task } from '../api/tasks'
+import { Link } from 'react-router'
+import { isOpen, TASK_KIND, type ResolvedLink, type Task } from '../api/tasks'
 import { fieldToday, relativeDay } from '../domain/dates'
 import type { Toast } from '../hooks/useTaskToggle'
 
@@ -25,12 +26,15 @@ export function TaskRow({
   task,
   place,
   today,
+  resolvedBy,
   onEdit,
   onToggle,
 }: {
   task: Task
   place?: string
   today: string
+  /** the log entry that closed it, if any (see `resolvedLink`) */
+  resolvedBy?: ResolvedLink
   onEdit: () => void
   onToggle: () => void
 }) {
@@ -44,23 +48,30 @@ export function TaskRow({
           {open ? '' : '✓'}
         </span>
       </button>
-      <button id={`task-${task.id}`} type="button" className="task__body" onClick={onEdit}>
-        <span className="task__title">
-          <span className="visually-hidden">Edit: </span>
-          <span aria-hidden="true">{TASK_KIND[task.kind].icon}</span> {task.title}
-        </span>
-        <span className="task__meta">
-          {[
-            place,
-            open && task.due_on ? `due ${relativeDay(task.due_on, today)}` : null,
-            task.status === 'in_progress' ? 'in progress' : null,
-            task.status === 'done' && closedOn ? `done ${closedOn}` : null,
-            task.status === 'cancelled' ? 'cancelled' : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </span>
-      </button>
+      <div className="task__main">
+        <button id={`task-${task.id}`} type="button" className="task__body" onClick={onEdit}>
+          <span className="task__title">
+            <span className="visually-hidden">Edit: </span>
+            <span aria-hidden="true">{TASK_KIND[task.kind].icon}</span> {task.title}
+          </span>
+          <span className="task__meta">
+            {[
+              place,
+              open && task.due_on ? `due ${relativeDay(task.due_on, today)}` : null,
+              task.status === 'in_progress' ? 'in progress' : null,
+              task.status === 'done' && closedOn ? `done ${closedOn}` : null,
+              task.status === 'cancelled' ? 'cancelled' : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </span>
+        </button>
+        {resolvedBy && (
+          <Link className="task__link" to={resolvedBy.to}>
+            <span className="visually-hidden">Done by the log entry:</span> {resolvedBy.label} →
+          </Link>
+        )}
+      </div>
     </li>
   )
 }

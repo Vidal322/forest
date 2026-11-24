@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import {
   ACTIVITY,
@@ -12,9 +13,10 @@ import {
 } from '../api/activities'
 import { friendlyError } from '../api/errors'
 import { fieldPhoto, useField } from '../api/field'
-import { SAVED_ON_PHONE } from '../api/outbox'
+import { markShownInline, SAVED_ON_PHONE } from '../api/outbox'
 import { plots as plotsApi, zoneName, zones as zonesApi, type Zone } from '../api/plots'
 import { useSpeciesList } from '../api/species'
+import { isOpen, TASK_KIND, taskInput, taskPlace, tasks as tasksApi, type Task, type TaskKind } from '../api/tasks'
 import { FieldMap } from '../components/FieldMap'
 import { ToastLine } from '../components/TaskRow'
 import { StatusBadge } from '../components/StatusBadge'
@@ -28,6 +30,14 @@ import { FieldLayers } from '../map/FieldLayers'
 
 const MAIN: ActivityType[] = ['watering', 'sowing', 'planting']
 const MORE: ActivityType[] = ['fertilizing', 'other']
+
+/** The kind of open task this work usually finishes: ticked for closing by default. */
+const CLOSES: Partial<Record<ActivityType, TaskKind>> = {
+  watering: 'water',
+  sowing: 'sow',
+  planting: 'plant',
+  fertilizing: 'fertilize',
+}
 
 function parseCount(text: string): number | null | 'bad' {
   const t = text.trim()
@@ -46,6 +56,9 @@ export function LogPage() {
   const zones = zonesApi.useList()
   const speciesList = useSpeciesList()
   const save = activities.useSave()
+  const qc = useQueryClient()
+  const tasks = tasksApi.useList()
+  const saveTask = tasksApi.useSave()
   // the entry this form is waiting on; once it is queued or saved the form moves on,
   // and a later refusal of it is reported by the sync bar instead
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -55,17 +68,11 @@ export function LogPage() {
   const del = activities.useDelete()
   // the last message, with an Undo for the entry just logged (a wrong tap is fixed in one more)
   const [toast, setToast] = useState<Toast | null>(null)
-  const say = useCallback(
-    (text: string, undoId?: string) =>
-      setToast((t) => ({
-        text,
-        n: (t?.n ?? 0) + 1,
-        undo: undoId ? () => del.mutate(undoId) : undefined,
-      })),
-    // del.mutate is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
+  const say = useCallback((text: string, undo?: () => void) => setToast((t) => ({ text, n: (t?.n ?? 0) + 1, undo })), [])
+  // how to undo the entry being saved: delete it and reopen the tasks it closed
+  const undoPending = useRef<(() => void) | undefined>(undefined)
+  // " Done: <titles>." for the tasks the entry being saved closes ('' when none)
+  const donePending = useRef('')
   const [params, setParams] = useSearchParams()
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set(params.getAll('zone')))
@@ -79,6 +86,8 @@ export function LogPage() {
   const [unit, setUnit] = useState<QuantityUnit | null>(null)
   const [species, setSpecies] = useState<Record<string, string>>({}) // id → count text
   const [notes, setNotes] = useState('')
+  // tasks ticked or unticked by hand; the others follow the default (see CLOSES)
+  const [taskTicks, setTaskTicks] = useState<Record<string, boolean>>({})
   const [showList, setShowList] = useState(false)
   const [error, setError] = useState('')
   const ids = { count: useId(), date: useId(), notes: useId(), err: useId() }
@@ -90,13 +99,27 @@ export function LogPage() {
   const effectiveUnit = unit ?? (type ? ACTIVITY[type].unit : null)
   const hasSpecies = type === 'sowing' || type === 'planting'
 
+  // open tasks on the chosen zones or on their plots, the kind this work finishes first
+  const chosenIds = new Set(chosen.map((z) => z.id))
+  const chosenPlots = new Set(chosen.map((z) => z.plot_id))
+  const closes = type ? CLOSES[type] : undefined
+  const openTasks = type
+    ? (tasks.data ?? [])
+        .filter((t) => isOpen(t) && (t.zone_id ? chosenIds.has(t.zone_id) : t.plot_id !== null && chosenPlots.has(t.plot_id)))
+        .sort((a, b) => Number(b.kind === closes) - Number(a.kind === closes))
+    : []
+  // a plot-wide task is ticked by default only when every zone of its plot was worked
+  const wholePlot = (plotId: string) => allZones.every((z) => z.plot_id !== plotId || chosenIds.has(z.id))
+  const ticked = (t: Task) => taskTicks[t.id] ?? (t.kind === closes && (t.zone_id !== null || (t.plot_id !== null && wholePlot(t.plot_id))))
+  const closing = openTasks.filter(ticked).length
+
   // (a zone deleted meanwhile simply isn't in `chosen`, which is built from the live list)
 
   // queued offline: as good as saved — clear the form for the next entry
   const queued = ownsResult && saveState.waiting
   useEffect(() => {
     if (!queued) return
-    say(SAVED_ON_PHONE, pendingId ?? undefined)
+    say(`${SAVED_ON_PHONE}${donePending.current}`, undoPending.current)
     reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only touches state setters
   }, [queued, say])
@@ -120,6 +143,7 @@ export function LogPage() {
     setUnit(null)
     setSpecies({})
     setNotes('')
+    setTaskTicks({})
     if (params.has('zone')) setParams({}, { replace: true })
   }
 
@@ -160,7 +184,16 @@ export function LogPage() {
     const names = chosen.map((z) => zoneName(z))
     const what = ACTIVITY[type].past
     const id = newId()
+    const toClose = openTasks.filter(ticked)
     setPendingId(id)
+    const undo = () => {
+      // put the tasks back as they were, then remove the entry
+      for (const t of toClose) saveTask.mutate({ id: t.id, input: taskInput(t) })
+      del.mutate(id)
+    }
+    undoPending.current = undo
+    const closed = toClose.length === 0 ? '' : ` Done: ${toClose.map((t) => t.title).join(', ')}.`
+    donePending.current = closed
     save.mutate(
       {
         id,
@@ -179,11 +212,23 @@ export function LogPage() {
       },
       {
         onSuccess: () => {
-          say(`Logged: ${what} ${zonesPhrase(names)}${day === today ? ' today' : ` on ${formatDay(day, today)}`}.`, id)
+          say(`Logged: ${what} ${zonesPhrase(names)}${day === today ? ' today' : ` on ${formatDay(day, today)}`}.${closed}`, undo)
           reset()
+        },
+        onError: () => {
+          // refused while the form is open: it says so and keeps the ticks for the next try;
+          // the task writes that depended on this entry fail too, and needn't be reported again
+          for (const m of qc.getMutationCache().findAll({ mutationKey: tasksApi.listKey })) {
+            const input = (m.state.variables as { input?: { resolved_by_activity_id?: string | null } } | undefined)?.input
+            if (input?.resolved_by_activity_id === id) markShownInline(m.mutationId)
+          }
         },
       },
     )
+    // queued after the entry (one ordered outbox), so the server knows the entry first
+    for (const t of toClose) {
+      saveTask.mutate({ id: t.id, input: taskInput(t, { status: 'done', resolved_by_activity_id: id }) })
+    }
   }
 
   if (field.data === null || (plots.data && plots.data.length === 0)) {
@@ -291,6 +336,25 @@ export function LogPage() {
         >
           More… (fertilized, other)
         </button>
+      )}
+
+      {openTasks.length > 0 && (
+        <fieldset className="zone-checks log__tasks">
+          <legend>Also done</legend>
+          {openTasks.map((t) => (
+            <label key={t.id} className="zone-check">
+              <input
+                type="checkbox"
+                checked={ticked(t)}
+                onChange={(e) => setTaskTicks((cur) => ({ ...cur, [t.id]: e.target.checked }))}
+              />
+              <span>
+                <span aria-hidden="true">{TASK_KIND[t.kind].icon}</span> {t.title}
+                <span className="muted small"> · {taskPlace(t, plots.data ?? [], allZones)}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
       )}
 
       <fieldset className="log__when">
@@ -427,7 +491,9 @@ export function LogPage() {
           {saveState.busy
             ? 'Saving…'
             : type && chosen.length > 0
-              ? `Save — ${ACTIVITY[type].label} ${chosen.length === 1 ? zoneName(chosen[0]!) : `${chosen.length} zones`}`
+              ? `Save — ${ACTIVITY[type].label} ${chosen.length === 1 ? zoneName(chosen[0]!) : `${chosen.length} zones`}${
+                  closing === 0 ? '' : ` · closes ${closing === 1 ? '1 task' : `${closing} tasks`}`
+                }`
               : 'Save'}
         </button>
       </div>

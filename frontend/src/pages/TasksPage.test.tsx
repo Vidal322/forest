@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import type { Activity } from '../api/activities'
 import type { Task } from '../api/tasks'
 import { addDays, fieldToday } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
@@ -25,9 +26,25 @@ const base: Task = {
 }
 const later: Task = { ...base, id: '40000000-0000-4000-8000-000000000002', title: 'Melhorar caminho', kind: 'improve_path', zone_id: null, plot_id: testPlot.id, due_on: null }
 
+const sowing: Activity = {
+  id: '50000000-0000-4000-8000-000000000001',
+  type: 'sowing',
+  performed_on: addDays(today, -1),
+  notes: null,
+  zones: [{ zone_id: testZone.id, quantity: null, unit: null }],
+  species: [],
+  version: 1,
+  created_at: '2026-11-01T10:00:00Z',
+  updated_at: '2026-11-01T10:00:00Z',
+}
+const sown: Task = { ...base, status: 'done', completed_at: new Date().toISOString(), resolved_by_activity_id: sowing.id }
+
 function taskApi(list: Task[] = [base, later], delayMs = 0) {
   let db = [...list]
   const api = fakeApi({
+    'GET /api/activities.*': () => ({ status: 200, body: [sowing] }),
+    'GET /api/species': () => ({ status: 200, body: [] }),
+    'GET /api/tree-counts': () => ({ status: 200, body: [] }),
     'GET /api/tasks': () => ({ status: 200, body: db }),
     'GET /api/plots': () => ({ status: 200, body: [testPlot] }),
     'GET /api/zones': () => ({ status: 200, body: [testZone] }),
@@ -143,5 +160,50 @@ describe('TasksPage', () => {
     await userEvent.dblClick(tick)
     await new Promise((r) => setTimeout(r, 500))
     expect(api.calls.filter((c) => c.method === 'PUT')).toHaveLength(1)
+  })
+
+  it('links a task done by a log entry to that entry in the zone’s history', async () => {
+    taskApi([sown, later])
+    const { router } = renderApp('/tasks')
+    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
+    const link = await screen.findByRole('link', { name: /Done by the log entry: .*Sowed/ })
+    expect(link).toHaveAttribute('href', `/zones/${testZone.id}#entry-${sowing.id}`)
+    await userEvent.click(link)
+    expect(router.state.location.pathname).toBe(`/zones/${testZone.id}`)
+    const entry = await screen.findByRole('button', { name: /Edit: .*Sowed/ })
+    await waitFor(() => expect(entry).toHaveFocus())
+    expect(entry).toHaveClass('is-target')
+  })
+
+  it('reopening a task done by a log entry drops the link', async () => {
+    const api = taskApi([sown])
+    renderApp('/tasks')
+    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Done: Falta semear' }))
+    await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true))
+    expect(api.calls.find((c) => c.method === 'PUT')!.body).toMatchObject({ status: 'open', resolved_by_activity_id: null })
+    expect(screen.queryByRole('link', { name: /Done by the log entry/ })).not.toBeInTheDocument()
+  })
+
+  it('reopening a linked task in its form drops the link too', async () => {
+    const api = taskApi([sown])
+    renderApp('/tasks')
+    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Falta semear/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true))
+    expect(api.calls.find((c) => c.method === 'PUT')!.body).toMatchObject({ status: 'open', resolved_by_activity_id: null })
+  })
+
+  it('keeps the link when a linked task is edited but stays done', async () => {
+    const api = taskApi([sown])
+    renderApp('/tasks')
+    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Edit: .*Falta semear/ }))
+    await userEvent.type(screen.getByLabelText('What needs doing?'), '!')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true))
+    expect(api.calls.find((c) => c.method === 'PUT')!.body).toMatchObject({ status: 'done', resolved_by_activity_id: sowing.id })
   })
 })

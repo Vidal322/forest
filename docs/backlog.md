@@ -62,7 +62,7 @@ Acceptance:
 ## Mockup gaps (target: `docs/mockups/`)
 
 ### M1 · Close a task when logging the work
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (quick log), maybe backend/internal/store (task)
 Parallel: alone
 Acceptance:

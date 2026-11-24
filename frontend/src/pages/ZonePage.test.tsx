@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Activity } from '../api/activities'
+import type { Task } from '../api/tasks'
 import { addDays, fieldToday } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
 import { testPlot, testZone } from '../test/fixtures'
@@ -23,7 +24,7 @@ const sowing: Activity = {
   updated_at: 'x',
 }
 
-function zoneApi() {
+function zoneApi(taskList: Task[] = []) {
   let entries = [sowing]
   let trees: { zone_id: string; species_id: string; alive: number; dead: number }[] = []
   return fakeApi({
@@ -34,7 +35,7 @@ function zoneApi() {
     'GET /api/zones': () => ({ status: 200, body: [testZone] }),
     'GET /api/plots': () => ({ status: 200, body: [testPlot] }),
     'GET /api/activities.*': () => ({ status: 200, body: entries }),
-    'GET /api/tasks': () => ({ status: 200, body: [] }),
+    'GET /api/tasks': () => ({ status: 200, body: taskList }),
     'GET /api/species': () => ({ status: 200, body: [{ id: 's1', scientific_name: 'Quercus suber', common_name: 'sobreiro', notes: null, updated_at: 'x' }] }),
     'GET /api/tree-counts': () => ({ status: 200, body: trees }),
     'PUT /api/zones/[^/]+/trees/[^/]+': ({ path, body }) => {
@@ -148,5 +149,31 @@ describe('ZonePage', () => {
     await userEvent.click(within(screen.getByRole('form', { name: 'Count trees' })).getByRole('button', { name: 'Save' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Counts are whole numbers from 0 to 10,000.')
     expect(api.calls.some((c) => c.path.includes('/trees/'))).toBe(false)
+  })
+
+  it('shows a task done by a log entry, with a link to that entry', async () => {
+    const sown: Task = {
+      id: '40000000-0000-4000-8000-000000000001',
+      plot_id: null,
+      zone_id: testZone.id,
+      title: 'Falta semear',
+      description: null,
+      kind: 'sow',
+      status: 'done',
+      due_on: null,
+      completed_at: new Date().toISOString(),
+      resolved_by_activity_id: sowing.id,
+      version: 2,
+      created_at: 'x',
+      updated_at: 'x',
+    }
+    zoneApi([sown])
+    renderApp(`/zones/${testZone.id}`)
+    await userEvent.click(await screen.findByRole('button', { name: 'Show done (1)' }))
+    const link = await screen.findByRole('link', { name: /Done by the log entry: .*Sowed/ })
+    await userEvent.click(link)
+    const entry = await screen.findByRole('button', { name: /Edit: .*Sowed/ })
+    await waitFor(() => expect(entry).toHaveFocus())
+    expect(entry).toHaveClass('is-target')
   })
 })

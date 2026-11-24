@@ -3,7 +3,7 @@ import { ApiError } from '../api/client'
 import { friendlyError } from '../api/errors'
 import { DELETED_ON_PHONE, SAVED_ON_PHONE } from '../api/outbox'
 import { zoneName, type Plot, type Zone } from '../api/plots'
-import { TASK_KIND, tasks as tasksApi, type Task, type TaskKind, type TaskStatus } from '../api/tasks'
+import { isOpen, TASK_KIND, tasks as tasksApi, type Task, type TaskKind, type TaskStatus } from '../api/tasks'
 import { addDays } from '../domain/dates'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
@@ -103,7 +103,8 @@ export function TaskForm({
           kind,
           status,
           due_on: due || null,
-          resolved_by_activity_id: task?.resolved_by_activity_id ?? null,
+          // reopened: no longer resolved by the entry that closed it
+          resolved_by_activity_id: isOpen({ status }) ? null : (task?.resolved_by_activity_id ?? null),
           base_version: baseVersion,
         },
       },

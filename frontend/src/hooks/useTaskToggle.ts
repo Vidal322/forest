@@ -19,7 +19,8 @@ export function useTaskToggle(onToast: (t: Omit<Toast, 'n'>) => void) {
       const open = isOpen(task)
       setPinned((s) => new Set(s).add(task.id))
       mutate(
-        { id: task.id, input: taskInput(task, { status: open ? 'done' : 'open' }) },
+        // reopened: no longer resolved by the entry that closed it
+        { id: task.id, input: taskInput(task, open ? { status: 'done' } : { status: 'open', resolved_by_activity_id: null }) },
         { onSettled: () => inFlight.current.delete(task.id) },
       )
       // said at once: also true offline, and the row may move before the server answers

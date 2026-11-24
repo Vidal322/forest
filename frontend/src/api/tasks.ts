@@ -1,3 +1,5 @@
+import { formatDay, relativeDay } from '../domain/dates'
+import { ACTIVITY, type Activity } from './activities'
 import { defineEntity } from './entity'
 import { zoneName, type Plot, type Zone } from './plots'
 
@@ -94,4 +96,29 @@ export function taskPlace(t: Task, plots: Plot[], zones: Zone[]): string {
     return z ? `${zoneName(z)}${p ? ` · ${p.name}` : ''}` : 'A deleted zone'
   }
   return plots.find((p) => p.id === t.plot_id)?.name ?? 'A deleted plot'
+}
+
+export type ResolvedLink = { to: string; label: string }
+
+/**
+ * Where to see the log entry that closed a task: its line in a zone's history
+ * (the task's own zone when the entry touched it, else one of the task's plot).
+ * None while the task is open, or when the entry isn't known here (deleted, or too old).
+ */
+export function resolvedLink(task: Task, entries: Activity[], zones: Zone[], today: string): ResolvedLink | undefined {
+  if (isOpen(task) || !task.resolved_by_activity_id) return undefined
+  const a = entries.find((x) => x.id === task.resolved_by_activity_id)
+  if (!a || a.zones.length === 0) return undefined
+  const plotOf = (id: string) => zones.find((z) => z.id === id)?.plot_id
+  const zoneId =
+    a.zones.find((z) => z.zone_id === task.zone_id)?.zone_id ??
+    a.zones.find((z) => task.plot_id !== null && plotOf(z.zone_id) === task.plot_id)?.zone_id ??
+    a.zones[0]!.zone_id
+  // the day as the zone's history shows it: "24 Nov (today)"
+  const day = formatDay(a.performed_on, today)
+  const rel = relativeDay(a.performed_on, today)
+  return {
+    to: `/zones/${zoneId}#entry-${a.id}`,
+    label: `${ACTIVITY[a.type].icon} ${ACTIVITY[a.type].label} ${day}${rel === day ? '' : ` (${rel})`}`,
+  }
 }

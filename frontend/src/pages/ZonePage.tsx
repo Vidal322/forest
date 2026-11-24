@@ -1,10 +1,10 @@
-import { useCallback, useRef, useState, type CSSProperties } from 'react'
-import { Link, useParams } from 'react-router'
-import { ACTIVITY, UNIT_LABEL, useZoneHistory, type Activity } from '../api/activities'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Link, useLocation, useParams } from 'react-router'
+import { ACTIVITY, activities as activitiesApi, UNIT_LABEL, useZoneHistory, type Activity } from '../api/activities'
 import { friendlyError } from '../api/errors'
 import { formatHa, KIND_LABEL, plots as plotsApi, zoneName, zones as zonesApi } from '../api/plots'
 import { useSpeciesList } from '../api/species'
-import { isOpen, tasks as tasksApi, type Task } from '../api/tasks'
+import { isOpen, resolvedLink, tasks as tasksApi, type Task } from '../api/tasks'
 import { ActivityEditForm } from '../components/ActivityEditForm'
 import { Flash } from '../components/Flash'
 import { StatusBadge } from '../components/StatusBadge'
@@ -36,6 +36,24 @@ export function ZonePage() {
   const [showClosed, setShowClosed] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
   const { toggle, pinned } = useTaskToggle(useCallback((t: Omit<Toast, 'n'>) => setToast((o) => ({ ...t, n: (o?.n ?? 0) + 1 })), []))
+  const allEntries = activitiesApi.useList()
+
+  // "#entry-<id>" (from a task done by that entry): bring the entry into view and mark it
+  const location = useLocation()
+  const [target, setTarget] = useState<string | null>(null)
+  const shownFor = useRef<string | null>(null)
+  const targetId = location.hash.startsWith('#entry-') ? location.hash.slice('#entry-'.length) : null
+  const targetLoaded = targetId !== null && history.data.some((a) => a.id === targetId)
+  useEffect(() => {
+    if (!targetId || !targetLoaded || shownFor.current === location.key) return
+    shownFor.current = location.key
+    setTarget(targetId)
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`entry-${targetId}`)
+      el?.scrollIntoView?.({ block: 'center' })
+      el?.focus({ preventScroll: true })
+    })
+  }, [targetId, targetLoaded, location.key])
 
   const { show } = flash
   const close = useCallback(
@@ -85,6 +103,8 @@ export function ZonePage() {
   // a task ticked here keeps its place until the page is left (no row slides under the thumb)
   const openTasks = zoneTasks.filter((t) => isOpen(t) || pinned.has(t.id))
   const closedTasks = zoneTasks.filter((t) => !isOpen(t) && !pinned.has(t.id))
+  const entries = [...history.data, ...(allEntries.data ?? [])]
+  const doneBy = (t: Task) => resolvedLink(t, entries, zones.data ?? [], today)
   const speciesName = new Map((species.data ?? []).map((s) => [s.id, s.common_name ?? s.scientific_name]))
 
   return (
@@ -148,7 +168,7 @@ export function ZonePage() {
         ) : (
           <ul className="list">
             {openTasks.map((t) => (
-              <TaskRow key={t.id} task={t} today={today} onEdit={() => open({ kind: 'task', task: t }, `task-${t.id}`)} onToggle={() => toggle(t)} />
+              <TaskRow key={t.id} task={t} today={today} resolvedBy={doneBy(t)} onEdit={() => open({ kind: 'task', task: t }, `task-${t.id}`)} onToggle={() => toggle(t)} />
             ))}
           </ul>
         )}
@@ -160,7 +180,7 @@ export function ZonePage() {
             {showClosed && (
               <ul className="list">
                 {closedTasks.map((t) => (
-                  <TaskRow key={t.id} task={t} today={today} onEdit={() => open({ kind: 'task', task: t }, `task-${t.id}`)} onToggle={() => toggle(t)} />
+                  <TaskRow key={t.id} task={t} today={today} resolvedBy={doneBy(t)} onEdit={() => open({ kind: 'task', task: t }, `task-${t.id}`)} onToggle={() => toggle(t)} />
                 ))}
               </ul>
             )}
@@ -206,7 +226,7 @@ export function ZonePage() {
                 <button
                   id={`entry-${a.id}`}
                   type="button"
-                  className="timeline__item"
+                  className={`timeline__item${target === a.id ? ' is-target' : ''}`}
                   onClick={() => open({ kind: 'activity', activity: a }, `entry-${a.id}`)}
                 >
                   <span className="timeline__title">

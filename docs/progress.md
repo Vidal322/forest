@@ -83,3 +83,27 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: move the README "Old deletions" section below Restore; document (and
   test) that a late edit of a purged activity or task gets 410; add a comment on the lock order (or say to run purge
   with the API stopped); accept only `dry=1`.
+
+## 2026-11-24 · M1 Close a task when logging the work — merged (squash of branch commits 2920c25 + df0dd24)
+- Change: frontend only. Once zones and a type are chosen, the quick log shows an "Also done" list of the open tasks on
+  those zones and their plots, with checkboxes. Tasks whose kind matches the work (sow, water, plant, fertilize) come
+  first and are ticked by default (plot-wide ones only when every zone of the plot is chosen); the Save button says
+  "closes N task(s)". Each ticked task is sent as `status: done`, `resolved_by_activity_id` = the new entry and its
+  `base_version`, queued in the outbox right after the entry, so it works offline. The confirmation adds
+  "Done: <titles>."; Undo reopens those tasks, then deletes the entry. If the server refuses the entry, the dependent
+  task writes fail too, are reported once, and the ticks stay. Done tasks on the zone page and the tasks list link to
+  the entry ("Sowed 24 Nov →", `/zones/<zone>#entry-<id>`), which is scrolled to, focused and outlined. Reopening a
+  task (tick or form) clears `resolved_by_activity_id`.
+- Review: round 1 findings fixed (the button names how many tasks it closes; plot-wide tasks only pre-ticked for the
+  whole plot). Three minor findings left as is: (1) after Undo the toast says only "Entry removed." though the tasks
+  were reopened too; (2) pre-existing: persisted own-versions in `entity.ts` that are ahead of the server (e.g. after
+  a database restore, or a preview on the same origin with another database) make every edit of that row 409, and
+  the toast still said "Done: …" while the task stayed open; (3) preview tooling: a stale service worker on :8099
+  served an old bundle until unregistered.
+- Browser check: Pixel 7 emulation on the preview. Sowing on one zone pre-ticked only its task; watering both zones
+  offline closed the zone and plot-wide tasks, and on reconnect the PUTs went activity, task, task; Undo reopened
+  both (200) then deleted the entry (204); the tasks page link opened the zone page with the entry outlined.
+- Follow-ups: these could become new items: name the reopened tasks in the Undo toast; drop own-versions higher than
+  the version the server reports on refetch; have preview.sh clear the service worker and caches on start. Also
+  noted by the author: the existing LogPage offline test leaks a retrying write into later tests; the zone page
+  highlights "More" in the bottom bar.
