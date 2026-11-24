@@ -11,11 +11,12 @@ The session running the loop only coordinates: it never edits code itself, and n
    Exit 1 → stop the loop (ScheduleWakeup `stop: true`) and tell the owner the reason.
 2. **Stop rules.** Run `python3 .claude/loop/items.py`. Stop if it lists nothing, or if `docs/backlog.md` has 3 or
    more `blocked:` / `failed:` items (they are waiting on the owner).
-3. **Run.** `Workflow({ name: "forest-step", args: { date: "<today YYYY-MM-DD>", session: "<your session id>",
+3. **Run.** `Workflow({ scriptPath: ".claude/workflows/forest-step.js", args: { date: "<today YYYY-MM-DD>", session: "<your session id>",
    items: <the JSON list from step 2, as a real array> } })`. It works through the items as a queue: up to 3 at a time (items sharing an
    **Area** tag never overlap; `Parallel: alone` items run by themselves), checks the budget before starting each one,
    and stops starting new ones on a budget stop, an interrupted item, or 3 blocked/failed items. Wait for its
-   notification; don't poll.
+   notification; don't poll. (Use the file path, not the name "forest-step": a named workflow
+   is loaded when the session starts and would miss later edits.)
 4. **Report.** Tell the owner in a few lines: what landed (commits), what got blocked (the questions) or failed, and
    why the workflow stopped (`stop`), if it did.
 5. **Next.** If the workflow stopped for the budget or an interruption, or itself errored, stop the loop. If it simply
