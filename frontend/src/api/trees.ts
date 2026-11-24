@@ -67,6 +67,7 @@ export function registerTreeMutations(qc: QueryClient) {
       if (pendingWrites(qc, listKey) <= 1) {
         void qc.invalidateQueries({ queryKey: listKey })
         void qc.invalidateQueries({ queryKey: ['plot-stats'] })
+        void qc.invalidateQueries({ queryKey: ['species-stats'] })
       }
     },
   })

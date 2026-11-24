@@ -93,6 +93,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Delete("/tasks/{id}", deleteHandler(h, h.store.DeleteTask))
 
 			r.Get("/plot-stats", listHandler(h, h.store.ListPlotStats))
+			r.Get("/species-stats", listHandler(h, h.store.ListSpeciesStats))
 
 			r.Get("/watering-rules", listHandler(h, h.store.ListWateringRules))
 			r.Put("/watering-rules/{id}", putHandler(h, h.store.PutWateringRule))

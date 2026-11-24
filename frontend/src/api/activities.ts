@@ -114,7 +114,7 @@ export const activities = defineEntity<Activity, ActivityInput>({
     const { base_version: _base, ...rest } = input
     return { id, ...rest, version: before?.version ?? 1, created_at: before?.created_at ?? now, updated_at: now }
   },
-  alsoRefresh: [['zones'], ['plot-stats']],
+  alsoRefresh: [['zones'], ['plot-stats'], ['species-stats']],
   onSaveOptimistic: (qc, input, before) => recolourZones(qc, zoneIdsOf(input, before), before),
   onDeleteOptimistic: (qc, _id, before) => recolourZones(qc, zoneIdsOf(before), before),
   versioned: true,

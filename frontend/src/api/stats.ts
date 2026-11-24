@@ -27,6 +27,22 @@ export function usePlotStats() {
   })
 }
 
+/** Where a species is used (zones, living trees, last sowing / planting). */
+export interface SpeciesStats {
+  species_id: string
+  zone_count: number
+  alive_tree_count: number
+  last_sown_on: string | null
+  last_planted_on: string | null
+}
+
+export function useSpeciesStats() {
+  return useQuery({
+    queryKey: ['species-stats'],
+    queryFn: ({ signal }) => apiGet<SpeciesStats[]>('/api/species-stats', { signal }),
+  })
+}
+
 export interface WateringRule {
   id: string
   name: string

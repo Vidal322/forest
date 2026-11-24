@@ -123,6 +123,7 @@ input[aria-invalid='true'] { border-color: var(--task); box-shadow: 0 0 0 1px va
 .list__item:hover { border-color: var(--moss); }
 .list__title { font-weight: 600; }
 .list__sub { font-size: 0.9rem; }
+.species-usage { color: var(--muted); }
 
 .menu { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.5rem; }
 .menu a {

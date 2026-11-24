@@ -21,6 +21,20 @@ func TestStatsAndWateringRulesAPI(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&stats); err != nil || rec.Code != 200 || len(stats) != 1 || stats[0].Name != "P" {
 		t.Fatalf("stats: %d %+v %v", rec.Code, stats, err)
 	}
+	spID := uuid.NewString()
+	send(t, h, http.MethodPut, "/api/species/"+spID, `{"scientific_name":"Test Stats Quercus"}`)
+	rec = send(t, h, http.MethodGet, "/api/species-stats", "")
+	var spStats []store.SpeciesStats
+	if err := json.NewDecoder(rec.Body).Decode(&spStats); err != nil || rec.Code != 200 {
+		t.Fatalf("species stats: %d %v", rec.Code, err)
+	}
+	found := false
+	for _, st := range spStats {
+		found = found || (st.SpeciesID.String() == spID && st.ZoneCount == 0 && st.LastSownOn == nil)
+	}
+	if !found {
+		t.Fatalf("new species missing from species stats: %+v", spStats)
+	}
 
 	id := uuid.NewString()
 	if rec = send(t, h, http.MethodPut, "/api/watering-rules/"+id, `{"name":"Summer","from_month":6,"to_month":9,"interval_days":4}`); rec.Code != 201 {

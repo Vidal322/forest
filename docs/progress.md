@@ -225,3 +225,12 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: pin plot-wide tasks under the plot's name; anchor the pin on the centre
   when the zone is small on screen; tests for drawing with layers off and closing the sheet with a map tap; hint
   "zones hidden" on the attention button when Zones is off.
+
+## 2026-11-24 · M8 Species: where each species is used — merged (squash of branch commit d7e4ea9)
+- Change: each species card shows a usage line, e.g. "2 zones · 12 trees alive · sown 28 Jun 2025 · planted 3 Oct", or
+  "Not used yet". New `GET /api/species-stats`. If it fails the list still shows. Refreshes after activity, tree
+  count, zone, plot and species changes, also offline ones once synced.
+- Review: no blocking findings. Minor, left as is: (1) a species with only dead trees reads "Not used yet"; (2) the
+  card height shifts when the line appears after loading.
+- Browser check: e2e smoke and species-usage passed; phone screenshot legible, nothing overflows.
+- Follow-ups: could mention dead trees; reserve the usage line height while loading.

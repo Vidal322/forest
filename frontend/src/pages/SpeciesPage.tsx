@@ -3,7 +3,9 @@ import { ApiError } from '../api/client'
 import { friendlyError } from '../api/errors'
 import { SAVED_ON_PHONE } from '../api/outbox'
 import { useDeleteSpecies, useSaveSpecies, useSpeciesList, type Species } from '../api/species'
+import { useSpeciesStats, type SpeciesStats } from '../api/stats'
 import { Flash } from '../components/Flash'
+import { formatDay } from '../domain/dates'
 import { useFlash } from '../hooks/useFlash'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
@@ -14,6 +16,8 @@ type Editing = { mode: 'add' } | { mode: 'edit'; species: Species } | null
 /** The species catalogue: picked later when logging a planting or a sowing. */
 export function SpeciesPage() {
   const list = useSpeciesList()
+  const stats = useSpeciesStats()
+  const statsById = useMemo(() => new Map((stats.data ?? []).map((st) => [st.species_id, st])), [stats.data])
   const [editing, setEditing] = useState<Editing>(null)
   const [query, setQuery] = useState('')
   const flash = useFlash()
@@ -127,11 +131,13 @@ export function SpeciesPage() {
                     disabled={editing !== null}
                     onClick={() => open({ mode: 'edit', species: s }, `species-${s.id}`)}
                     aria-label={`Edit ${s.scientific_name}`}
+                    aria-describedby={stats.data ? `species-usage-${s.id}` : undefined}
                   >
                     <span className="list__title">
                       <i>{s.scientific_name}</i>
                     </span>
                     {s.common_name && <span className="list__sub">{s.common_name}</span>}
+                    {stats.data && <span id={`species-usage-${s.id}`} className="list__sub species-usage">{usage(statsById.get(s.id))}</span>}
                     {s.notes && <span className="list__sub muted">{s.notes}</span>}
                   </button>
                 </li>
@@ -142,6 +148,17 @@ export function SpeciesPage() {
       )}
     </div>
   )
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** "2 zones · 120 trees alive · sown 28 Sep · planted 3 Oct", or "Not used yet". */
+function usage(st: SpeciesStats | undefined): string {
+  if (!st || (st.zone_count === 0 && st.alive_tree_count === 0 && !st.last_sown_on && !st.last_planted_on)) return 'Not used yet'
+  const parts = [plural(st.zone_count, 'zone', 'zones'), `${plural(st.alive_tree_count, 'tree', 'trees')} alive`]
+  if (st.last_sown_on) parts.push(`sown ${formatDay(st.last_sown_on)}`)
+  if (st.last_planted_on) parts.push(`planted ${formatDay(st.last_planted_on)}`)
+  return parts.join(' · ')
 }
 
 /** Lower-case, no accents: "Castanheiro" matches "castanhéiro". */

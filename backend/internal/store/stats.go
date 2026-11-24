@@ -68,3 +68,61 @@ func (s *Store) ListPlotStats(ctx context.Context) ([]PlotStats, error) {
 		return p, err
 	})
 }
+
+// SpeciesStats say where a species is used: in how many zones, how many of its
+// trees are alive, and when it was last sown and planted.
+type SpeciesStats struct {
+	SpeciesID      uuid.UUID `json:"species_id"`
+	ZoneCount      int       `json:"zone_count"`       // live zones with its living trees or a sowing/planting of it
+	AliveTreeCount int       `json:"alive_tree_count"` // trees recorded alive, in live plots
+	LastSownOn     *string   `json:"last_sown_on"`
+	LastPlantedOn  *string   `json:"last_planted_on"`
+}
+
+// ListSpeciesStats returns usage stats for every live species (alphabetical, like the catalogue).
+// Deleted activities, zones and plots don't count.
+func (s *Store) ListSpeciesStats(ctx context.Context) ([]SpeciesStats, error) {
+	rows, err := s.db.Query(ctx, `
+		WITH live_zone AS (
+			SELECT z.* FROM zone z JOIN plot p ON p.id = z.plot_id AND p.deleted_at IS NULL WHERE z.deleted_at IS NULL
+		), logged AS (
+			-- sowings and plantings of the species, with the live zones they were done in
+			SELECT asp.species_id, a.type, a.performed_on, z.id AS zone_id
+			  FROM activity_species asp
+			  JOIN activity a       ON a.id = asp.activity_id AND a.deleted_at IS NULL AND a.type IN ('sowing', 'planting')
+			  JOIN activity_zone az ON az.activity_id = a.id
+			  JOIN live_zone z      ON z.id = az.zone_id
+		), tree_zone AS (
+			-- zones holding its living trees (counted on the zone, or inside it by position)
+			SELECT t.species_id, z.id AS zone_id
+			  FROM tree t
+			  JOIN live_zone z ON t.zone_id = z.id
+			              OR (t.zone_id IS NULL AND t.position IS NOT NULL AND z.plot_id = t.plot_id AND ST_Contains(z.geom, t.position))
+			 WHERE t.deleted_at IS NULL AND t.status = 'alive'
+		), alive AS (
+			SELECT t.species_id, count(*) AS n
+			  FROM tree t JOIN plot p ON p.id = t.plot_id AND p.deleted_at IS NULL
+			 WHERE t.deleted_at IS NULL AND t.status = 'alive'
+			 GROUP BY t.species_id
+		)
+		SELECT sp.id,
+		       (SELECT count(*) FROM (SELECT zone_id FROM logged WHERE species_id = sp.id
+		                              UNION SELECT zone_id FROM tree_zone WHERE species_id = sp.id) u),
+		       COALESCE(alive.n, 0),
+		       (SELECT to_char(max(performed_on), 'YYYY-MM-DD') FROM logged WHERE species_id = sp.id AND type = 'sowing'),
+		       (SELECT to_char(max(performed_on), 'YYYY-MM-DD') FROM logged WHERE species_id = sp.id AND type = 'planting')
+		  FROM species sp
+		  LEFT JOIN alive ON alive.species_id = sp.id
+		 WHERE sp.deleted_at IS NULL
+		 ORDER BY lower(sp.scientific_name), sp.id`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (SpeciesStats, error) {
+		var st SpeciesStats
+		var zones, alive int64
+		err := r.Scan(&st.SpeciesID, &zones, &alive, &st.LastSownOn, &st.LastPlantedOn)
+		st.ZoneCount, st.AliveTreeCount = int(zones), int(alive)
+		return st, err
+	})
+}

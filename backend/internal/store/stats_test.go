@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"forest/internal/dbtest"
 	"forest/internal/store"
 )
 
@@ -137,5 +138,65 @@ func TestActivityUnitsMatchTheWork(t *testing.T) {
 		Zones: []store.ActivityZone{{ZoneID: w.zoneA, Quantity: ptr(3), Unit: ptr("kg")}}})
 	if !errors.As(err, &ve) {
 		t.Fatalf("kg of water: %v", err)
+	}
+}
+
+func TestSpeciesStats(t *testing.T) {
+	w := newActivityWorld(t)
+	ctx := t.Context()
+	other, _, err := w.s.PutSpecies(ctx, uuid.New(), store.SpeciesInput{ScientificName: dbtest.Name("Test Pinus stats")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := func(typ, day string, zone uuid.UUID) uuid.UUID {
+		t.Helper()
+		id := uuid.New()
+		if _, _, err := w.s.PutActivity(ctx, id, store.ActivityInput{Type: typ, PerformedOn: day,
+			Zones: []store.ActivityZone{{ZoneID: zone}}, Species: []store.ActivitySpecies{{SpeciesID: w.species}}}); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	log("sowing", fieldDay(t, -10), w.zoneA)
+	log("sowing", fieldDay(t, -5), w.zoneA)
+	gone := log("sowing", fieldDay(t, -1), w.zoneA)
+	if err := w.s.DeleteActivity(ctx, gone); err != nil {
+		t.Fatal(err)
+	}
+	// trees counted in zone B, without a planting logged; the other species only has dead trees
+	if _, err := w.s.SetTreeCounts(ctx, w.zoneB, w.species, store.TreeCountInput{Alive: 3, Dead: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.s.SetTreeCounts(ctx, w.zoneA, other.ID, store.TreeCountInput{Dead: 2}); err != nil {
+		t.Fatal(err)
+	}
+	log("planting", fieldDay(t, -3), w.zoneB)
+
+	stats, err := w.s.ListSpeciesStats(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[uuid.UUID]store.SpeciesStats{}
+	for _, st := range stats {
+		byID[st.SpeciesID] = st
+	}
+	got := byID[w.species]
+	if got.ZoneCount != 2 || got.AliveTreeCount != 3 || got.LastSownOn == nil || *got.LastSownOn != fieldDay(t, -5) ||
+		got.LastPlantedOn == nil || *got.LastPlantedOn != fieldDay(t, -3) {
+		t.Fatalf("used species: %+v", got)
+	}
+	unused, ok := byID[other.ID]
+	if !ok || unused.ZoneCount != 0 || unused.AliveTreeCount != 0 || unused.LastSownOn != nil || unused.LastPlantedOn != nil {
+		t.Fatalf("species with dead trees only: %+v (listed %v)", unused, ok)
+	}
+
+	if err := w.s.DeleteSpecies(ctx, other.ID); err != nil {
+		t.Fatal(err)
+	}
+	stats, _ = w.s.ListSpeciesStats(ctx)
+	for _, st := range stats {
+		if st.SpeciesID == other.ID {
+			t.Fatal("deleted species still listed")
+		}
 	}
 }

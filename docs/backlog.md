@@ -134,7 +134,7 @@ Acceptance:
 - Readable on a phone without horizontal scrolling. Backend tests for the numbers.
 
 ### M8 · Species: where each species is used
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (species/stats), frontend (species page)
 Area: species
 Acceptance:

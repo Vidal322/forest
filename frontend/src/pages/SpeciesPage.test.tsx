@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Species } from '../api/species'
+import type { SpeciesStats } from '../api/stats'
 import { fakeApi } from '../test/fakeApi'
 import { SAVED_ON_PHONE } from '../api/outbox'
 import { renderApp } from '../test/render'
@@ -15,9 +16,10 @@ const suber: Species = {
 }
 
 /** A fake species API backed by an array, like the real one (PUT by id, soft delete). */
-function speciesApi(initial: Species[] = []) {
+function speciesApi(initial: Species[] = [], stats?: SpeciesStats[]) {
   let db = [...initial]
   return fakeApi({
+    ...(stats && { 'GET /api/species-stats': () => ({ status: 200, body: stats }) }),
     'GET /api/species': () => ({ status: 200, body: db }),
     'PUT /api/species/[^/]+': ({ path, body }) => {
       const id = path.split('/').pop()!
@@ -175,5 +177,29 @@ describe('SpeciesPage', () => {
     expect(await screen.findByText('This was deleted in the meantime.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit Quercus suber' })).not.toBeInTheDocument()
+  })
+
+  it('shows where each species is used: zones, living trees, last sowing and planting', async () => {
+    const pinea = { ...suber, id: '22222222-2222-4222-8222-222222222222', scientific_name: 'Pinus pinea', common_name: 'pinheiro-manso' }
+    speciesApi(
+      [suber, pinea],
+      [
+        { species_id: suber.id, zone_count: 3, alive_tree_count: 1, last_sown_on: '2024-06-28', last_planted_on: '2024-10-03' },
+        { species_id: pinea.id, zone_count: 0, alive_tree_count: 0, last_sown_on: null, last_planted_on: null },
+      ],
+    )
+    renderApp('/species')
+    const suberItem = await screen.findByRole('button', { name: 'Edit Quercus suber' })
+    await waitFor(() =>
+      expect(suberItem).toHaveAccessibleDescription('3 zones · 1 tree alive · sown 28 Jun 2024 · planted 3 Oct 2024'),
+    )
+    expect(screen.getByRole('button', { name: 'Edit Pinus pinea' })).toHaveAccessibleDescription('Not used yet')
+  })
+
+  it('still lists the species when their usage cannot be loaded', async () => {
+    speciesApi([suber]) // no /api/species-stats: 404
+    renderApp('/species')
+    expect(await screen.findByRole('button', { name: 'Edit Quercus suber' })).toBeInTheDocument()
+    expect(screen.queryByText('Not used yet')).not.toBeInTheDocument()
   })
 })

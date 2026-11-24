@@ -375,6 +375,7 @@ erDiagram
 - `updated_at` only moves when a row really changes. On `activity` and `task` a trigger also bumps `version` on every real change (soft deletes included); the API never sets `version` itself.
 - Views ignore everything soft-deleted (field, plot, zone, activity, task, species): a deleted zone's history stays in the tables but no longer feeds plot numbers.
 - View **`plot_stats`**: `area_ha`, `tree_count` (alive), `dead_tree_count`, `species_count`, `last_watered_on` and `open_task_count` (the plot's own tasks plus its zones' tasks). `species_count` = distinct species across alive trees in the plot ∪ species in sowing/planting `activity_species` rows whose activity touches the plot's zones.
+- Species usage (`GET /api/species-stats`, a query, no view): per live species, `zone_count` = distinct live zones holding its alive trees (counted on the zone or inside it by position) ∪ zones of its live sowings/plantings; `alive_tree_count` (live plots only); `last_sown_on` / `last_planted_on` from the activity log.
 - Overlap side effects: watering zone A does not mark an overlapping zone B as watered; a point can be in several zones (Q8 may return several); summed zone areas can double-count — plot areas always use the plot polygon.
 - Indexes:
   - `activity (field_id, type, performed_on DESC)`
