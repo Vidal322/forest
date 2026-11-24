@@ -209,7 +209,7 @@ Acceptance:
 - In "Sown & planted by date", a species' tree count drops when some of the planting's zones are deleted, like the per-plot table (or the note and docs say it is not zone-aware).
 
 ### F7 · Planted stats: species share when only dead zones had tree counts
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (stats)
 Area: stats
 Acceptance:

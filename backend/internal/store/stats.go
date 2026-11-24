@@ -187,7 +187,8 @@ type PlantedPlot struct {
 // it was the only species; a mixed planting without counts per species isn't attributed.
 // Like the per-plot sums, it follows the live zones: the species' own count isn't split by zone,
 // so when some of the planting's zones are deleted it is scaled to the share of the planting's
-// trees still on live zones (rounded), or of its zones when no trees were counted per zone.
+// trees still on live zones (rounded; none when they were all counted on deleted zones),
+// or of its zones when no trees were counted per zone.
 type PlantedSpecies struct {
 	SpeciesID      uuid.UUID `json:"species_id"`
 	ScientificName string    `json:"scientific_name"`
@@ -254,8 +255,9 @@ func (s *Store) GetPlantedStats(ctx context.Context, from, to string) (PlantedSt
 			       (SELECT sum(c.quantity) FROM (`+counted+`) c WHERE c.activity_id = a.id) AS total,
 			       (SELECT count(*) FROM activity_species x WHERE x.activity_id = a.id) AS n_species,
 			       -- the share of the planting still on live zones: its trees there over all its trees,
-			       -- or its live zones over all its zones when no trees were counted per zone
-			       (SELECT COALESCE(sum(az.quantity) FILTER (WHERE az.unit = 'trees' AND z.deleted_at IS NULL AND p.deleted_at IS NULL)::numeric
+			       -- (0 when they were all counted on deleted zones), or its live zones over all its zones
+			       -- when no trees were counted per zone
+			       (SELECT COALESCE(COALESCE(sum(az.quantity) FILTER (WHERE az.unit = 'trees' AND z.deleted_at IS NULL AND p.deleted_at IS NULL), 0)::numeric
 			                          / NULLIF(sum(az.quantity) FILTER (WHERE az.unit = 'trees'), 0),
 			                        count(*) FILTER (WHERE z.deleted_at IS NULL AND p.deleted_at IS NULL)::numeric / count(*))
 			          FROM activity_zone az

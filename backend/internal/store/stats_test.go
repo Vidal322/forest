@@ -306,6 +306,9 @@ func TestPlantedStats(t *testing.T) {
 	// counts per species, none per zone
 	log("planting", -3, []store.ActivityZone{{ZoneID: w.zoneA}, {ZoneID: zoneC.ID}},
 		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(10), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(4), Unit: ptr("trees")})
+	// counts per species, trees counted only on the zone deleted below (the other zone has no count)
+	log("planting", -3, []store.ActivityZone{zq(zoneC.ID, 20, "trees"), {ZoneID: w.zoneA}},
+		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(6), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(4), Unit: ptr("trees")})
 	gone := log("sowing", -1, []store.ActivityZone{zq(w.zoneA, 500, "holes")}, store.ActivitySpecies{SpeciesID: q})
 	if err := w.s.DeleteActivity(ctx, gone); err != nil {
 		t.Fatal(err)
@@ -350,11 +353,12 @@ func TestPlantedStats(t *testing.T) {
 		t.Fatal(err)
 	}
 	plot1 := za.PlotID
-	check(map[uuid.UUID][2]int{plot1: {100, 50}, plot2.ID: {40, 50}}, map[uuid.UUID][2]int{q: {140, 77}, p: {140, 27}})
+	check(map[uuid.UUID][2]int{plot1: {100, 50}, plot2.ID: {40, 70}}, map[uuid.UUID][2]int{q: {140, 83}, p: {140, 31}})
 
 	// a deleted zone's work no longer counts, and the plot stays listed with zeros. A species' own
 	// count on a planting is scaled to the share still on live zones: 10 of 40 trees
-	// (25 → 6, 15 → 4), or 1 of 2 zones when none were counted per zone (10 → 5, 4 → 2)
+	// (25 → 6, 15 → 4), or 1 of 2 zones when none were counted per zone (10 → 5, 4 → 2). When the
+	// trees were counted only on the deleted zone, none of them are on a live zone (6 → 0, 4 → 0)
 	if err := w.s.DeleteZone(ctx, zoneC.ID); err != nil {
 		t.Fatal(err)
 	}

@@ -368,3 +368,12 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Browser check: e2e map-tap-overlap (Pixel 7, touch taps below, right, above and on the name) and plot-page passed;
   screenshot read.
 - Follow-ups: plot-page e2e flakiness at the stats scroll-to-card step could be looked at separately.
+
+## 2026-11-24 · F7 Planted stats: species share when only dead zones had tree counts — merged (squash of branch commit cec0113)
+- Change: when every zone with a trees count is deleted and a live zone has none, species rows now show 0 like the
+  plot row (they used to keep about half, from the live-zones-over-all-zones fallback). The live trees sum in
+  `GetPlantedStats` is COALESCEd to 0; the zone-ratio fallback only applies when no trees were counted on any zone.
+  New case in `TestPlantedStats`.
+- Review: no findings.
+- Browser check: not needed (backend query only).
+- Follow-ups: none.
