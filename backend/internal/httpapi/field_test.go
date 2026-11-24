@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"forest/internal/dbtest"
 	"forest/internal/photo"
 	"forest/internal/store"
@@ -20,6 +22,14 @@ import (
 // with a temporary photo directory.
 func newFieldRouter(t *testing.T) http.Handler {
 	t.Helper()
+	h, _ := newFieldRouterTx(t)
+	return h
+}
+
+// newFieldRouterTx is newFieldRouter that also returns its transaction, for tests
+// that look at rows the API does not expose.
+func newFieldRouterTx(t *testing.T) (http.Handler, pgx.Tx) {
+	t.Helper()
 	tx := dbtest.Tx(t)
 	if _, err := tx.Exec(t.Context(), `UPDATE field SET deleted_at = now() WHERE deleted_at IS NULL`); err != nil {
 		t.Fatal(err)
@@ -28,7 +38,7 @@ func newFieldRouter(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewRouter(Deps{Log: slog.New(slog.DiscardHandler), Store: store.New(tx), Photos: photos})
+	return NewRouter(Deps{Log: slog.New(slog.DiscardHandler), Store: store.New(tx), Photos: photos}), tx
 }
 
 func pngBytes(t *testing.T, w, h int) []byte {

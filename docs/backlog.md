@@ -26,7 +26,7 @@ Acceptance:
 - README "Running it in the field" explains how and how often to back up (e.g. a cron line) and how to restore.
 
 ### B2 · Tests for the trees API
-Status: todo
+Status: done (2026-11-24)
 Touches: backend/internal/httpapi (tests only)
 Parallel: ok
 Acceptance:
