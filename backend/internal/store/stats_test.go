@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -198,5 +199,64 @@ func TestSpeciesStats(t *testing.T) {
 		if st.SpeciesID == other.ID {
 			t.Fatal("deleted species still listed")
 		}
+	}
+}
+
+func TestPlotStatsWateringCoverageAndWeeklyActivity(t *testing.T) {
+	w := newActivityWorld(t)
+	ctx := t.Context()
+	plotID := func(zone uuid.UUID) uuid.UUID {
+		z, err := w.s.GetZone(ctx, zone)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return z.PlotID
+	}(w.zoneA)
+	path, _, err := w.s.PutZone(ctx, uuid.New(), store.ZoneInput{PlotID: plotID, Label: ptr("Path"), Kind: "path", Geom: square(50, 50, 10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty := newPlot(t, w.s, "Plot Empty stats", square(200, 200, 50))
+	log := func(typ string, day string, zones ...uuid.UUID) uuid.UUID {
+		t.Helper()
+		id := uuid.New()
+		in := store.ActivityInput{Type: typ, PerformedOn: day}
+		for _, z := range zones {
+			in.Zones = append(in.Zones, store.ActivityZone{ZoneID: z})
+		}
+		if _, _, err := w.s.PutActivity(ctx, id, in); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	log("watering", fieldDay(t, -6), w.zoneA)     // watered within the last 7 days; week 7
+	log("watering", fieldDay(t, -7), w.zoneB)     // one day too old for coverage; week 6
+	log("watering", w.today, path.ID)             // paths don't count for coverage, but are activity; week 7
+	log("sowing", w.today, w.zoneA, w.zoneB)      // one activity on two zones counts once; week 7
+	log("fertilizing", fieldDay(t, -55), w.zoneA) // oldest week
+	log("fertilizing", fieldDay(t, -56), w.zoneA) // outside the 8 weeks
+	gone := log("watering", w.today, w.zoneB)     // deleted: neither watered nor counted
+	if err := w.s.DeleteActivity(ctx, gone); err != nil {
+		t.Fatal(err)
+	}
+
+	stats, err := w.s.ListPlotStats(ctx)
+	if err != nil || len(stats) != 2 {
+		t.Fatalf("%+v %v", stats, err)
+	}
+	byID := map[uuid.UUID]store.PlotStats{}
+	for _, p := range stats {
+		byID[p.PlotID] = p
+	}
+	p := byID[plotID]
+	if p.CultivationZones != 2 || p.ZonesWatered7d != 1 {
+		t.Fatalf("coverage: %d of %d", p.ZonesWatered7d, p.CultivationZones)
+	}
+	if want := []int{1, 0, 0, 0, 0, 0, 1, 3}; !slices.Equal(p.ActivitiesPerWeek, want) {
+		t.Fatalf("weeks: %v, want %v", p.ActivitiesPerWeek, want)
+	}
+	e := byID[empty.ID]
+	if e.CultivationZones != 0 || e.ZonesWatered7d != 0 || !slices.Equal(e.ActivitiesPerWeek, make([]int, 8)) {
+		t.Fatalf("empty plot: %+v", e)
 	}
 }

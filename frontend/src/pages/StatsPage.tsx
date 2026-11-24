@@ -95,7 +95,70 @@ function PlotCard({ p, today }: { p: PlotStats; today: string }) {
       <p className="muted small">
         Last watered: {p.last_watered_on ? relativeDay(p.last_watered_on, today) : 'never'}
       </p>
+      <WateringCoverage watered={p.zones_watered_7d} total={p.cultivation_zones} />
+      <WeeklyActivity weeks={p.activities_per_week} />
     </section>
+  )
+}
+
+function WateringCoverage({ watered, total }: { watered: number; total: number }) {
+  const pct = total > 0 ? Math.round((watered / total) * 100) : 0
+  return (
+    <>
+      <h3 className="stats__h">Watered in the last 7 days</h3>
+      {total === 0 ? (
+        <p className="muted small">No cultivation zones yet.</p>
+      ) : (
+        <>
+          <div className="meter" aria-hidden="true">
+            <i style={{ width: `${pct}%` }} />
+          </div>
+          <p className="small">
+            <b>
+              {n(watered)} of {n(total)}
+            </b>{' '}
+            cultivation {total === 1 ? 'zone' : 'zones'} ({pct}%)
+          </p>
+        </>
+      )}
+    </>
+  )
+}
+
+const weekLabel = (ago: number) => (ago === 0 ? 'last 7 days' : `${ago * 7}–${ago * 7 + 6} days ago`)
+
+function WeeklyActivity({ weeks }: { weeks: number[] }) {
+  const max = Math.max(1, ...weeks)
+  const total = weeks.reduce((a, b) => a + b, 0)
+  return (
+    <>
+      <h3 className="stats__h">Activity per week, last 8 weeks</h3>
+      {total === 0 ? (
+        <p className="muted small">Nothing logged in the last 8 weeks.</p>
+      ) : (
+        <>
+          <ol className="weeks" aria-label="Activities logged per week, oldest first">
+            {weeks.map((v, i) => (
+              <li key={i} className={v === 0 ? 'is-zero' : undefined}>
+                <span className="weeks__n" aria-hidden="true">
+                  {v}
+                </span>
+                <span className="weeks__bar">
+                  <i style={{ height: `${(v / max) * 100}%` }} />
+                </span>
+                <span className="visually-hidden">
+                  {weekLabel(weeks.length - 1 - i)}: {v} {v === 1 ? 'activity' : 'activities'}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="weeks__axis muted small" aria-hidden="true">
+            <span>8 weeks ago</span>
+            <span>now</span>
+          </p>
+        </>
+      )}
+    </>
   )
 }
 

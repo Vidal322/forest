@@ -18,6 +18,11 @@ export interface PlotStats {
   litres_watered: number
   waterings_last_30d: number
   zones_need_water: number
+  /** live cultivation zones, and how many were watered in the last 7 days (today included) */
+  cultivation_zones: number
+  zones_watered_7d: number
+  /** activities logged per 7-day week, last 8 weeks, oldest first (the last one ends today) */
+  activities_per_week: number[]
 }
 
 export function usePlotStats() {

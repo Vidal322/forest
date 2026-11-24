@@ -125,7 +125,7 @@ Acceptance:
 - Clear "viewing <date>" indicator and one tap back to today. Tests for the as-of query.
 
 ### M7 · Plot stats: watering coverage and weekly activity
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (stats), frontend (stats page)
 Area: stats
 Acceptance:

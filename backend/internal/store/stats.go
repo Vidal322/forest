@@ -25,6 +25,11 @@ type PlotStats struct {
 	LitresWatered    int `json:"litres_watered"`
 	WateringsLast30d int `json:"waterings_last_30d"`
 	ZonesNeedWater   int `json:"zones_need_water"`
+	// watering coverage: live cultivation zones, and how many of them were watered in the last 7 days (today included)
+	CultivationZones int `json:"cultivation_zones"`
+	ZonesWatered7d   int `json:"zones_watered_7d"`
+	// activities logged on the plot's zones per 7-day week, last 8 weeks, oldest first (the last one ends today)
+	ActivitiesPerWeek []int `json:"activities_per_week"`
 }
 
 // ListPlotStats returns stats for every live plot (from the plot_stats view plus log totals).
@@ -44,27 +49,58 @@ func (s *Store) ListPlotStats(ctx context.Context) ([]PlotStats, error) {
 		), zs AS (
 			SELECT plot_id, count(*) AS zones, count(*) FILTER (WHERE needs_water) AS dry
 			  FROM zone_status GROUP BY plot_id
+		), cov AS (
+			SELECT z.plot_id, count(*) AS cultivation,
+			       count(*) FILTER (WHERE EXISTS (
+			           SELECT 1 FROM activity_zone az
+			             JOIN activity a ON a.id = az.activity_id AND a.deleted_at IS NULL
+			            WHERE az.zone_id = z.id AND a.type = 'watering'
+			              AND a.performed_on > field_today() - 7 AND a.performed_on <= field_today())) AS watered
+			  FROM zone z
+			 WHERE z.deleted_at IS NULL AND z.kind = 'cultivation'
+			 GROUP BY z.plot_id
+		), recent AS (
+			-- week 7 = the last 7 days, week 0 = 50 to 56 days ago
+			SELECT DISTINCT z.plot_id, a.id, 7 - (field_today() - a.performed_on) / 7 AS week
+			  FROM activity_zone az
+			  JOIN activity a ON a.id = az.activity_id AND a.deleted_at IS NULL
+			  JOIN zone z     ON z.id = az.zone_id AND z.deleted_at IS NULL
+			 WHERE a.performed_on > field_today() - 56 AND a.performed_on <= field_today()
+		), weekly AS (
+			SELECT ps.plot_id,
+			       array_agg((SELECT count(*) FROM recent r WHERE r.plot_id = ps.plot_id AND r.week = w.i) ORDER BY w.i) AS weeks
+			  FROM plot_stats ps CROSS JOIN generate_series(0, 7) AS w(i)
+			 GROUP BY ps.plot_id
 		)
 		SELECT ps.plot_id, ps.name, ps.area_ha::float8, ps.declared_area_ha::float8,
 		       COALESCE(zs.zones, 0), ps.tree_count, ps.dead_tree_count, ps.species_count,
 		       to_char(log.last_watered_on, 'YYYY-MM-DD'), ps.open_task_count,
 		       COALESCE(log.holes_sown, 0), COALESCE(log.trees_planted, 0), COALESCE(log.litres_watered, 0),
-		       COALESCE(log.waterings_30d, 0), COALESCE(zs.dry, 0)
+		       COALESCE(log.waterings_30d, 0), COALESCE(zs.dry, 0),
+		       COALESCE(cov.cultivation, 0), COALESCE(cov.watered, 0), weekly.weeks
 		  FROM plot_stats ps
-		  LEFT JOIN log ON log.plot_id = ps.plot_id
-		  LEFT JOIN zs  ON zs.plot_id = ps.plot_id
+		  LEFT JOIN log    ON log.plot_id = ps.plot_id
+		  LEFT JOIN zs     ON zs.plot_id = ps.plot_id
+		  LEFT JOIN cov    ON cov.plot_id = ps.plot_id
+		  JOIN weekly      ON weekly.plot_id = ps.plot_id
 		 ORDER BY lower(ps.name), ps.plot_id`)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (PlotStats, error) {
 		var p PlotStats
-		var zones, trees, dead, species, tasks, holes, planted, litres, waterings, dry int64
+		var zones, trees, dead, species, tasks, holes, planted, litres, waterings, dry, cultivation, watered int64
+		var weeks []int64
 		err := r.Scan(&p.PlotID, &p.Name, &p.AreaHa, &p.DeclaredAreaHa, &zones, &trees, &dead, &species,
-			&p.LastWateredOn, &tasks, &holes, &planted, &litres, &waterings, &dry)
+			&p.LastWateredOn, &tasks, &holes, &planted, &litres, &waterings, &dry, &cultivation, &watered, &weeks)
 		p.ZoneCount, p.TreeCount, p.DeadTreeCount, p.SpeciesCount = int(zones), int(trees), int(dead), int(species)
 		p.OpenTaskCount, p.HolesSown, p.TreesPlanted, p.LitresWatered = int(tasks), int(holes), int(planted), int(litres)
 		p.WateringsLast30d, p.ZonesNeedWater = int(waterings), int(dry)
+		p.CultivationZones, p.ZonesWatered7d = int(cultivation), int(watered)
+		p.ActivitiesPerWeek = make([]int, len(weeks))
+		for i, n := range weeks {
+			p.ActivitiesPerWeek[i] = int(n)
+		}
 		return p, err
 	})
 }

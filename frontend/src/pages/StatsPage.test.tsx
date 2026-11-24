@@ -23,6 +23,9 @@ const p1: PlotStats = {
   litres_watered: 0,
   waterings_last_30d: 4,
   zones_need_water: 2,
+  cultivation_zones: 6,
+  zones_watered_7d: 4,
+  activities_per_week: [1, 0, 0, 2, 0, 0, 1, 5],
 }
 
 describe('StatsPage', () => {
@@ -34,6 +37,23 @@ describe('StatsPage', () => {
     expect(within(card).getByText('240')).toBeInTheDocument()
     expect(card).toHaveTextContent('Last watered: never')
     expect(screen.getByText(/Areas appear once the scale is set/)).toBeInTheDocument()
+  })
+
+  it('shows watering coverage over 7 days and activity per week over 8 weeks', async () => {
+    const empty = { ...p1, plot_id: 'p2', name: 'Plot 2', cultivation_zones: 0, zones_watered_7d: 0, activities_per_week: Array(8).fill(0) }
+    fakeApi({ 'GET /api/plot-stats': () => ({ status: 200, body: [p1, empty] }) })
+    renderApp('/stats')
+    const card = await screen.findByRole('region', { name: 'Plot 1' })
+    expect(card).toHaveTextContent('4 of 6 cultivation zones (67%)')
+    const weeks = within(within(card).getByRole('list', { name: /Activities logged per week/ })).getAllByRole('listitem')
+    expect(weeks).toHaveLength(8)
+    expect(weeks[0]).toHaveTextContent('49–55 days ago: 1 activity')
+    expect(weeks[7]).toHaveTextContent('last 7 days: 5 activities')
+
+    const other = screen.getByRole('region', { name: 'Plot 2' })
+    expect(other).toHaveTextContent('No cultivation zones yet.')
+    expect(other).toHaveTextContent('Nothing logged in the last 8 weeks.')
+    expect(other.querySelector('.meter')).toBeNull()
   })
 })
 

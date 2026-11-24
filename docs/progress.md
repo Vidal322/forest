@@ -234,3 +234,14 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   card height shifts when the line appears after loading.
 - Browser check: e2e smoke and species-usage passed; phone screenshot legible, nothing overflows.
 - Follow-ups: could mention dead trees; reserve the usage line height while loading.
+
+## 2026-11-24 · M7 Plot stats: watering coverage and weekly activity — merged (squash of branch commit 285afd9, rebased)
+- Change: each plot card on the stats page shows a coverage bar ("X of Y cultivation zones (Z%)" watered in the last 7
+  days) and an 8-week activity bar chart (rolling 7-day windows ending today, empty weeks greyed). New fields on
+  `GET /api/plot-stats`: `cultivation_zones`, `zones_watered_7d`, `activities_per_week`. Zone names needing water from
+  the mockup were left out on purpose (the "need water now" count and the map cover it).
+- Review: no blocking findings. Minor, left as is: correlated subquery per plot and week (fine at this size); the
+  weekly join relies on 8 rows per plot. Rebase conflict in `stats_test.go` (both sides added a test) resolved by
+  keeping both; checks passed afterwards.
+- Browser check: e2e plot-stats and smoke passed; phone screenshot fits the width, no horizontal scroll.
+- Follow-ups: none.
