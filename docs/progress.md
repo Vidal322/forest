@@ -41,3 +41,22 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Browser check: not needed (scripts, Makefile and README only).
 - Follow-ups: possible items: disarm the trap (or rename the old database to `<db>_old`) before the swap in
   `restore.sh`; document or warn that backups use the compose `db` service whatever host DATABASE_URL names.
+
+## 2026-11-24 · B4 Restore never loses both databases — merged (squash of branch commit a41a0bd)
+- Change: a restore over an existing database never drops it any more. `restore.sh` blocks new connections, then in
+  one transaction disconnects sessions, renames `<db>` to `<db>_old_<YYYYmmdd_HHMMSS>` and `<db>_restoring` to `<db>`;
+  if a rename fails the transaction rolls back and the old database keeps its name. Once the swap starts the EXIT trap
+  only re-allows connections, it never drops anything. The script prints the old copy's name and the command to drop
+  it. `backup-check` now also does a forced restore over the scratch database (refused without `force=1`; with it,
+  exactly one `_old_` copy, original row counts in both, both accept connections). README: backups and restores always
+  use the compose `db` service (only the database name in DATABASE_URL is used), a replaced database is kept as
+  `<db>_old_<date_time>` until dropped, a forced restore leaves newer photo files in place.
+- Review: no blocking findings. Three minor ones left as is: (1) `backup-check`'s `_old_` pattern uses
+  `${check:0:40}` with unescaped `_`, so with a live database name of 40+ characters it could match (and its cleanup
+  drop) the live database's own kept `_old_` copies; the default `forest` is safe; (2) the "refused without force=1"
+  assertion only checks a non-zero exit, not the refusal message; (3) the rollback of a failed rename and the
+  disconnect of a session holding the database open were checked by hand (both correct), not in `backup-check`.
+- Browser check: not needed (scripts and README only).
+- Follow-ups: possible items: make `backup-check` use a short fixed check name (or drop only the exact `_old_` name
+  restore printed), grep the refusal message, and hold a connection (`pg_sleep`) during the forced restore. shellcheck
+  is not in the dev shell, so the scripts are not linted.

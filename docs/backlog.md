@@ -36,7 +36,7 @@ Acceptance:
 - Any bug the tests find is fixed in the same item.
 
 ### B4 · Restore never loses both databases
-Status: todo
+Status: done (2026-11-24)
 Touches: backend/scripts (restore.sh), README
 Parallel: ok
 Acceptance:

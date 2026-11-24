@@ -70,8 +70,13 @@ and keep a copy off the machine — a backup on the same disk is lost with it.
 cd backend
 make backup         # → backups/<date_time>/ at the repo root: db.dump (pg_dump -Fc) + photos/; prints path and size
 make backup-check   # proves it works: backs up, restores into a scratch database, compares every table's row count
-                    # and every photo (the live data is only read); run it once after setting up, then monthly
+                    # and every photo, then a forced restore over it must keep the old copy (the live data is only
+                    # read); run it once after setting up, then monthly
 ```
+
+Backups and restores always go through the compose `db` service (`docker compose exec db …`, run from `backend/`):
+they use that container's own `pg_dump` / `pg_restore`, and the host and port in `DATABASE_URL` are ignored (only its
+database name is used). So the database must live in that container; a Postgres elsewhere needs its own backup.
 
 `make backup` only needs `make` and Docker (it uses the database container's own `pg_dump`), so cron can run it
 outside the Nix shell. Cron runs with a bare `PATH` (`/usr/bin:/bin`), which misses Docker when it is installed as a
@@ -100,9 +105,12 @@ make restore from=backups/2026-11-24_033000 db=forest data=data force=1
 ```
 
 `make restore` loads the dump into a scratch database and only swaps it in once that worked, so a broken backup never
-costs you the database you had. It refuses to overwrite the live `forest` database without `force=1`. Photos are copied
-into `<data>/photos` next to any already there. Delete a check database afterwards with
-`docker compose exec db psql -U forest -c 'DROP DATABASE forest_check'` (from `backend/`).
+costs you the database you had. It refuses to overwrite the live `forest` database without `force=1`. It never drops
+a database either: the one it replaces is renamed to `<db>_old_<date_time>`, and the restore prints that name and the
+command to drop it once you are happy with the result; until then it is your way back.
+Photos are copied into `<data>/photos` over the ones already there: a forced restore leaves photo files newer than the
+backup in place (they are harmless — nothing in the restored database points at them). Delete a check database
+afterwards with `docker compose exec db psql -U forest -c 'DROP DATABASE forest_check'` (from `backend/`).
 
 ## Design
 
