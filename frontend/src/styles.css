@@ -352,6 +352,10 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 .log__count { display: block; margin-top: 0.4rem; }
 
 /* ---------- tasks ---------- */
+/* plot filter: one row of chips, scrolled sideways when the names don't fit */
+.tasks__filter { border: 0; padding: 0; margin: 0; min-width: 0; }
+.tasks__plots { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0.6rem -1rem 0; padding: 0 1rem; }
+.tasks__plots .chip { flex: none; }
 .tasks__group { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 1.1rem 0 0.4rem; }
 .tasks__group--overdue { color: var(--task); }
 .task { display: flex; align-items: stretch; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }

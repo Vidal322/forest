@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { activities as activitiesApi } from '../api/activities'
 import { friendlyError } from '../api/errors'
 import { plots as plotsApi, zones as zonesApi } from '../api/plots'
-import { isOpen, resolvedLink, taskPlace, tasks as tasksApi, type Task } from '../api/tasks'
+import { isOpen, resolvedLink, taskPlace, taskPlotId, tasks as tasksApi, type Task } from '../api/tasks'
+import { useRemembered } from '../app/remembered'
 import { TaskForm } from '../components/TaskForm'
 import { TaskRow, ToastLine } from '../components/TaskRow'
 import { daysBetween } from '../domain/dates'
@@ -24,11 +25,43 @@ export function TasksPage() {
   const returnFocus = useRef<string | null>(null)
   const showToast = useCallback((t: Omit<Toast, 'n'>) => setToast((old) => ({ ...t, n: (old?.n ?? 0) + 1 })), [])
   const { toggle, pinned } = useTaskToggle(showToast)
+  const [plotChoice, setPlotChoice] = useRemembered<string | null>('tasks.plot', null)
 
+  const p = useMemo(() => plots.data ?? [], [plots.data])
+  const z = useMemo(() => zones.data ?? [], [zones.data])
   const all = useMemo(() => list.data ?? [], [list.data])
+  // filtering only makes sense with two plots or more; a deleted plot falls back to all
+  const plotFilter = p.length > 1 && p.some((x) => x.id === plotChoice) ? plotChoice : null
+  const filterName = p.find((x) => x.id === plotFilter)?.name
+  // a plot chosen earlier may sit past the edge of the chip row: bring it into view (sideways only)
+  const chipRow = useRef<HTMLDivElement>(null)
+  const chipsShown = p.length > 1
+  useEffect(() => {
+    const row = chipRow.current
+    const on = row?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!row || !on) return
+    const past = on.getBoundingClientRect().right - row.getBoundingClientRect().right
+    if (past > 0) row.scrollLeft += past + 16
+    // only when the chips first appear
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chipsShown])
+  // open tasks per plot (zone tasks count under their plot), for the chips
+  const openByPlot = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const t of all) {
+      const id = isOpen(t) ? taskPlotId(t, z) : undefined
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+    }
+    return counts
+  }, [all, z])
+  const openTotal = all.filter(isOpen).length
+  const shown = useMemo(
+    () => (plotFilter === null ? all : all.filter((t) => taskPlotId(t, z) === plotFilter)),
+    [all, z, plotFilter],
+  )
   const groups = useMemo(() => {
     // a task ticked here keeps its place (struck through) until the page is left
-    const open = all.filter((t) => isOpen(t) || pinned.has(t.id))
+    const open = shown.filter((t) => isOpen(t) || pinned.has(t.id))
     const days = (t: Task) => (t.due_on ? daysBetween(today, t.due_on) : null)
     return [
       { key: 'overdue', title: 'Overdue', items: open.filter((t) => t.due_on !== null && days(t)! < 0) },
@@ -37,8 +70,9 @@ export function TasksPage() {
       { key: 'later', title: 'Later', items: open.filter((t) => t.due_on !== null && days(t)! > 7) },
       { key: 'undated', title: 'No date', items: open.filter((t) => t.due_on === null) },
     ].filter((g) => g.items.length > 0)
-  }, [all, today, pinned])
-  const closed = all.filter((t) => !isOpen(t) && !pinned.has(t.id))
+  }, [shown, today, pinned])
+  const closed = shown.filter((t) => !isOpen(t) && !pinned.has(t.id))
+  const elsewhere = plotFilter === null ? 0 : openTotal - (openByPlot.get(plotFilter) ?? 0)
 
   const editingTask = editing?.mode === 'edit' ? all.find((t) => t.id === editing.id) : undefined
   const close = useCallback((message?: string) => {
@@ -54,8 +88,6 @@ export function TasksPage() {
     setEditing({ mode: 'edit', id: t.id })
   }
 
-  const p = plots.data ?? []
-  const z = zones.data ?? []
   const offline = list.isPending && list.fetchStatus === 'paused'
   const rowProps = (t: Task) => ({
     task: t,
@@ -95,6 +127,28 @@ export function TasksPage() {
         }}
       />
 
+      {chipsShown && (
+        <fieldset className="tasks__filter">
+          <legend className="visually-hidden">Show the tasks of</legend>
+          <div ref={chipRow} className="row tasks__plots">
+            <button type="button" className={`chip${plotFilter === null ? ' is-on' : ''}`} aria-pressed={plotFilter === null} onClick={() => setPlotChoice(null)}>
+              All plots ({openTotal})
+            </button>
+            {p.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                className={`chip${plotFilter === x.id ? ' is-on' : ''}`}
+                aria-pressed={plotFilter === x.id}
+                onClick={() => setPlotChoice(x.id)}
+              >
+                {x.name} ({openByPlot.get(x.id) ?? 0})
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       {editing?.mode === 'add' && <TaskForm key="new" plots={p} zones={z} today={today} onDone={close} onCancel={() => close()} />}
       {editing?.mode === 'edit' &&
         (editingTask ? (
@@ -129,8 +183,19 @@ export function TasksPage() {
         groups.length === 0 &&
         editing === null && (
           <div className="empty">
-            <p>Nothing to do. 🌿</p>
-            <p className="muted">Add things like “Falta semear” or “Melhorar caminho” as tasks.</p>
+            <p>Nothing to do{filterName ? ` in ${filterName}` : ''}. 🌿</p>
+            {elsewhere > 0 ? (
+              <>
+                <p className="muted">
+                  {elsewhere === 1 ? '1 open task' : `${elsewhere} open tasks`} in other plots.
+                </p>
+                <button type="button" className="btn" onClick={() => setPlotChoice(null)}>
+                  Show all plots
+                </button>
+              </>
+            ) : (
+              <p className="muted">Add things like “Falta semear” or “Melhorar caminho” as tasks.</p>
+            )}
           </div>
         )
       )}

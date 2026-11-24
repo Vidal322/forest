@@ -127,3 +127,26 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Follow-ups: these could become new items: derive open tasks per zone from the cached tasks query (or adjust
   `open_task_count` optimistically in the tasks entity) with an offline test; decide whether plots are ordered by
   their most urgent zone or the hint says "in each plot"; add tie and 'other'-kind cases to the sort tests.
+
+## 2026-11-24 · M2 Tasks: filter by plot — merged (squash of branch commit 5a1f608, rebased as c525cdb)
+- Change: frontend only. The Tasks page has a row of large chips under the heading, "All plots (n)" and one per plot
+  with its open task count; the row scrolls sideways (never the page) and only shows with two or more plots. Zone tasks
+  count under their zone's plot (`taskPlotId` in `src/api/tasks.ts`), and the "Show done and cancelled" list is
+  filtered too. The choice is kept in memory while the app is open (`useRemembered` in `src/app/remembered.ts`,
+  cleared per test in `src/test/setup.ts`), forgotten on reload, and falls back to all plots if that plot was deleted;
+  coming back scrolls the chosen chip into view. Empty state: "Nothing to do in <plot>. 🌿", "N open tasks in other
+  plots." and a "Show all plots" button. Chips instead of the mockup's select: easier to tap and show the counts.
+- Review: no blocking findings. Four minor ones left as is: (1) with a plot chosen, Add task still starts at "Choose a
+  zone or plot…", and a task saved for another plot does not show in the current view although "Added …" appears;
+  (2) while plots/zones are still loading (or only partly cached offline) the filter briefly shows all plots, and zone
+  tasks whose zone is not loaded drop out of the filtered list and counts; (3) for the same reason the per-plot counts
+  may not add up to "All plots (n)" until zones load; (4) no test for the deleted-plot fallback (the chip scroll was
+  checked by hand; jsdom has no layout).
+- Browser check: Pixel 7 emulation on the preview with 4 long-named plots, one zone, 3 open tasks (one on the zone) and
+  1 done task: chips 40px tall, row scrolls sideways, page scrollWidth stays 412; the last (off-screen) plot stayed
+  chosen after Map -> Tasks and its chip was scrolled into view; a plot with only a done task showed the empty state
+  plus "Show done and cancelled (1)"; reload reset to All plots. The stale service worker on the preview again had to be
+  unregistered.
+- Follow-ups: these could become new items: preselect the chosen plot in Add task (or switch back to All plots after
+  adding elsewhere); wait for plots and zones before applying or dropping the remembered choice; test the deleted-plot
+  fallback.

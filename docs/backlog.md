@@ -72,7 +72,7 @@ Acceptance:
 - The zone page and tasks list show the task as done and link to the activity.
 
 ### M2 · Tasks: filter by plot
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (tasks page)
 Parallel: ok
 Acceptance:

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { act, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { Activity } from '../api/activities'
@@ -39,15 +39,20 @@ const sowing: Activity = {
 }
 const sown: Task = { ...base, status: 'done', completed_at: new Date().toISOString(), resolved_by_activity_id: sowing.id }
 
-function taskApi(list: Task[] = [base, later], delayMs = 0) {
+// a second plot with a zone of its own, for the plot filter
+const plot2 = { ...testPlot, id: '10000000-0000-4000-8000-000000000002', name: 'Plot 2' }
+const zone2 = { ...testZone, id: '20000000-0000-4000-8000-000000000002', plot_id: plot2.id, label: 'Ribeira' }
+const inZone2: Task = { ...base, id: '40000000-0000-4000-8000-000000000003', title: 'Regar ribeira', kind: 'water', zone_id: zone2.id, due_on: today }
+
+function taskApi(list: Task[] = [base, later], delayMs = 0, twoPlots = false) {
   let db = [...list]
   const api = fakeApi({
     'GET /api/activities.*': () => ({ status: 200, body: [sowing] }),
     'GET /api/species': () => ({ status: 200, body: [] }),
     'GET /api/tree-counts': () => ({ status: 200, body: [] }),
     'GET /api/tasks': () => ({ status: 200, body: db }),
-    'GET /api/plots': () => ({ status: 200, body: [testPlot] }),
-    'GET /api/zones': () => ({ status: 200, body: [testZone] }),
+    'GET /api/plots': () => ({ status: 200, body: twoPlots ? [testPlot, plot2] : [testPlot] }),
+    'GET /api/zones': () => ({ status: 200, body: twoPlots ? [testZone, zone2] : [testZone] }),
     'PUT /api/tasks/[^/]+': ({ path, body }) => {
       const b = body as Partial<Task> & { base_version: number | null }
       const id = path.split('/').pop()!
@@ -205,5 +210,63 @@ describe('TasksPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true))
     expect(api.calls.find((c) => c.method === 'PUT')!.body).toMatchObject({ status: 'done', resolved_by_activity_id: sowing.id })
+  })
+
+  describe('plot filter', () => {
+    const chip = (name: RegExp) => screen.findByRole('button', { name })
+
+    it('is not shown with a single plot', async () => {
+      taskApi()
+      renderApp('/tasks')
+      await screen.findByRole('heading', { name: /Overdue/ })
+      expect(screen.queryByRole('group', { name: 'Show the tasks of' })).not.toBeInTheDocument()
+    })
+
+    it('shows one plot’s tasks, zone tasks counted under their plot', async () => {
+      taskApi([base, later, inZone2], 0, true)
+      renderApp('/tasks')
+      expect(await chip(/All plots \(3\)/)).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Plot 1 (2)' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Plot 2 (1)' }))
+      expect(screen.getByRole('button', { name: 'Plot 2 (1)' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: /Edit: .*Regar ribeira/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Edit: .*Falta semear/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Edit: .*Melhorar caminho/ })).not.toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Plot 1 (2)' }))
+      expect(screen.getByRole('button', { name: /Edit: .*Falta semear/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Edit: .*Melhorar caminho/ })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Edit: .*Regar ribeira/ })).not.toBeInTheDocument()
+    })
+
+    it('filters the done ones too', async () => {
+      taskApi([sown, inZone2], 0, true)
+      renderApp('/tasks')
+      await userEvent.click(await chip(/Plot 2 \(1\)/))
+      expect(screen.queryByRole('button', { name: /Show done/ })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Plot 1 (0)' }))
+      expect(screen.getByRole('button', { name: /Show done and cancelled \(1\)/ })).toBeInTheDocument()
+    })
+
+    it('is remembered when coming back to the page', async () => {
+      taskApi([base, later, inZone2], 0, true)
+      const { router } = renderApp('/tasks')
+      await userEvent.click(await chip(/Plot 2 \(1\)/))
+      await act(() => router.navigate('/more'))
+      await act(() => router.navigate('/tasks'))
+      expect(await chip(/Plot 2 \(1\)/)).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.queryByRole('button', { name: /Edit: .*Falta semear/ })).not.toBeInTheDocument()
+    })
+
+    it('says when a plot has nothing to do but others do', async () => {
+      taskApi([base, later], 0, true)
+      renderApp('/tasks')
+      await userEvent.click(await chip(/Plot 2 \(0\)/))
+      expect(screen.getByText('Nothing to do in Plot 2. 🌿')).toBeInTheDocument()
+      expect(screen.getByText('2 open tasks in other plots.')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Show all plots' }))
+      expect(screen.getByRole('button', { name: /All plots/ })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: /Edit: .*Falta semear/ })).toBeInTheDocument()
+    })
   })
 })

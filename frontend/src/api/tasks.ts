@@ -88,6 +88,12 @@ export const tasks = defineEntity<Task, TaskInput>({
   alsoRefresh: [['zones'], ['plot-stats']], // open task counts
 })
 
+/** The plot a task counts under: its own, or its zone's (undefined if the zone isn't known here). */
+export function taskPlotId(t: Pick<Task, 'plot_id' | 'zone_id'>, zones: Zone[]): string | undefined {
+  if (t.plot_id) return t.plot_id
+  return zones.find((z) => z.id === t.zone_id)?.plot_id
+}
+
 /** Where a task is: "Clareira · Plot 1" or "Plot 2". */
 export function taskPlace(t: Task, plots: Plot[], zones: Zone[]): string {
   if (t.zone_id) {
