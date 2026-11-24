@@ -25,6 +25,16 @@ describe('Layout', () => {
     expect(within(tabs).getByRole('link', { name: /more/i })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('reaches the More page (and its export) from the top navigation (wide screens)', async () => {
+    fakeApi({ 'GET /api/field': () => ({ status: 404, body: { error: { code: 'no_field' } } }) })
+    const { router } = renderApp('/')
+    const top = screen.getAllByRole('navigation', { name: 'Main' })[0]!
+    await userEvent.click(within(top).getByRole('link', { name: 'More' }))
+    expect(router.state.location.pathname).toBe('/more')
+    expect(await screen.findByRole('button', { name: /download csv/i })).toBeInTheDocument()
+    expect(within(top).getByRole('link', { name: 'More' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('has a friendly page for unknown addresses', () => {
     fakeApi({})
     renderApp('/nope')

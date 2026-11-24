@@ -6,7 +6,7 @@ import { friendlyError } from '../api/errors'
 import { OUTBOX_SCOPE } from '../api/outbox'
 import { NAV } from '../app/nav'
 
-/** Phones: everything that isn't a bottom tab, and the export. */
+/** Everything that isn't a bottom tab on phones, and the export (also in the top bar on wide screens). */
 export function MorePage() {
   return (
     <div className="page">

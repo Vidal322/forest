@@ -195,7 +195,7 @@ Acceptance:
 - Stats page can show covas (planting holes) and trees planted between two dates, per plot and per species.
 
 ### F5 · Desktop: reach the More page from the top navigation
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (navigation)
 Area: navigation, more-page
 Acceptance:

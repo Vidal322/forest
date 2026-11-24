@@ -328,3 +328,14 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   named `restore_check_*` (harmless, cleanup is exact).
 - Browser check: not needed (docs, script, Makefile, comment, test).
 - Follow-ups: none.
+
+## 2026-11-24 · F5 Desktop: reach the More page from the top navigation — merged (squash of branch commit 61b8723)
+- Change: on desktop widths (641px and up) the top bar has a "More" link, so the More page and its CSV export can be
+  reached without typing `/more`. It is highlighted only on `/more`, because Plot stats, Species and Field setup have
+  their own top-bar links. At 641-820px the links got less padding and a smaller font so the bar stays on one line.
+  Phone bottom tabs are unchanged.
+- Review: no blocking findings. Minor, left as is: the More link is not driven by the NAV list (deliberate); the e2e
+  test covers only 641px and 1280px and only the Online status pill, not 642-820px or Offline.
+- Browser check: e2e suite passed (11 tests), including the new desktop-more test at 1280px and 641px; 641px
+  screenshot read.
+- Follow-ups: none that matter for correctness.

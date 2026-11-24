@@ -29,6 +29,10 @@ export function Layout() {
               {n.label}
             </NavLink>
           ))}
+          {/* the export (and anything else only on More) must be reachable on desktop too */}
+          <NavLink to="/more" className="topnav__link">
+            More
+          </NavLink>
         </nav>
         <span className="spacer" />
         <ServerStatus />
