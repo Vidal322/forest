@@ -16,7 +16,9 @@ Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/moc
 - Backend (`cd backend`): `make db-up migrate`, `make run`, `make check` (lint + tests), `make db-smoke` (schema checks).
   First run: `cp .env.example .env`. The database is on port 5433.
 - Frontend (`cd frontend`): `pnpm dev` (proxies `/api` and `/healthz` to :8080), `pnpm dev:lan` (open it on a phone), `pnpm check`, `pnpm build` (PWA).
-- Playwright MCP (`.mcp.json`): headless system Chrome emulating a Pixel 7, started via `nix develop` (needs Node ≥ 20;
+- Browser (e2e) tests: `frontend/e2e/*.e2e.ts`, run with `.claude/loop/e2e.sh [spec]` (fresh preview on its own port
+  and database, system Chrome as a Pixel 7; screenshots via `shot()` in `frontend/e2e-results/`).
+- Playwright MCP (`.mcp.json`, for ad-hoc looks, one shared browser): headless system Chrome emulating a Pixel 7, started via `nix develop` (needs Node ≥ 20;
   system Node is 18). Screenshots land in `.playwright-mcp/` (ignored). First start downloads the package — if it times
   out, run the `.mcp.json` command once by hand or raise `MCP_TIMEOUT`.
 - The API applies migrations itself on start; photos are stored under `FOREST_DATA_DIR` (default `backend/data`).

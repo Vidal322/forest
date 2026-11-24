@@ -3,12 +3,14 @@
 # forest_wt_<id> (so tests and migrations of unfinished work never touch the dev database).
 #   worktree.sh <id>            create or reuse it (frontend deps installed); prints its absolute path
 #   worktree.sh --remove <id>   stop its preview, remove the worktree, delete the branch, drop its database
+#   worktree.sh --reset-db <id> drop and recreate its database (e.g. after renumbering a migration)
 set -euo pipefail
 main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
 command -v psql >/dev/null && command -v pnpm >/dev/null || exec nix develop "$main" -c "$0" "$@"
 
-remove=0
+remove=0 reset=0
 if [ "${1:-}" = --remove ]; then remove=1; shift; fi
+if [ "${1:-}" = --reset-db ]; then reset=1; shift; fi
 id=${1:?usage: worktree.sh [--remove] <item-id>}
 wt=$main/.claude/worktrees/$id
 db=forest_wt_$(tr 'A-Z-' 'a-z_' <<<"$id" | tr -cd 'a-z0-9_')
@@ -21,6 +23,12 @@ if [ $remove = 1 ]; then
   git -C "$main" show-ref --verify -q "refs/heads/auto/$id" && git -C "$main" branch -D "auto/$id"
   psql "$(url_for postgres)" -q -c "DROP DATABASE IF EXISTS $db WITH (FORCE)"
   echo "removed $id"
+  exit 0
+fi
+
+if [ $reset = 1 ]; then
+  psql "$(url_for postgres)" -q -c "DROP DATABASE IF EXISTS $db WITH (FORCE)" -c "CREATE DATABASE $db"
+  echo "reset $db"
   exit 0
 fi
 

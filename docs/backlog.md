@@ -5,9 +5,9 @@ order = priority. Each item is one squashed commit on `master`.
 
 - **Status**: `todo`, `done (<date>)`, `blocked: <question for the owner>`, `failed: <why> (branch auto/<id>)`.
   To unblock an item, answer the question in the item text and set it back to `todo`.
-- **Touches**: the areas the item changes. **Parallel**: `ok` if the item may run next to another one; `alone` if it
-  adds a migration, changes shared store/schema code, or is a walkthrough. Two `ok` items run together only if their
-  Touches don't share a page, package or directory.
+- **Touches**: what the item changes. **Area**: short tags; items sharing a tag never run at the same time (up to 3
+  run at once). `Parallel: alone` instead of Area: the item runs with nothing else (walkthroughs). Migrations are fine
+  in parallel: clashing numbers are renumbered when an item lands.
 - **Acceptance**: what the reviewer checks. Anything a user sees is also checked in a phone-sized browser.
 
 ## Safety & ops
@@ -117,7 +117,7 @@ Acceptance:
 ### M6 · Map: show state as of a date
 Status: todo
 Touches: backend (zone status as of), frontend (map page)
-Parallel: alone
+Area: map, zone-status
 Acceptance:
 - A date control ("Show state as of", mockup) recolours zones by their status on that day, computed from the activity
   log up to that date (backend parameter on the zone status query, defaults to `field_today()`; likely a migration
@@ -127,7 +127,7 @@ Acceptance:
 ### M7 · Plot stats: watering coverage and weekly activity
 Status: todo
 Touches: backend (stats), frontend (stats page)
-Parallel: alone
+Area: stats
 Acceptance:
 - First check what `StatsPage.tsx` already shows; build only what is missing from `docs/mockups/plot-stats.html`:
   watering coverage over the last 7 days and activity per week over the last 8 weeks, per plot.
@@ -136,7 +136,7 @@ Acceptance:
 ### M8 · Species: where each species is used
 Status: todo
 Touches: backend (species/stats), frontend (species page)
-Parallel: alone
+Area: species
 Acceptance:
 - Species page shows, per species, the number of zones, living trees, and the last sowing/planting date (mockup
   `species.html`).
@@ -144,7 +144,7 @@ Acceptance:
 ### M9 · Plot page
 Status: todo
 Touches: frontend (new page, routes), maybe backend
-Parallel: ok
+Area: plot-page, routes
 Acceptance:
 - `/plots/:id`: plot name, area, its zones (sorted by need), open tasks, recent activity, link to its stats.
 - Reachable by tapping a plot label on the map and from the stats page.
@@ -156,16 +156,16 @@ Status: todo
 Touches: none at first (finds problems)
 Parallel: alone
 Acceptance:
-- With `.claude/loop/preview.sh` and the Playwright MCP (phone emulation) go through: field setup with a photo, draw a
-  plot and a zone, quick log a watering, go offline (`browser_run_code_unsafe`:
-  `await page.context().setOffline(true)`), log a sowing, come back online and see it sync, add and close a task.
+- `frontend/e2e/walkthrough.e2e.ts` goes through the main flows on the phone emulation, through the UI (not the API):
+  field setup with a photo, draw a plot and a zone, quick log a watering, go offline (`context.setOffline(true)`),
+  log a sowing, come back online and see it sync, add and close a task. Screenshots of each step via `shot()`.
 - Small fixes land in this item; anything bigger becomes a new `todo` item below with acceptance criteria.
 - Progress entry lists the screenshots taken and what was rough.
 
 ### F2 · Display-size photo copies
 Status: todo
 Touches: backend/internal/photo, frontend (map image)
-Parallel: alone
+Area: photo, map
 Acceptance:
 - On upload the API also stores a display copy (e.g. longest side 2048 px, JPEG) and the map loads it; the original is
   kept for alignment/calibration. Existing photos get copies on first request or via a one-off command.
@@ -174,7 +174,7 @@ Acceptance:
 ### F3 · Export the activity log as CSV
 Status: todo
 Touches: backend (export endpoint), frontend (More page)
-Parallel: ok
+Area: export, more-page
 Acceptance:
 - `GET /api/export/activities.csv` (date, type, zones, plots, species, quantity, notes; several zones or species in
   one cell are joined with "; ") and a "Download CSV" button on the More page. Opens in a spreadsheet with correct accents (UTF-8 BOM). No coordinates in the export.
@@ -182,7 +182,7 @@ Acceptance:
 ### F4 · Covas planted per date range
 Status: todo
 Touches: backend (stats), frontend (stats page)
-Parallel: alone
+Area: stats
 Acceptance:
 - Stats page can show covas (planting holes) and trees planted between two dates, per plot and per species.
 
@@ -191,7 +191,7 @@ Acceptance:
 ### T1 · Purge and backup loose ends
 Status: todo
 Touches: README, docs/data-model.md, backend/Makefile, backend/internal/store (comment + test only)
-Parallel: ok
+Area: backup-purge
 Acceptance:
 - README: the "Old deletions" section moves below the Backups **Restore** block.
 - docs/data-model.md says a late *edit* (with `base_version`) of a purged activity or task gets 410 while a plain

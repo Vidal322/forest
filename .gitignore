@@ -35,3 +35,4 @@ backend/data/
 .claude/loop/run/
 .claude/loop/usage/
 backups/
+frontend/e2e-results/
