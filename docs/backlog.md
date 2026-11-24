@@ -88,6 +88,15 @@ Acceptance:
   derived zone status — never a stored one.
 - The order is explained in one short line in the UI.
 
+### M10 · Offline task changes update zone badges right away
+Status: todo
+Touches: frontend (api/tasks.ts, zone status/list queries)
+Parallel: ok
+Acceptance:
+- Closing or reopening a task offline (tasks page, zone page, quick log) updates the zone's open-task count and its
+  place in the zone list immediately (optimistic cache update), and the server's answer replaces it after sync.
+- A test with the fake API offline shows the count change before the outbox flushes.
+
 ### M4 · Map: needs-attention summary
 Status: todo
 Touches: frontend (map page)
