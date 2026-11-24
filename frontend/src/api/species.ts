@@ -15,7 +15,7 @@ export const species = defineEntity<Species, SpeciesInput>({
   name: 'species',
   sort: (a, b) => a.scientific_name.localeCompare(b.scientific_name, undefined, { sensitivity: 'base' }),
   optimistic: (id, input) => ({ id, ...input, updated_at: new Date().toISOString() }),
-  alsoRefresh: [['plot-stats'], ['species-stats']],
+  alsoRefresh: [['plot-stats'], ['species-stats'], ['planted-stats']],
 })
 
 export const speciesKey = species.listKey

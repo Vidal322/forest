@@ -306,3 +306,13 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   on desktop the More page is not in the top navigation.
 - Browser check: full e2e 7/7 including export-csv; screenshot looked fine on a phone.
 - Follow-ups: new item F5 (desktop navigation to More).
+
+## 2026-11-24 · F4 Covas planted per date range — merged (squash of branch commits d1cb492, b37d9ee, rebased)
+- Change: `GET /api/planted-stats?from=&to=` (422 on bad dates) and a "Sown & planted by date" card on the Stats page:
+  quick ranges, From/To pickers (kept in the address), per-plot table (zeros included) and per-species table. Covas
+  are not split by species, so a species gets the covas of every sowing whose mix included it; documented in
+  `docs/data-model.md` and on the page.
+- Review: no blocking findings. Minor: (1) species tree counts do not drop when some of a planting's zones are deleted
+  (per-plot totals do); (2) no "nothing logged" hint when every total is 0 (left as is).
+- Browser check: e2e 7/7 including planted-range; phone screenshot looked right, no sideways scroll.
+- Follow-ups: new item F6 (species trees follow live zones).

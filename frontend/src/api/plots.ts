@@ -55,7 +55,7 @@ export const plots = defineEntity<Plot, PlotInput>({
     area_ha: before && JSON.stringify(before.geom) === JSON.stringify(input.geom) ? before.area_ha : null,
     updated_at: new Date().toISOString(),
   }),
-  alsoRefresh: [['zones'], ['plot-stats'], ['tasks'], ['tree-counts'], ['species-stats']],
+  alsoRefresh: [['zones'], ['plot-stats'], ['tasks'], ['tree-counts'], ['species-stats'], ['planted-stats']],
   // deleting a plot deletes its zones, their tasks and counted trees: hide them at once (also offline)
   onDeleteOptimistic: (qc, id) => {
     const zoneIds = new Set((qc.getQueryData<Zone[]>(['zones']) ?? []).filter((z) => z.plot_id === id).map((z) => z.id))
@@ -65,7 +65,7 @@ export const plots = defineEntity<Plot, PlotInput>({
 
 export const zones = defineEntity<Zone, ZoneInput>({
   name: 'zones',
-  alsoRefresh: [['plot-stats'], ['tasks'], ['tree-counts'], ['species-stats']],
+  alsoRefresh: [['plot-stats'], ['tasks'], ['tree-counts'], ['species-stats'], ['planted-stats']],
   // deleting a zone deletes its tasks and counted trees: hide them at once (also offline)
   onDeleteOptimistic: (qc, id) => hideRelated(qc, (r) => r.zone_id === id, new Set([id])),
   sort: (a, b) => a.id.localeCompare(b.id), // drawing order is decided by FieldLayers

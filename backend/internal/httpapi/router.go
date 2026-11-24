@@ -95,6 +95,7 @@ func NewRouter(d Deps) http.Handler {
 
 			r.Get("/plot-stats", listHandler(h, h.store.ListPlotStats))
 			r.Get("/species-stats", listHandler(h, h.store.ListSpeciesStats))
+			r.Get("/planted-stats", h.plantedStats)
 
 			r.Get("/export/activities.csv", h.exportActivitiesCSV)
 

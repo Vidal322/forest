@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib'
 import { randomUUID } from 'node:crypto'
-import type { APIRequestContext, Page } from '@playwright/test'
+import type { APIRequestContext, Locator, Page } from '@playwright/test'
 
 /** A plain-colour PNG (the API only needs a decodable image as the field photo). */
 export function makePng(width = 1200, height = 800, rgb: [number, number, number] = [96, 140, 70]): Buffer {
@@ -67,7 +67,9 @@ export async function putZone(request: APIRequestContext, plotId: string, label:
   return id
 }
 
-/** Saves a screenshot under e2e-results/ for the reviewer to look at (phone usability). */
-export async function shot(page: Page, name: string): Promise<void> {
-  await page.screenshot({ path: `e2e-results/${name}.png`, fullPage: true })
+/** Saves a screenshot under e2e-results/ for the reviewer to look at (phone usability):
+ * the whole page, or only `part` of it (e.g. one card) when given. */
+export async function shot(page: Page, name: string, part?: Locator): Promise<void> {
+  const path = `e2e-results/${name}.png`
+  await (part ? part.screenshot({ path }) : page.screenshot({ path, fullPage: true }))
 }

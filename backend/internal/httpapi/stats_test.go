@@ -54,3 +54,23 @@ func TestStatsAndWateringRulesAPI(t *testing.T) {
 		t.Fatalf("delete: %d", rec.Code)
 	}
 }
+
+func TestPlantedStatsAPI(t *testing.T) {
+	h := newFieldRouter(t)
+	if rec := upload(t, h, "Quinta", pngBytes(t, 300, 200)); rec.Code != 201 {
+		t.Fatalf("setup: %d", rec.Code)
+	}
+	plotID := uuid.NewString()
+	send(t, h, http.MethodPut, "/api/plots/"+plotID, `{"name":"Planted P","geom":`+squareJSON+`}`)
+	rec := send(t, h, http.MethodGet, "/api/planted-stats?from=2026-09-01&to=2026-09-30", "")
+	var st store.PlantedStats
+	if err := json.NewDecoder(rec.Body).Decode(&st); err != nil || rec.Code != 200 || st.From != "2026-09-01" || st.To != "2026-09-30" ||
+		len(st.Plots) != 1 || st.Plots[0].PlotID.String() != plotID || st.Plots[0].HolesSown != 0 || st.Species == nil {
+		t.Fatalf("planted stats: %d %+v %v", rec.Code, st, err)
+	}
+	for _, q := range []string{"", "?from=2026-09-01", "?from=2026-09-30&to=2026-09-01", "?from=1%20Sep&to=2026-09-30"} {
+		if rec := send(t, h, http.MethodGet, "/api/planted-stats"+q, ""); rec.Code != 422 {
+			t.Errorf("%q: %d %s", q, rec.Code, rec.Body)
+		}
+	}
+}

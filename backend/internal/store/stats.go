@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -161,4 +162,126 @@ func (s *Store) ListSpeciesStats(ctx context.Context) ([]SpeciesStats, error) {
 		st.ZoneCount, st.AliveTreeCount = int(zones), int(alive)
 		return st, err
 	})
+}
+
+// PlantedStats are the covas sown and trees planted between two dates (both included),
+// per plot and per species, from the activity log.
+type PlantedStats struct {
+	From    string           `json:"from"`
+	To      string           `json:"to"`
+	Plots   []PlantedPlot    `json:"plots"`   // every live plot, alphabetical, zeros included
+	Species []PlantedSpecies `json:"species"` // live species with covas or trees counted in the range, alphabetical
+}
+
+// PlantedPlot: sums of the per-zone quantities (unit holes for sowings, trees for plantings) on the plot's live zones.
+type PlantedPlot struct {
+	PlotID       uuid.UUID `json:"plot_id"`
+	Name         string    `json:"name"`
+	HolesSown    int       `json:"holes_sown"`
+	TreesPlanted int       `json:"trees_planted"`
+}
+
+// PlantedSpecies: covas aren't split by species, so HolesSown counts the covas of every
+// sowing that had the species in its mix (a cova sown with a mix counts for each species in it).
+// TreesPlanted is the species' own count on the planting, or the planting's whole count when
+// it was the only species; a mixed planting without counts per species isn't attributed.
+type PlantedSpecies struct {
+	SpeciesID      uuid.UUID `json:"species_id"`
+	ScientificName string    `json:"scientific_name"`
+	CommonName     *string   `json:"common_name"`
+	HolesSown      int       `json:"holes_sown"`
+	TreesPlanted   int       `json:"trees_planted"`
+}
+
+// GetPlantedStats sums sowings and plantings performed from `from` to `to` (YYYY-MM-DD, both included).
+// Deleted activities, zones, plots and species don't count.
+func (s *Store) GetPlantedStats(ctx context.Context, from, to string) (PlantedStats, error) {
+	out := PlantedStats{Plots: []PlantedPlot{}, Species: []PlantedSpecies{}}
+	f, err := time.Parse(time.DateOnly, from)
+	if err != nil {
+		return out, invalid("from", "must be a date like 2026-09-01")
+	}
+	t, err := time.Parse(time.DateOnly, to)
+	if err != nil {
+		return out, invalid("to", "must be a date like 2026-09-30")
+	}
+	if t.Before(f) {
+		return out, invalid("to", "can't be before the start date")
+	}
+	out.From, out.To = f.Format(time.DateOnly), t.Format(time.DateOnly)
+
+	// the per-zone quantities that count: covas of sowings, trees of plantings, on live zones of live plots
+	const counted = `
+		SELECT a.id AS activity_id, a.type, z.plot_id, az.quantity
+		  FROM activity a
+		  JOIN activity_zone az ON az.activity_id = a.id
+		  JOIN zone z ON z.id = az.zone_id AND z.deleted_at IS NULL
+		  JOIN plot p ON p.id = z.plot_id AND p.deleted_at IS NULL
+		 WHERE a.deleted_at IS NULL AND a.performed_on BETWEEN $1 AND $2
+		   AND ((a.type = 'sowing' AND az.unit = 'holes') OR (a.type = 'planting' AND az.unit = 'trees'))`
+
+	rows, err := s.db.Query(ctx, `
+		WITH counted AS (`+counted+`)
+		SELECT p.id, p.name,
+		       COALESCE(sum(c.quantity) FILTER (WHERE c.type = 'sowing'), 0),
+		       COALESCE(sum(c.quantity) FILTER (WHERE c.type = 'planting'), 0)
+		  FROM plot p
+		  LEFT JOIN counted c ON c.plot_id = p.id
+		 WHERE p.deleted_at IS NULL
+		 GROUP BY p.id
+		 ORDER BY lower(p.name), p.id`, out.From, out.To)
+	if err != nil {
+		return out, err
+	}
+	out.Plots, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (PlantedPlot, error) {
+		var p PlantedPlot
+		var holes, trees int64
+		err := r.Scan(&p.PlotID, &p.Name, &holes, &trees)
+		p.HolesSown, p.TreesPlanted = int(holes), int(trees)
+		return p, err
+	})
+	if err != nil {
+		return out, err
+	}
+
+	rows, err = s.db.Query(ctx, `
+		WITH live_act AS (
+			-- sowings and plantings in the range that touch a live zone, with their counted total
+			SELECT a.id, a.type,
+			       (SELECT sum(c.quantity) FROM (`+counted+`) c WHERE c.activity_id = a.id) AS total,
+			       (SELECT count(*) FROM activity_species x WHERE x.activity_id = a.id) AS n_species
+			  FROM activity a
+			 WHERE a.deleted_at IS NULL AND a.type IN ('sowing', 'planting') AND a.performed_on BETWEEN $1 AND $2
+			   AND EXISTS (SELECT 1 FROM activity_zone az
+			                 JOIN zone z ON z.id = az.zone_id AND z.deleted_at IS NULL
+			                 JOIN plot p ON p.id = z.plot_id AND p.deleted_at IS NULL
+			                WHERE az.activity_id = a.id)
+		), per AS (
+			SELECT asp.species_id,
+			       CASE WHEN la.type = 'sowing' THEN la.total END AS holes,
+			       CASE WHEN la.type = 'planting' THEN
+			            CASE WHEN asp.unit = 'trees' THEN asp.quantity WHEN la.n_species = 1 THEN la.total END
+			       END AS trees
+			  FROM live_act la
+			  JOIN activity_species asp ON asp.activity_id = la.id
+		)
+		SELECT sp.id, sp.scientific_name, sp.common_name,
+		       COALESCE(sum(per.holes), 0), COALESCE(sum(per.trees), 0)
+		  FROM per
+		  JOIN species sp ON sp.id = per.species_id AND sp.deleted_at IS NULL
+		 GROUP BY sp.id
+		-- a species with nothing counted (e.g. only sown by seeds) isn't listed as a row of zeros
+		HAVING sum(per.holes) IS NOT NULL OR sum(per.trees) IS NOT NULL
+		 ORDER BY lower(sp.scientific_name), sp.id`, out.From, out.To)
+	if err != nil {
+		return out, err
+	}
+	out.Species, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (PlantedSpecies, error) {
+		var p PlantedSpecies
+		var holes, trees int64
+		err := r.Scan(&p.SpeciesID, &p.ScientificName, &p.CommonName, &holes, &trees)
+		p.HolesSown, p.TreesPlanted = int(holes), int(trees)
+		return p, err
+	})
+	return out, err
 }

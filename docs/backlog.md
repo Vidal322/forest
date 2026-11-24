@@ -188,7 +188,7 @@ Acceptance:
   one cell are joined with "; ") and a "Download CSV" button on the More page. Opens in a spreadsheet with correct accents (UTF-8 BOM). No coordinates in the export.
 
 ### F4 · Covas planted per date range
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (stats), frontend (stats page)
 Area: stats
 Acceptance:
@@ -200,6 +200,13 @@ Touches: frontend (navigation)
 Area: navigation, more-page
 Acceptance:
 - On desktop widths the More page (and with it the CSV export) is reachable from the top navigation, not only at `/more`.
+
+### F6 · Planted stats: species trees follow the live zones
+Status: todo
+Touches: backend (stats)
+Area: stats
+Acceptance:
+- In "Sown & planted by date", a species' tree count drops when some of the planting's zones are deleted, like the per-plot table (or the note and docs say it is not zone-aware).
 
 ## Tidy-ups (low priority)
 

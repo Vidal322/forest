@@ -260,3 +260,103 @@ func TestPlotStatsWateringCoverageAndWeeklyActivity(t *testing.T) {
 		t.Fatalf("empty plot: %+v", e)
 	}
 }
+
+func TestPlantedStats(t *testing.T) {
+	w := newActivityWorld(t)
+	ctx := t.Context()
+	plot2 := newPlot(t, w.s, dbtest.Name("Plot Planted"), square(200, 200, 100))
+	zoneC, _, err := w.s.PutZone(ctx, uuid.New(), store.ZoneInput{PlotID: plot2.ID, Label: ptr("C"), Geom: square(210, 210, 10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mix, _, err := w.s.PutSpecies(ctx, uuid.New(), store.SpeciesInput{ScientificName: dbtest.Name("Test Arbutus planted")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedOnly, _, err := w.s.PutSpecies(ctx, uuid.New(), store.SpeciesInput{ScientificName: dbtest.Name("Test Pinus seeds only")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, p := w.species, mix.ID
+	log := func(typ string, day int, zones []store.ActivityZone, species ...store.ActivitySpecies) uuid.UUID {
+		t.Helper()
+		id := uuid.New()
+		if _, _, err := w.s.PutActivity(ctx, id, store.ActivityInput{Type: typ, PerformedOn: fieldDay(t, day), Zones: zones, Species: species}); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	zq := func(zone uuid.UUID, n int, unit string) store.ActivityZone {
+		return store.ActivityZone{ZoneID: zone, Quantity: ptr(n), Unit: ptr(unit)}
+	}
+	// a sowing of a mix over both plots: each species "has" all 140 covas
+	log("sowing", -10, []store.ActivityZone{zq(w.zoneA, 100, "holes"), zq(zoneC.ID, 40, "holes")},
+		store.ActivitySpecies{SpeciesID: q}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(500), Unit: ptr("seeds")})
+	log("sowing", -40, []store.ActivityZone{zq(w.zoneA, 999, "holes")}, store.ActivitySpecies{SpeciesID: q}) // before the range
+	// one species without its own count: it gets the planting's whole count
+	log("planting", -5, []store.ActivityZone{zq(w.zoneB, 30, "trees")}, store.ActivitySpecies{SpeciesID: q})
+	// counts per species
+	log("planting", -3, []store.ActivityZone{zq(zoneC.ID, 20, "trees")},
+		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(12), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(8), Unit: ptr("trees")})
+	// a mix without counts per species: counted for the plot only
+	log("planting", -2, []store.ActivityZone{zq(w.zoneA, 10, "trees")}, store.ActivitySpecies{SpeciesID: q}, store.ActivitySpecies{SpeciesID: p})
+	gone := log("sowing", -1, []store.ActivityZone{zq(w.zoneA, 500, "holes")}, store.ActivitySpecies{SpeciesID: q})
+	if err := w.s.DeleteActivity(ctx, gone); err != nil {
+		t.Fatal(err)
+	}
+	log("watering", -1, []store.ActivityZone{zq(w.zoneA, 50, "litres")})
+	// sown by seeds, not covas: nothing counted, so the species isn't listed
+	log("sowing", -4, []store.ActivityZone{zq(w.zoneB, 300, "seeds")}, store.ActivitySpecies{SpeciesID: seedOnly.ID})
+
+	check := func(plots map[uuid.UUID][2]int, species map[uuid.UUID][2]int) {
+		t.Helper()
+		st, err := w.s.GetPlantedStats(ctx, fieldDay(t, -20), fieldDay(t, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if st.From != fieldDay(t, -20) || st.To != fieldDay(t, 0) {
+			t.Fatalf("range: %s – %s", st.From, st.To)
+		}
+		gotPlots := map[uuid.UUID][2]int{}
+		for _, pl := range st.Plots {
+			gotPlots[pl.PlotID] = [2]int{pl.HolesSown, pl.TreesPlanted}
+		}
+		for id, want := range plots {
+			if got, ok := gotPlots[id]; !ok || got != want {
+				t.Errorf("plot %s: got %v (listed %v), want %v", id, got, ok, want)
+			}
+		}
+		gotSpecies := map[uuid.UUID][2]int{}
+		for _, sp := range st.Species {
+			gotSpecies[sp.SpeciesID] = [2]int{sp.HolesSown, sp.TreesPlanted}
+		}
+		for id, want := range species {
+			if got, ok := gotSpecies[id]; !ok || got != want {
+				t.Errorf("species %s: got %v (listed %v), want %v", id, got, ok, want)
+			}
+		}
+		if got, ok := gotSpecies[seedOnly.ID]; ok {
+			t.Errorf("species sown only by seeds is listed: %v", got)
+		}
+	}
+	za, err := w.s.GetZone(ctx, w.zoneA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plot1 := za.PlotID
+	check(map[uuid.UUID][2]int{plot1: {100, 40}, plot2.ID: {40, 20}}, map[uuid.UUID][2]int{q: {140, 42}, p: {140, 8}})
+
+	// a deleted zone's work no longer counts, and the plot stays listed with zeros
+	if err := w.s.DeleteZone(ctx, zoneC.ID); err != nil {
+		t.Fatal(err)
+	}
+	check(map[uuid.UUID][2]int{plot1: {100, 40}, plot2.ID: {0, 0}}, map[uuid.UUID][2]int{q: {100, 30}, p: {100, 0}})
+
+	var ve *store.ValidationError
+	if _, err := w.s.GetPlantedStats(ctx, "2026-09-30", "2026-09-01"); !errors.As(err, &ve) {
+		t.Fatalf("reversed range: %v", err)
+	}
+	if _, err := w.s.GetPlantedStats(ctx, "", "2026-09-01"); !errors.As(err, &ve) {
+		t.Fatalf("missing start: %v", err)
+	}
+}

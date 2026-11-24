@@ -5,12 +5,13 @@ import { OUTBOX_SCOPE } from '../api/outbox'
 import { friendlyError } from '../api/errors'
 import { formatHa } from '../api/plots'
 import { usePlotStats, type PlotStats } from '../api/stats'
+import { PlantedInRange } from '../components/PlantedInRange'
 import { relativeDay } from '../domain/dates'
 import { useFieldToday } from '../hooks/useFieldToday'
 
 const n = (v: number) => v.toLocaleString('en-GB')
 
-/** Per plot: area (measured vs the old map), what was sown/planted, watering, and what's pending. */
+/** Per plot: area (measured vs the old map), what was sown/planted (all time and between two dates), watering, and what's pending. */
 export function StatsPage() {
   const stats = usePlotStats()
   const pending = useIsMutating({ predicate: (m) => m.options.scope?.id === OUTBOX_SCOPE.id })
@@ -62,6 +63,7 @@ export function StatsPage() {
           <Stat label="Zones needing water" value={n(totals.dry)} warn={totals.dry > 0} />
         </div>
       )}
+      {stats.data && stats.data.length > 0 && <PlantedInRange today={today} />}
       {stats.data?.map((p) => <PlotCard key={p.plot_id} p={p} today={today} />)}
       {stats.data && stats.data.some((p) => p.area_ha === null) && (
         <p className="muted small">

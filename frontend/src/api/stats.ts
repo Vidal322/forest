@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { apiGet } from './client'
 import { defineEntity } from './entity'
 
@@ -45,6 +45,30 @@ export function useSpeciesStats() {
   return useQuery({
     queryKey: ['species-stats'],
     queryFn: ({ signal }) => apiGet<SpeciesStats[]>('/api/species-stats', { signal }),
+  })
+}
+
+/** Covas sown and trees planted between two dates (both included), per plot and per species. */
+export interface PlantedStats {
+  from: string
+  to: string
+  /** every plot, zeros included */
+  plots: { plot_id: string; name: string; holes_sown: number; trees_planted: number }[]
+  /**
+   * species sown or planted in the range. Covas aren't split by species: a cova sown with a mix counts for each
+   * species in it. Trees count per species when logged per species (or when the planting had one species).
+   */
+  species: { species_id: string; scientific_name: string; common_name: string | null; holes_sown: number; trees_planted: number }[]
+}
+
+/** `range` null = nothing to load yet (e.g. a date is missing). The last result stays while the next range loads. */
+export function usePlantedStats(range: { from: string; to: string } | null) {
+  return useQuery({
+    queryKey: ['planted-stats', range?.from, range?.to],
+    queryFn: ({ signal }) =>
+      apiGet<PlantedStats>(`/api/planted-stats?from=${range!.from}&to=${range!.to}`, { signal }),
+    enabled: range !== null,
+    placeholderData: keepPreviousData,
   })
 }
 
