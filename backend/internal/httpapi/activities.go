@@ -11,7 +11,7 @@ import (
 	"forest/internal/store"
 )
 
-// GET /api/activities?zone_id=…&since=YYYY-MM-DD&limit=N — newest first.
+// GET /api/activities?zone_id=…&plot_id=…&since=YYYY-MM-DD&limit=N — newest first.
 func (h *handlers) listActivities(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	var f store.ActivityFilter
@@ -22,6 +22,14 @@ func (h *handlers) listActivities(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		f.ZoneID = &id
+	}
+	if v := q.Get("plot_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_id", "plot_id must be a UUID")
+			return
+		}
+		f.PlotID = &id
 	}
 	if v := q.Get("since"); v != "" {
 		if _, err := time.Parse(time.DateOnly, v); err != nil {

@@ -1,11 +1,11 @@
-import { DomEvent, latLngBounds, type LatLngBounds, type Polygon as LeafletPolygon, type PathOptions } from 'leaflet'
+import { DomEvent, latLngBounds, type LatLngBounds, type LeafletMouseEvent, type Tooltip as LeafletTooltip, type Polygon as LeafletPolygon, type PathOptions } from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Polygon, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import { formatHa, type Plot, type Polygon as Geom, type Zone } from '../api/plots'
 import { zoneStatus, type ZoneStatus } from '../domain/zoneStatus'
 import { PLOT_COLOR, STATUS_COLOR } from './colors'
-import { outerRingLatLngs, toLatLng, type FramePoint } from './frame'
-import { openRing, ringArea } from './geometry'
+import { outerRingLatLngs, toFramePoint, toLatLng, type FramePoint } from './frame'
+import { openRing, pointInRing, ringArea } from './geometry'
 
 const ringLatLngs = (g: Geom) => outerRingLatLngs(g.coordinates)
 const corners = (g: Geom) => openRing(g.coordinates[0] ?? [])
@@ -21,6 +21,17 @@ function widthOf(g: Geom): number {
 /** Top-most corner (smallest y; leftmost on ties): where the plot's name goes, out of its zones' way. */
 function topCorner(g: Geom): FramePoint {
   return corners(g).reduce((best, p) => (p[1] < best[1] || (p[1] === best[1] && p[0] < best[0]) ? p : best))
+}
+
+/** How far (screen px) around a plot name's text a tap still counts as on the name when a zone is under it. */
+const NAME_SLACK_PX = 3
+
+/** Whether a tap landed on the text of a label, not only in the thumb room padded around it. */
+function onLabelText(label: HTMLElement, x: number, y: number): boolean {
+  const range = document.createRange()
+  range.selectNodeContents(label)
+  const r = range.getBoundingClientRect()
+  return x >= r.left - NAME_SLACK_PX && x <= r.right + NAME_SLACK_PX && y >= r.top - NAME_SLACK_PX && y <= r.bottom + NAME_SLACK_PX
 }
 
 function zoneStyle(status: ZoneStatus, selected: boolean): PathOptions {
@@ -125,6 +136,20 @@ export function FieldLayers({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, map])
 
+  // The plot's name has thumb room padded around it, over whatever zone lies under the name.
+  // A tap in that room (not on the text) goes to the zone drawn there, if any: zones are what
+  // people tap most, and one right next to the name must still open.
+  const zoneUnderTap = (e: LeafletMouseEvent): Zone | undefined => {
+    const ev = e.originalEvent
+    // the target is the label (a Leaflet tooltip); its element holds the name
+    const label = (e.target as LeafletTooltip).getElement?.()
+    if (!onSelectZone || !ev || !label || onLabelText(label, ev.clientX, ev.clientY)) return undefined
+    const at = toFramePoint(map.mouseEventToLatLng(ev))
+    const hits = ordered.filter((z) => pointInRing(at, corners(z.geom)))
+    // drawn on top: a selected zone, else the last (smallest) one
+    return hits.findLast((z) => z.id === selectedId || selectedIds?.has(z.id)) ?? hits[hits.length - 1]
+  }
+
   return (
     <>
       {plots.map((p) => {
@@ -140,7 +165,18 @@ export function FieldLayers({
               offset={[6, 14]}
               position={toLatLng(topCorner(p.geom))}
               className={`map-label map-label--plot${tappable ? ' map-label--link' : ''}`}
-              eventHandlers={tappable ? { click: () => onSelectPlot(p) } : undefined}
+              eventHandlers={
+                tappable
+                  ? {
+                      click: (e) => {
+                        DomEvent.stopPropagation(e) // not a background tap
+                        const zone = zoneUnderTap(e)
+                        if (zone) onSelectZone!(zone)
+                        else onSelectPlot(p)
+                      },
+                    }
+                  : undefined
+              }
             >
               {p.name}
               {p.area_ha !== null ? ` · ${formatHa(p.area_ha)}` : ''}

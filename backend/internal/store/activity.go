@@ -177,6 +177,7 @@ func ptrEq[T comparable](a, b *T) bool {
 // ActivityFilter narrows ListActivities.
 type ActivityFilter struct {
 	ZoneID *uuid.UUID // only activities touching this zone
+	PlotID *uuid.UUID // only activities touching one of this plot's live zones
 	Since  *string    // performed on or after this day (YYYY-MM-DD)
 	Limit  int        // newest first; 0 = default (500)
 }
@@ -200,8 +201,10 @@ func (s *Store) ListActivities(ctx context.Context, f ActivityFilter) ([]Activit
 		 WHERE a.deleted_at IS NULL
 		   AND ($1::uuid IS NULL OR EXISTS (SELECT 1 FROM activity_zone az WHERE az.activity_id = a.id AND az.zone_id = $1))
 		   AND ($2::date IS NULL OR a.performed_on >= $2::date)
+		   AND ($4::uuid IS NULL OR EXISTS (SELECT 1 FROM activity_zone az JOIN zone z ON z.id = az.zone_id
+		                                     WHERE az.activity_id = a.id AND z.plot_id = $4 AND z.deleted_at IS NULL))
 		 ORDER BY a.performed_on DESC, a.created_at DESC, a.id
-		 LIMIT $3`, f.ZoneID, f.Since, limit)
+		 LIMIT $3`, f.ZoneID, f.Since, limit, f.PlotID)
 	if err != nil {
 		return nil, err
 	}

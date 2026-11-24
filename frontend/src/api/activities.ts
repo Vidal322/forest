@@ -135,22 +135,38 @@ const GLOBAL_LIST_LIMIT = 500
  * one), with the cached global list on top for entries made or changed on the phone.
  */
 export function useZoneHistory(zoneId: string | undefined) {
+  return useHistory(['activities', 'zone', zoneId], `zone_id=${zoneId}`, Boolean(zoneId), (a) =>
+    a.zones.some((z) => z.zone_id === zoneId),
+  )
+}
+
+/**
+ * A plot's whole history (entries touching one of its live zones, `zoneIds`): like a
+ * zone's, the server's own list for the plot under the cached global one.
+ */
+export function usePlotHistory(plotId: string | undefined, zoneIds: ReadonlySet<string>) {
+  return useHistory(['activities', 'plot', plotId], `plot_id=${plotId}`, Boolean(plotId), (a) =>
+    a.zones.some((z) => zoneIds.has(z.zone_id)),
+  )
+}
+
+function useHistory(queryKey: readonly unknown[], filter: string, enabled: boolean, touches: (a: Activity) => boolean) {
   const all = activities.useList()
-  const zone = useQuery({
+  const own = useQuery({
     // under ['activities'], so every refresh of the log refreshes it too
-    queryKey: ['activities', 'zone', zoneId],
-    queryFn: ({ signal }) => apiGet<Activity[]>(`/api/activities?zone_id=${zoneId}&limit=5000`, { signal }),
-    enabled: Boolean(zoneId),
+    queryKey,
+    queryFn: ({ signal }) => apiGet<Activity[]>(`/api/activities?${filter}&limit=5000`, { signal }),
+    enabled,
   })
-  const recent = (all.data ?? []).filter((a) => a.zones.some((z) => z.zone_id === zoneId))
+  const recent = (all.data ?? []).filter(touches)
   // The global list is complete unless the server capped it: only then can older
-  // entries be missing, and they come from the zone's own list.
+  // entries be missing, and they come from the own list.
   const capped = (all.data?.length ?? 0) >= GLOBAL_LIST_LIMIT
   const oldestRecent = capped ? all.data![all.data!.length - 1]!.performed_on : null
   const recentIds = new Set(recent.map((a) => a.id))
-  const older = capped ? (zone.data ?? []).filter((a) => !recentIds.has(a.id) && a.performed_on < oldestRecent!) : []
+  const older = capped ? (own.data ?? []).filter((a) => !recentIds.has(a.id) && a.performed_on < oldestRecent! && touches(a)) : []
   const data = [...recent, ...older].sort(
     (a, b) => b.performed_on.localeCompare(a.performed_on) || b.created_at.localeCompare(a.created_at),
   )
-  return { data, isPending: all.isPending && zone.isPending, isError: all.isError && zone.isError, error: all.error ?? zone.error, offline: all.isPending && all.fetchStatus === 'paused' }
+  return { data, isPending: all.isPending && own.isPending, isError: all.isError && own.isError, error: all.error ?? own.error, offline: all.isPending && all.fetchStatus === 'paused' }
 }

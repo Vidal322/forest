@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useParams } from 'react-router'
-import { ACTIVITY, activities as activitiesApi, UNIT_LABEL, zonesPhrase, type Activity } from '../api/activities'
+import { ACTIVITY, activities as activitiesApi, UNIT_LABEL, usePlotHistory, zonesPhrase, type Activity } from '../api/activities'
 import { friendlyError } from '../api/errors'
 import { formatHa, plots as plotsApi, zoneName, zones as zonesApi, type Zone } from '../api/plots'
 import { isOpen, resolvedLink, taskPlotId, tasks as tasksApi, type Task } from '../api/tasks'
@@ -41,7 +41,9 @@ export function PlotPage() {
   const allZones = useMemo(() => zones.data ?? [], [zones.data])
   const own = useMemo(() => allZones.filter((z) => z.plot_id === id).sort(byName).sort(byNeed(today)), [allZones, id, today])
   const ownIds = useMemo(() => new Set(own.map((z) => z.id)), [own])
-  const recent = useMemo(() => (entries.data ?? []).filter((a) => a.zones.some((z) => ownIds.has(z.zone_id))), [entries.data, ownIds])
+  // the plot's own list from the server, so older entries aren't lost to the global log's cap
+  const history = usePlotHistory(id, ownIds)
+  const recent = history.data
 
   const { show } = flash
   const close = useCallback(
@@ -87,7 +89,6 @@ export function PlotPage() {
   const plotTasks = (tasks.data ?? []).filter((t) => taskPlotId(t, allZones) === plot.id && (isOpen(t) || pinned.has(t.id)))
   const zoneById = new Map(own.map((z) => [z.id, z]))
   const place = (t: Task) => (t.zone_id ? (zoneById.get(t.zone_id) ? zoneName(zoneById.get(t.zone_id)!) : 'A deleted zone') : 'Whole plot')
-  const entriesOffline = entries.isPending && entries.fetchStatus === 'paused'
 
   return (
     <div className="page">
@@ -208,13 +209,15 @@ export function PlotPage() {
         <div className="section-head">
           <h2 id="plot-recent">Recent activity</h2>
         </div>
-        {entries.isError && !entries.data && (
+        {history.isError && (
           <p className="note warn" role="alert">
-            {friendlyError(entries.error)}
+            {friendlyError(history.error)}
           </p>
         )}
-        {entriesOffline && <p className="note">No connection. Recent activity will appear when there is signal.</p>}
-        {entries.data && recent.length === 0 && <p className="muted">Nothing logged in this plot yet.</p>}
+        {history.offline && recent.length === 0 && <p className="note">No connection. Recent activity will appear when there is signal.</p>}
+        {zones.data && recent.length === 0 && !history.isPending && !history.offline && !history.isError && (
+          <p className="muted">Nothing logged in this plot yet.</p>
+        )}
         {recent.length > 0 && (
           <ol className="timeline">
             {recent.slice(0, shown).map((a) => (

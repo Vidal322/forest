@@ -54,7 +54,15 @@ func TestActivitiesAPI(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&list); err != nil || len(list) != 1 {
 		t.Fatalf("list: %d %v", len(list), err)
 	}
-	for _, bad := range []string{"?zone_id=x", "?since=yesterday", "?limit=0"} {
+	rec = send(t, h, http.MethodGet, "/api/activities?plot_id="+plotID, "")
+	if err := json.NewDecoder(rec.Body).Decode(&list); err != nil || len(list) != 1 {
+		t.Fatalf("plot list: %d %v", len(list), err)
+	}
+	rec = send(t, h, http.MethodGet, "/api/activities?plot_id="+uuid.NewString(), "")
+	if err := json.NewDecoder(rec.Body).Decode(&list); err != nil || len(list) != 0 {
+		t.Fatalf("other plot list: %d %v", len(list), err)
+	}
+	for _, bad := range []string{"?zone_id=x", "?plot_id=x", "?since=yesterday", "?limit=0"} {
 		if rec := send(t, h, http.MethodGet, "/api/activities"+bad, ""); rec.Code != 400 {
 			t.Errorf("%s: %d", bad, rec.Code)
 		}

@@ -230,7 +230,7 @@ Acceptance:
 - `backup-check` cleanup can never drop `<db>_old_*` copies, whatever the database name length.
 
 ### M12 · Plot page: per-plot activity query and tap-overlap check
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (activity list), frontend
 Area: plot-page, map
 Acceptance:

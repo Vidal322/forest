@@ -357,3 +357,14 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   keep about half their count while the plot shows 0; the case is untested. Left as is, added as F7.
 - Browser check: e2e planted-range (3 tests) passed on the phone viewport; screenshot read, note wraps cleanly.
 - Follow-ups: F7.
+
+## 2026-11-24 · M12 Plot page: per-plot activity query and tap-overlap check — merged (squash of branch commit 922b7cd, rebased)
+- Change: the plot page's recent activity no longer depends on the 500-entry global log cap. `GET /api/activities` takes
+  `plot_id` (entries touching one of the plot's live zones; a bad id gives 400) and `usePlotHistory` fetches entries
+  older than the global list from it. On the map, a tap on a plot name's padding more than 3px off the text opens the
+  zone drawn under that point; with no zone underneath the plot still opens.
+- Review: no blocking findings. Minor, left as is: the plot-page e2e failed in 2 of 4 runs at the stats scroll-to-card
+  viewport check (looks like an existing race, not in this change); the tap routing has only an e2e, no vitest.
+- Browser check: e2e map-tap-overlap (Pixel 7, touch taps below, right, above and on the name) and plot-page passed;
+  screenshot read.
+- Follow-ups: plot-page e2e flakiness at the stats scroll-to-card step could be looked at separately.

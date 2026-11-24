@@ -55,12 +55,13 @@ const entry = (over: Partial<Activity>): Activity => ({
   ...over,
 })
 
-function plotApi(entries: Activity[] = [entry({})]) {
+function plotApi(entries: Activity[] = [entry({})], plotEntries: Activity[] = entries) {
   let tasks = taskList
   return fakeApi({
     'GET /api/plots': () => ({ status: 200, body: [testPlot, otherPlot] }),
     'GET /api/zones': () => ({ status: 200, body: [ribeira, testZone, elsewhere] }),
     'GET /api/tasks': () => ({ status: 200, body: tasks }),
+    [`GET /api/activities\\?plot_id=${testPlot.id}&.*`]: () => ({ status: 200, body: plotEntries }),
     'GET /api/activities.*': () => ({ status: 200, body: entries }),
     'PUT /api/tasks/[^/]+': ({ path, body }) => {
       const id = path.split('/').pop()!
@@ -113,6 +114,20 @@ describe('PlotPage', () => {
     expect(links[0]).toHaveTextContent('yesterday')
     expect(links[0]).toHaveTextContent('Ribeira and Clareira')
     expect(links[0]).toHaveAttribute('href', `/zones/${ribeira.id}#entry-50000000-0000-4000-8000-000000000001`)
+  })
+
+  it('finds entries older than the capped global log in the plot’s own list', async () => {
+    const busy = Array.from({ length: 500 }, (_, i) =>
+      entry({ id: `51000000-0000-4000-8000-${String(i).padStart(12, '0')}`, zones: [{ zone_id: elsewhere.id, quantity: null, unit: null }] }),
+    )
+    const old = entry({ id: '50000000-0000-4000-8000-000000000009', type: 'sowing', performed_on: addDays(today, -60), zones: [{ zone_id: testZone.id, quantity: 80, unit: 'holes' }] })
+    const api = plotApi(busy, [old])
+    renderApp(`/plots/${testPlot.id}`)
+    const recent = within(await screen.findByRole('region', { name: 'Recent activity' }))
+    const link = await recent.findByRole('link')
+    expect(link).toHaveTextContent('Sowed · 80 covas')
+    expect(link).toHaveTextContent('Clareira')
+    expect(api.calls.some((c) => c.path.startsWith(`/api/activities?plot_id=${testPlot.id}&`))).toBe(true)
   })
 
   it('says when the plot does not exist', async () => {

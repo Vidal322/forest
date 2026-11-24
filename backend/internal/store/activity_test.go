@@ -153,6 +153,58 @@ func TestListActivities(t *testing.T) {
 	}
 }
 
+func TestListActivitiesByPlot(t *testing.T) {
+	w := newActivityWorld(t)
+	ctx := t.Context()
+	other := newPlot(t, w.s, dbtest.Name("Plot Other"), square(200, 200, 100))
+	c, _, err := w.s.PutZone(ctx, uuid.New(), store.ZoneInput{PlotID: other.ID, Label: ptr("C"), Geom: square(210, 210, 10)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	put := func(zones ...uuid.UUID) uuid.UUID {
+		t.Helper()
+		id := uuid.New()
+		in := store.ActivityInput{Type: "watering", PerformedOn: w.today}
+		for _, z := range zones {
+			in.Zones = append(in.Zones, store.ActivityZone{ZoneID: z})
+		}
+		if _, _, err := w.s.PutActivity(ctx, id, in); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	put(w.zoneA) // another plot's
+	both := put(w.zoneB, c.ID)
+	onC := put(c.ID)
+
+	ids := func(f store.ActivityFilter) map[uuid.UUID]bool {
+		t.Helper()
+		list, err := w.s.ListActivities(ctx, f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[uuid.UUID]bool{}
+		for _, a := range list {
+			got[a.ID] = true
+		}
+		return got
+	}
+	if got := ids(store.ActivityFilter{PlotID: &other.ID}); len(got) != 2 || !got[both] || !got[onC] {
+		t.Fatalf("other plot: %v", got)
+	}
+
+	// a deleted zone's history no longer belongs to its plot
+	if err := w.s.DeleteZone(ctx, c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(store.ActivityFilter{PlotID: &other.ID}); len(got) != 0 {
+		t.Fatalf("after the zone's delete: %v", got)
+	}
+	if got := ids(store.ActivityFilter{PlotID: &other.ID, ZoneID: &w.zoneA}); len(got) != 0 {
+		t.Fatalf("both filters: %v", got)
+	}
+}
+
 func TestEditOfUnknownActivityIsGone(t *testing.T) {
 	w := newActivityWorld(t)
 	_, _, err := w.s.PutActivity(t.Context(), uuid.New(), store.ActivityInput{Type: "watering", PerformedOn: w.today,
