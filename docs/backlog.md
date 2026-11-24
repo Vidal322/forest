@@ -35,6 +35,17 @@ Acceptance:
   deleted zone or species, response shape. `plots_test.go` already has a smoke test: extend, don't duplicate.
 - Any bug the tests find is fixed in the same item.
 
+### B4 · Restore never loses both databases
+Status: todo
+Touches: backend/scripts (restore.sh), README
+Parallel: ok
+Acceptance:
+- In `backend/scripts/restore.sh` a forced restore renames the live database to `<db>_old_<timestamp>` before
+  swapping in `<db>_restoring`, and the EXIT trap can no longer drop anything once the swap has started; if the
+  rename fails, the old database is renamed back. The script prints where the old copy is and how to drop it.
+- `make backup-check` (or a new test) covers a forced restore over an existing database.
+- README says backups always use the compose `db` service, and that a forced restore leaves newer photo files in place.
+
 ### B3 · Purge old tombstones
 Status: todo
 Touches: backend/internal/store, backend/cmd, backend/Makefile
