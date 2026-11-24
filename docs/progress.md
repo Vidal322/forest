@@ -347,3 +347,13 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   plot-page e2e test failed once and passed on rerun (looks flaky, unrelated).
 - Browser check: e2e map-as-of passed on the phone-sized browser; screenshot read, line and buttons legible.
 - Follow-ups: none that matter for correctness; the plot-page e2e flakiness could be looked at separately.
+
+## 2026-11-24 · F6 Planted stats: species trees follow the live zones — merged (squash of branch commit 8835dc0, rebased)
+- Change: in "Sown & planted by date", a species' planted-tree count drops when some of the planting's zones are
+  deleted, like the per-plot table. Each species count is scaled by live trees / all trees (or live zones / all zones
+  when no trees were counted per zone), rounded, so species rows can differ from the plot row by one. The note under
+  the table and docs/data-model.md say so.
+- Review: no blocking findings. Minor: when all zones with tree counts are deleted and a live zone has none, species
+  keep about half their count while the plot shows 0; the case is untested. Left as is, added as F7.
+- Browser check: e2e planted-range (3 tests) passed on the phone viewport; screenshot read, note wraps cleanly.
+- Follow-ups: F7.

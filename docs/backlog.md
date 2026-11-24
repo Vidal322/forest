@@ -202,11 +202,18 @@ Acceptance:
 - On desktop widths the More page (and with it the CSV export) is reachable from the top navigation, not only at `/more`.
 
 ### F6 · Planted stats: species trees follow the live zones
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (stats)
 Area: stats
 Acceptance:
 - In "Sown & planted by date", a species' tree count drops when some of the planting's zones are deleted, like the per-plot table (or the note and docs say it is not zone-aware).
+
+### F7 · Planted stats: species share when only dead zones had tree counts
+Status: todo
+Touches: backend (stats)
+Area: stats
+Acceptance:
+- When every zone with a trees count is deleted and a live zone has none, the species rows show 0 like the plot row (today the live share falls back to live zones over all zones, so each species keeps about half). Covered by a case in `TestPlantedStats`.
 
 ## Tidy-ups (low priority)
 

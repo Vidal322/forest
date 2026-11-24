@@ -300,6 +300,12 @@ func TestPlantedStats(t *testing.T) {
 		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(12), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(8), Unit: ptr("trees")})
 	// a mix without counts per species: counted for the plot only
 	log("planting", -2, []store.ActivityZone{zq(w.zoneA, 10, "trees")}, store.ActivitySpecies{SpeciesID: q}, store.ActivitySpecies{SpeciesID: p})
+	// counts per species over two zones, one of which gets deleted below
+	log("planting", -3, []store.ActivityZone{zq(w.zoneB, 10, "trees"), zq(zoneC.ID, 30, "trees")},
+		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(25), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(15), Unit: ptr("trees")})
+	// counts per species, none per zone
+	log("planting", -3, []store.ActivityZone{{ZoneID: w.zoneA}, {ZoneID: zoneC.ID}},
+		store.ActivitySpecies{SpeciesID: q, Quantity: ptr(10), Unit: ptr("trees")}, store.ActivitySpecies{SpeciesID: p, Quantity: ptr(4), Unit: ptr("trees")})
 	gone := log("sowing", -1, []store.ActivityZone{zq(w.zoneA, 500, "holes")}, store.ActivitySpecies{SpeciesID: q})
 	if err := w.s.DeleteActivity(ctx, gone); err != nil {
 		t.Fatal(err)
@@ -344,13 +350,15 @@ func TestPlantedStats(t *testing.T) {
 		t.Fatal(err)
 	}
 	plot1 := za.PlotID
-	check(map[uuid.UUID][2]int{plot1: {100, 40}, plot2.ID: {40, 20}}, map[uuid.UUID][2]int{q: {140, 42}, p: {140, 8}})
+	check(map[uuid.UUID][2]int{plot1: {100, 50}, plot2.ID: {40, 50}}, map[uuid.UUID][2]int{q: {140, 77}, p: {140, 27}})
 
-	// a deleted zone's work no longer counts, and the plot stays listed with zeros
+	// a deleted zone's work no longer counts, and the plot stays listed with zeros. A species' own
+	// count on a planting is scaled to the share still on live zones: 10 of 40 trees
+	// (25 → 6, 15 → 4), or 1 of 2 zones when none were counted per zone (10 → 5, 4 → 2)
 	if err := w.s.DeleteZone(ctx, zoneC.ID); err != nil {
 		t.Fatal(err)
 	}
-	check(map[uuid.UUID][2]int{plot1: {100, 40}, plot2.ID: {0, 0}}, map[uuid.UUID][2]int{q: {100, 30}, p: {100, 0}})
+	check(map[uuid.UUID][2]int{plot1: {100, 50}, plot2.ID: {0, 0}}, map[uuid.UUID][2]int{q: {100, 41}, p: {100, 6}})
 
 	var ve *store.ValidationError
 	if _, err := w.s.GetPlantedStats(ctx, "2026-09-30", "2026-09-01"); !errors.As(err, &ve) {

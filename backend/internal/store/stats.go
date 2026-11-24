@@ -185,6 +185,9 @@ type PlantedPlot struct {
 // sowing that had the species in its mix (a cova sown with a mix counts for each species in it).
 // TreesPlanted is the species' own count on the planting, or the planting's whole count when
 // it was the only species; a mixed planting without counts per species isn't attributed.
+// Like the per-plot sums, it follows the live zones: the species' own count isn't split by zone,
+// so when some of the planting's zones are deleted it is scaled to the share of the planting's
+// trees still on live zones (rounded), or of its zones when no trees were counted per zone.
 type PlantedSpecies struct {
 	SpeciesID      uuid.UUID `json:"species_id"`
 	ScientificName string    `json:"scientific_name"`
@@ -249,7 +252,16 @@ func (s *Store) GetPlantedStats(ctx context.Context, from, to string) (PlantedSt
 			-- sowings and plantings in the range that touch a live zone, with their counted total
 			SELECT a.id, a.type,
 			       (SELECT sum(c.quantity) FROM (`+counted+`) c WHERE c.activity_id = a.id) AS total,
-			       (SELECT count(*) FROM activity_species x WHERE x.activity_id = a.id) AS n_species
+			       (SELECT count(*) FROM activity_species x WHERE x.activity_id = a.id) AS n_species,
+			       -- the share of the planting still on live zones: its trees there over all its trees,
+			       -- or its live zones over all its zones when no trees were counted per zone
+			       (SELECT COALESCE(sum(az.quantity) FILTER (WHERE az.unit = 'trees' AND z.deleted_at IS NULL AND p.deleted_at IS NULL)::numeric
+			                          / NULLIF(sum(az.quantity) FILTER (WHERE az.unit = 'trees'), 0),
+			                        count(*) FILTER (WHERE z.deleted_at IS NULL AND p.deleted_at IS NULL)::numeric / count(*))
+			          FROM activity_zone az
+			          JOIN zone z ON z.id = az.zone_id
+			          JOIN plot p ON p.id = z.plot_id
+			         WHERE az.activity_id = a.id) AS live_share
 			  FROM activity a
 			 WHERE a.deleted_at IS NULL AND a.type IN ('sowing', 'planting') AND a.performed_on BETWEEN $1 AND $2
 			   AND EXISTS (SELECT 1 FROM activity_zone az
@@ -260,7 +272,7 @@ func (s *Store) GetPlantedStats(ctx context.Context, from, to string) (PlantedSt
 			SELECT asp.species_id,
 			       CASE WHEN la.type = 'sowing' THEN la.total END AS holes,
 			       CASE WHEN la.type = 'planting' THEN
-			            CASE WHEN asp.unit = 'trees' THEN asp.quantity WHEN la.n_species = 1 THEN la.total END
+			            CASE WHEN asp.unit = 'trees' THEN round(asp.quantity * la.live_share)::int WHEN la.n_species = 1 THEN la.total END
 			       END AS trees
 			  FROM live_act la
 			  JOIN activity_species asp ON asp.activity_id = la.id

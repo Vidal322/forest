@@ -56,7 +56,8 @@ export interface PlantedStats {
   plots: { plot_id: string; name: string; holes_sown: number; trees_planted: number }[]
   /**
    * species sown or planted in the range. Covas aren't split by species: a cova sown with a mix counts for each
-   * species in it. Trees count per species when logged per species (or when the planting had one species).
+   * species in it. Trees count per species when logged per species (or when the planting had one species),
+   * scaled to the share of the planting still on live zones.
    */
   species: { species_id: string; scientific_name: string; common_name: string | null; holes_sown: number; trees_planted: number }[]
 }

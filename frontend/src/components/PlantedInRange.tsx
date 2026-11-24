@@ -182,7 +182,8 @@ function SpeciesTable({ stats }: { stats: PlantedStats }) {
           </table>
           <p className="muted small">
             A cova sown with a seed mix counts for each species in it. Trees of a mixed planting count per species only
-            when the count per species was logged.
+            when the count per species was logged; when some of the planting's zones were deleted since, that count shrinks
+            in proportion.
           </p>
         </>
       )}
