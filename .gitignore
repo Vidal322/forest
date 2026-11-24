@@ -26,3 +26,6 @@ coverage/
 
 # uploaded photos (local runs)
 backend/data/
+
+# playwright mcp screenshots / traces
+.playwright-mcp/

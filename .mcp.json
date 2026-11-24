@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "nix",
+      "args": [
+        "develop",
+        "--command",
+        "npx",
+        "-y",
+        "@playwright/mcp@0.0.86",
+        "--browser",
+        "chrome",
+        "--headless",
+        "--isolated",
+        "--device",
+        "Pixel 7",
+        "--output-dir",
+        ".playwright-mcp"
+      ]
+    }
+  }
+}
