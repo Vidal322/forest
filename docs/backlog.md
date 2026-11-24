@@ -180,7 +180,7 @@ Acceptance:
 - Map still lines up exactly (same frame units). Tests.
 
 ### F3 · Export the activity log as CSV
-Status: todo
+Status: done (2026-11-24)
 Touches: backend (export endpoint), frontend (More page)
 Area: export, more-page
 Acceptance:
@@ -193,6 +193,13 @@ Touches: backend (stats), frontend (stats page)
 Area: stats
 Acceptance:
 - Stats page can show covas (planting holes) and trees planted between two dates, per plot and per species.
+
+### F5 · Desktop: reach the More page from the top navigation
+Status: todo
+Touches: frontend (navigation)
+Area: navigation, more-page
+Acceptance:
+- On desktop widths the More page (and with it the CSV export) is reachable from the top navigation, not only at `/more`.
 
 ## Tidy-ups (low priority)
 

@@ -296,3 +296,13 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   limits, only reachable if limits are lowered after storing.
 - Browser check: full e2e 7/7, screenshot `display-photo-map.png` looked right.
 - Follow-ups: none that matter for the field.
+
+## 2026-11-24 · F3 Export the activity log as CSV — merged (squash of branch commits 3b8d805, 6121d39)
+- Change: `GET /api/export/activities.csv` returns every live activity, oldest first (Date, Type, Zones, Plots, Species,
+  Quantity, Notes; "; " inside a cell), UTF-8 with BOM, CRLF, names only, file named `forest-activities-<today>.csv`.
+  Cells starting with = + - @ get a leading apostrophe. The More page has an Export card with "Download CSV"; offline
+  it says so, and it warns when queued changes are not in the file.
+- Review: no blocking findings. Minor: a note starting with "-" or "+" shows the apostrophe (deliberate, documented);
+  on desktop the More page is not in the top navigation.
+- Browser check: full e2e 7/7 including export-csv; screenshot looked fine on a phone.
+- Follow-ups: new item F5 (desktop navigation to More).

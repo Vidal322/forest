@@ -102,3 +102,39 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError(res.status, 'bad_response', 'Unexpected response from the server', requestId)
   }
 }
+
+/**
+ * GET a file (an export): its bytes and the name the server suggests. Failures are
+ * ApiErrors like apiRequest's; a 2xx of another type than `type` (a captive portal
+ * page, …) is "bad_response".
+ */
+export async function apiDownload(path: string, type: string, timeoutMs = 30_000): Promise<{ blob: Blob; filename: string | null }> {
+  const timeout = AbortSignal.timeout(timeoutMs)
+  let res: Response
+  try {
+    res = await fetch(path, { signal: timeout, cache: 'no-store' })
+  } catch {
+    if (timeout.aborted) throw new ApiError(0, 'timeout', 'The server took too long to answer', null)
+    throw new ApiError(0, 'network', 'Could not reach the server', null)
+  }
+  const requestId = res.headers.get('X-Request-Id')
+  if (!res.ok) {
+    // the usual {"error": …} body
+    let code = 'unknown'
+    let message = `Request failed (${res.status})`
+    try {
+      const body = (await res.json()) as ErrorBody
+      if (typeof body.error?.code === 'string') code = body.error.code
+      if (typeof body.error?.message === 'string') message = body.error.message
+    } catch {
+      // not JSON — keep the generic message
+    }
+    throw new ApiError(res.status, code, message, requestId)
+  }
+  if (!(res.headers.get('Content-Type') ?? '').startsWith(type)) {
+    throw new ApiError(res.status, 'bad_response', 'Unexpected response from the server', requestId)
+  }
+  const blob = await res.blob()
+  const filename = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? null
+  return { blob, filename }
+}
