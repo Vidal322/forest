@@ -51,3 +51,29 @@ export function zoneStatus(z: ZoneState, today: string): ZoneStatus {
   if (z.last_sown_on) return 'sown'
   return 'watered' // only ever watered (e.g. an existing planting): watered within the interval
 }
+
+/** What the zone list's order means, in one line. */
+export const NEED_ORDER_HINT = 'Most urgent first: dry longest, then unsown or with open tasks.'
+
+/**
+ * How urgent a zone is, for sorting (lower = sooner), from the derived status:
+ * needs water (longest overdue first), then needs attention (nothing sown yet, or
+ * open tasks), then fine. Ties keep the caller's order (sort is stable).
+ */
+export function needRank(z: ZoneState & { open_task_count: number }, today: string): [number, number] {
+  const s = zoneStatus(z, today)
+  if (s === 'needs-water') {
+    const last = latest(z.last_watered_on, z.last_sown_on, z.last_planted_on)!
+    return [0, -(daysBetween(last, today) - z.current_interval_days)]
+  }
+  if (s === 'unsown' || z.open_task_count > 0) return [1, 0]
+  return [2, 0]
+}
+
+export function byNeed(today: string) {
+  return (a: ZoneState & { open_task_count: number }, b: ZoneState & { open_task_count: number }) => {
+    const [ra, da] = needRank(a, today)
+    const [rb, db] = needRank(b, today)
+    return ra - rb || da - db
+  }
+}

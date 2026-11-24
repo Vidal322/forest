@@ -107,3 +107,23 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   the version the server reports on refetch; have preview.sh clear the service worker and caches on start. Also
   noted by the author: the existing LogPage offline test leaks a retrying write into later tests; the zone page
   highlights "More" in the bottom bar.
+
+## 2026-11-24 · M3 Zones sorted by need — merged (squash of branch commit 4e0d1ed)
+- Change: frontend only. The zone list (Map > Zones) stays grouped by plot and sorts the zones of each plot by need,
+  using only the status derived from the activity log (never the stored `needs_water`): first zones that need water,
+  most days past their watering interval first; then zones needing attention (a planting zone with nothing sown yet,
+  or any zone with open tasks, paths included); then the rest; name order inside each group (`needRank` / `byNeed`
+  in `src/domain/zoneStatus.ts`). A hint line on top reads "Most urgent first: dry longest, then unsown or with open
+  tasks." and a zone with open tasks shows "· N open task(s)". The status badge in the list no longer shrinks or wraps.
+- Review: no blocking findings. Four minor ones left as is: (1) the open task count and attention rank come from the
+  server's `zone.open_task_count`, which the cache does not update when a task is closed or added offline (seen in the
+  preview: a task ticked done offline still showed "1 open task" until reconnect); (2) needs-water zones rank by days
+  past their own interval, not days since watering — the same today since the interval is per field/season;
+  (3) plots stay in name order, so "Most urgent first" only holds within each plot; (4) no test for ties in the
+  needs-water group or for 'other'-kind zones.
+- Browser check: Pixel 7 emulation on the preview with one plot and six zones: order was Encosta (19 days dry), Vale
+  (10 days dry), Baixa (unsown), Caminho · 1 open task, Plantada · 1 open task, Regada; hint wraps to two lines, nothing
+  overflows, tap targets kept. Offline task close reproduced finding (1).
+- Follow-ups: these could become new items: derive open tasks per zone from the cached tasks query (or adjust
+  `open_task_count` optimistically in the tasks entity) with an offline test; decide whether plots are ordered by
+  their most urgent zone or the hint says "in each plot"; add tie and 'other'-kind cases to the sort tests.

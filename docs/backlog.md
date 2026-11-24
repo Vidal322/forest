@@ -80,7 +80,7 @@ Acceptance:
 - Empty states read well on a phone.
 
 ### M3 · Zones sorted by need
-Status: todo
+Status: done (2026-11-24)
 Touches: frontend (zone list)
 Parallel: ok
 Acceptance:

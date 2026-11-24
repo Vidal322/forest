@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addDays, daysBetween, fieldToday, formatDay, relativeDay } from './dates'
-import { needsWater, zoneStatus, type ZoneState } from './zoneStatus'
+import { byNeed, needRank, needsWater, zoneStatus, type ZoneState } from './zoneStatus'
 
 const base: ZoneState = {
   kind: 'cultivation',
@@ -62,5 +62,19 @@ describe('dates', () => {
     expect(relativeDay('2026-11-22', today)).toBe('today')
     expect(relativeDay('2026-11-21', today)).toBe('yesterday')
     expect(relativeDay('2026-11-17', today)).toBe('5 days ago')
+  })
+})
+
+describe('byNeed', () => {
+  const t = { open_task_count: 0 }
+  it('ranks the longest overdue first, then attention, then fine', () => {
+    const dry2 = { ...base, ...t, last_watered_on: '2026-11-13' }
+    const dry5 = { ...base, ...t, last_sown_on: '2026-11-10' }
+    const unsown = { ...base, ...t }
+    const tasks = { ...base, kind: 'path' as const, open_task_count: 1 }
+    const fine = { ...base, ...t, last_watered_on: '2026-11-21' }
+    const sorted = [fine, unsown, dry2, tasks, dry5].sort(byNeed(today))
+    expect(sorted).toEqual([dry5, dry2, unsown, tasks, fine])
+    expect(needRank(dry5, today)).toEqual([0, -5])
   })
 })
