@@ -36,25 +36,33 @@ var ErrFileTooLarge = errors.New("file too large")
 // ErrTooLarge: the image has more pixels than MaxSide/MaxPixels allow.
 var ErrTooLarge = fmt.Errorf("image larger than %d px per side or %d megapixels", MaxSide, MaxPixels/1_000_000)
 
-// Clean decodes an image and returns it re-encoded as JPEG, with its size.
-// JPEGs are first turned upright according to their EXIF orientation, and
-// transparency is flattened onto white.
-func Clean(data []byte) (out []byte, width, height int, err error) {
+// Cleaned is an upload made safe to keep: the photo as a fresh JPEG, its size, and
+// the smaller copy the map shows (nil when the photo is already small enough).
+type Cleaned struct {
+	JPEG          []byte
+	Display       []byte
+	Width, Height int
+}
+
+// Clean decodes an image and returns it re-encoded as JPEG, with its size and its
+// display copy. JPEGs are first turned upright according to their EXIF orientation,
+// and transparency is flattened onto white.
+func Clean(data []byte) (Cleaned, error) {
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return nil, 0, 0, ErrNotAnImage
+		return Cleaned{}, ErrNotAnImage
 	}
 	if cfg.Width <= 0 || cfg.Height <= 0 {
-		return nil, 0, 0, ErrNotAnImage
+		return Cleaned{}, ErrNotAnImage
 	}
 	if cfg.Width > MaxSide || cfg.Height > MaxSide || cfg.Width*cfg.Height > MaxPixels {
-		return nil, 0, 0, ErrTooLarge
+		return Cleaned{}, ErrTooLarge
 	}
 	decoding <- struct{}{}
 	defer func() { <-decoding }()
 	img, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, 0, 0, ErrNotAnImage
+		return Cleaned{}, ErrNotAnImage
 	}
 	o := 1
 	if format == "jpeg" {
@@ -63,10 +71,14 @@ func Clean(data []byte) (out []byte, width, height int, err error) {
 	upright := orient(img, o)
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, upright, &jpeg.Options{Quality: 88}); err != nil {
-		return nil, 0, 0, err
+		return Cleaned{}, err
+	}
+	display, err := displayCopy(upright)
+	if err != nil {
+		return Cleaned{}, err
 	}
 	b := upright.Bounds()
-	return buf.Bytes(), b.Dx(), b.Dy(), nil
+	return Cleaned{JPEG: buf.Bytes(), Display: display, Width: b.Dx(), Height: b.Dy()}, nil
 }
 
 // ReadLimited reads at most limit bytes from r; more is an error.

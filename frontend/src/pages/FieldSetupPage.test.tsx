@@ -159,6 +159,15 @@ describe('the map', () => {
     renderApp('/')
     expect(await screen.findByRole('img', { name: 'Aerial photo of the field' })).toHaveAttribute(
       'src',
+      `/api/photos/${field.photo!.key}/display`,
+    )
+  })
+
+  it('places the scale line on the full-size original', async () => {
+    fakeApi({ 'GET /api/field': () => ({ status: 200, body: field }) })
+    renderApp('/field')
+    expect(await screen.findByRole('img', { name: 'Aerial photo of the field' })).toHaveAttribute(
+      'src',
       `/api/photos/${field.photo!.key}`,
     )
   })

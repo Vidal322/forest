@@ -225,7 +225,7 @@ function parseMetres(text: string): number | null {
 }
 
 function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
-  const photo = fieldPhoto(field)
+  const photo = fieldPhoto(field, 'original')
   const [line, setLine] = useState<[FramePoint, FramePoint]>(() => initialLine(field))
   // A never-calibrated field starts with a made-up line: it must be placed before saving.
   const [placed, setPlaced] = useState(field.calibration_line !== null)

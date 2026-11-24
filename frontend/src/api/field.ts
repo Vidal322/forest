@@ -60,16 +60,25 @@ export function useField() {
   })
 }
 
-/** What FieldMap needs to show the field's current photo. */
-export function fieldPhoto(field: Field): FieldPhoto | null {
+/**
+ * What FieldMap needs to show the field's current photo. The map loads the light
+ * display copy (≤ 2048 px a side) stretched over the photo's full size, so the frame
+ * is unchanged; calibration and alignment use the full-size original.
+ */
+export function fieldPhoto(field: Field, size: 'display' | 'original' = 'display'): FieldPhoto | null {
   if (!field.photo) return null
   const p = field.photo
   return {
-    url: `/api/photos/${p.key}`,
+    url: photoUrl(p.key, size),
     width: field.frame_width,
     height: field.frame_height,
     image: { width: p.width, height: p.height, affine: toAffine(p.affine_to_frame) },
   }
+}
+
+/** URL of a stored photo, as uploaded or as the map's display copy. */
+export function photoUrl(key: string, size: 'display' | 'original'): string {
+  return size === 'display' ? `/api/photos/${key}/display` : `/api/photos/${key}`
 }
 
 export function lineOf(a: FramePoint, b: FramePoint): LineString {

@@ -26,6 +26,7 @@ A zone's state ("sown on 28 Sep", "needs water") is **derived from its activitie
 - **Area.** `area_ha = ST_Area(geom) × metres_per_unit² / 10 000`. Before calibration, areas are shown as "uncalibrated".
 - All geometries use PostGIS **SRID 0**, which is plain cartesian with no Earth model. The frontend draws on the image with the same pixel coordinates, so no projection is ever needed.
 - **New photos keep the frame.** The *first* uploaded photo defines the frame. A newer photo is aligned to it by clicking ≥ 3 matching points (a rock, a path corner) on both images. That gives an affine transform (least-squares fit) stored on the `FieldImage` row, and the frontend uses it to draw the new photo under the existing shapes. Geometries are **always stored in frame units**: anything drawn or calibrated on a newer photo is converted to the frame before saving, so geometries never change when a photo is replaced. `frame_width`/`frame_height` are not bounds — a larger newer photo can yield negative or out-of-range coordinates, which is fine.
+- **Display copies.** Next to each photo the API keeps a copy at most 2048 px on its longest side (`photos/display/<key>`, served at `/api/photos/<key>/display`; a smaller photo is its own copy, and a photo stored before copies existed gets one on its first request). The map loads that copy stretched over the photo's full `width`×`height`, so coordinates stay in the photo's own pixels. Calibration and alignment use the original (`/api/photos/<key>`).
 
 ## 2. Domain model (UML)
 

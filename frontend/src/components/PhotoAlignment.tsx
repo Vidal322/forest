@@ -83,7 +83,7 @@ function useImageSize(url: string | null): { width: number; height: number } | '
  */
 export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (message: string) => void }) {
   const qc = useQueryClient()
-  const current = fieldPhoto(field)
+  const current = fieldPhoto(field, 'original')
   const [file, setFile] = useState<File | null>(null)
   const [url, setUrl] = useState<string | null>(null)
   const [inputKey, setInputKey] = useState(0)

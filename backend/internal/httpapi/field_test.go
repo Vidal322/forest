@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"image"
+	"image/jpeg"
 	"image/png"
 	"log/slog"
 	"mime/multipart"
@@ -11,6 +12,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"forest/internal/dbtest"
@@ -96,6 +98,14 @@ func TestFieldSetupFlow(t *testing.T) {
 	if _, err := (func() (image.Image, error) { i, _, err := image.Decode(img.Body); return i, err })(); err != nil {
 		t.Fatalf("photo is not an image: %v", err)
 	}
+	// small enough: the map's copy is the photo itself
+	disp := send(t, h, http.MethodGet, "/api/photos/"+f.Photo.Key+"/display", "")
+	if disp.Code != 200 || disp.Header().Get("Cache-Control") != "public, max-age=31536000, immutable" {
+		t.Fatalf("display: %d %v", disp.Code, disp.Header())
+	}
+	if cfg, err := jpeg.DecodeConfig(disp.Body); err != nil || cfg.Width != 320 || cfg.Height != 240 {
+		t.Fatalf("display copy %+v %v", cfg, err)
+	}
 
 	if rec := upload(t, h, "Again", pngBytes(t, 10, 10)); rec.Code != http.StatusConflict {
 		t.Fatalf("second setup: %d", rec.Code)
@@ -115,6 +125,44 @@ func TestFieldSetupFlow(t *testing.T) {
 	}
 	if err := json.NewDecoder(rec.Body).Decode(&f); err != nil || f.MetresPerUnit == nil || *f.MetresPerUnit != 0.2 {
 		t.Fatalf("calibrated field: %+v %v", f, err)
+	}
+}
+
+// A large photo: the frame is its full size, the map gets a smaller copy, and the
+// original stays available for calibration and alignment.
+func TestFieldLargePhotoGetsDisplayCopy(t *testing.T) {
+	h := newFieldRouter(t)
+	rec := upload(t, h, "Quinta", pngBytes(t, 4096, 3072))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("upload: %d %s", rec.Code, rec.Body)
+	}
+	var f store.Field
+	if err := json.NewDecoder(rec.Body).Decode(&f); err != nil {
+		t.Fatal(err)
+	}
+	if f.FrameWidth != 4096 || f.FrameHeight != 3072 {
+		t.Fatalf("frame %dx%d", f.FrameWidth, f.FrameHeight)
+	}
+	size := func(path string) (int, int) {
+		t.Helper()
+		rec := send(t, h, http.MethodGet, path, "")
+		if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/jpeg" {
+			t.Fatalf("%s: %d", path, rec.Code)
+		}
+		cfg, err := jpeg.DecodeConfig(rec.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Width, cfg.Height
+	}
+	if w, hh := size("/api/photos/" + f.Photo.Key); w != 4096 || hh != 3072 {
+		t.Fatalf("original %dx%d", w, hh)
+	}
+	if w, hh := size("/api/photos/" + f.Photo.Key + "/display"); w != 2048 || hh != 1536 {
+		t.Fatalf("display %dx%d", w, hh)
+	}
+	if rec := send(t, h, http.MethodGet, "/api/photos/"+uuid.NewString()+".jpg/display", ""); rec.Code != 404 {
+		t.Fatalf("missing display: %d", rec.Code)
 	}
 }
 
@@ -145,6 +193,9 @@ func TestFieldUploadErrors(t *testing.T) {
 	for _, key := range []string{"nope.jpg", "..%2F..%2Fetc%2Fpasswd"} {
 		if rec := send(t, h, http.MethodGet, "/api/photos/"+key, ""); rec.Code != 404 {
 			t.Errorf("photo %q: %d", key, rec.Code)
+		}
+		if rec := send(t, h, http.MethodGet, "/api/photos/"+key+"/display", ""); rec.Code != 404 {
+			t.Errorf("display %q: %d", key, rec.Code)
 		}
 	}
 }

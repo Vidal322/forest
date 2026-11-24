@@ -47,9 +47,13 @@ func TestCleanStripsMetadata(t *testing.T) {
 	if !bytes.Contains(in, []byte("GPSLatitude")) {
 		t.Fatal("fixture should contain the marker")
 	}
-	out, w, h, err := Clean(in)
+	c, err := Clean(in)
 	if err != nil {
 		t.Fatal(err)
+	}
+	out, w, h := c.JPEG, c.Width, c.Height
+	if c.Display != nil {
+		t.Fatal("a small photo needs no display copy")
 	}
 	if w != 40 || h != 30 {
 		t.Fatalf("size %dx%d", w, h)
@@ -63,21 +67,22 @@ func TestCleanStripsMetadata(t *testing.T) {
 }
 
 func TestCleanPNG(t *testing.T) {
-	_, w, h, err := Clean(testPNG(t, 120, 80))
+	c, err := Clean(testPNG(t, 120, 80))
+	w, h := c.Width, c.Height
 	if err != nil || w != 120 || h != 80 {
 		t.Fatalf("%dx%d %v", w, h, err)
 	}
 }
 
 func TestCleanRejects(t *testing.T) {
-	if _, _, _, err := Clean([]byte("hello")); !errors.Is(err, ErrNotAnImage) {
+	if _, err := Clean([]byte("hello")); !errors.Is(err, ErrNotAnImage) {
 		t.Fatalf("text: %v", err)
 	}
 	// header claims a huge image: refused before decoding a single pixel
 	huge := testPNG(t, 1, 1)
 	binary.BigEndian.PutUint32(huge[16:20], 20000)                           // IHDR width
 	binary.BigEndian.PutUint32(huge[29:33], crc32.ChecksumIEEE(huge[12:29])) // fix the chunk CRC
-	if _, _, _, err := Clean(huge); !errors.Is(err, ErrTooLarge) {
+	if _, err := Clean(huge); !errors.Is(err, ErrTooLarge) {
 		t.Fatalf("huge: %v", err)
 	}
 }
@@ -147,10 +152,11 @@ func TestCleanTurnsPhoneJPEGsUpright(t *testing.T) {
 	if got := jpegOrientation(in); got != 6 {
 		t.Fatalf("orientation parsed as %d", got)
 	}
-	out, w, h, err := Clean(in)
+	c, err := Clean(in)
 	if err != nil {
 		t.Fatal(err)
 	}
+	out, w, h := c.JPEG, c.Width, c.Height
 	if w != 20 || h != 40 {
 		t.Fatalf("size %dx%d, want 20x40 (upright)", w, h)
 	}
@@ -170,10 +176,11 @@ func TestCleanFlattensTransparencyOnWhite(t *testing.T) {
 	if err := png.Encode(&buf, image.NewNRGBA(image.Rect(0, 0, 8, 8))); err != nil { // fully transparent
 		t.Fatal(err)
 	}
-	out, _, _, err := Clean(buf.Bytes())
+	c, err := Clean(buf.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
+	out := c.JPEG
 	img, _ := jpeg.Decode(bytes.NewReader(out))
 	if g := gray(img.At(4, 4)); g < 240 {
 		t.Fatalf("transparent pixel became %d, want white", g)

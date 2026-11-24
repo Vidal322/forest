@@ -171,7 +171,7 @@ Acceptance:
 - Progress entry lists the screenshots taken and what was rough.
 
 ### F2 · Display-size photo copies
-Status: todo
+Status: done (2026-11-24)
 Touches: backend/internal/photo, frontend (map image)
 Area: photo, map
 Acceptance:

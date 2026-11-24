@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"math"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -59,14 +61,14 @@ func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "name", "is required")
 		return
 	}
-	clean, width, height, err := photo.Clean(data)
+	clean, err := photo.Clean(data)
 	if err != nil {
 		h.writePhotoError(w, r, err)
 		return
 	}
-	key := uuid.NewString() + ".jpg"
-	if err := h.photos.Save(key, clean); err != nil {
-		writeStoreError(w, r, h.log, err)
+	width, height := clean.Width, clean.Height
+	key, ok := h.savePhoto(w, r, clean)
+	if !ok {
 		return
 	}
 	// Not cancelled by a client that hangs up mid-commit: otherwise the row could be
@@ -82,6 +84,21 @@ func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, f)
+}
+
+// savePhoto stores a cleaned photo and its display copy under a new key.
+func (h *handlers) savePhoto(w http.ResponseWriter, r *http.Request, clean photo.Cleaned) (key string, ok bool) {
+	key = uuid.NewString() + ".jpg"
+	err := h.photos.Save(key, clean.JPEG)
+	if err == nil && clean.Display != nil {
+		err = h.photos.SaveDisplay(key, clean.Display)
+	}
+	if err != nil {
+		_ = h.photos.Remove(key)
+		writeStoreError(w, r, h.log, err)
+		return "", false
+	}
+	return key, true
 }
 
 // readPhotoUpload streams a multipart body with a "name" text part and a "photo" file part.
@@ -173,8 +190,9 @@ func (h *handlers) updateField(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, f)
 }
 
-// GET /api/photos/{key}: photos never change under a key, so they cache forever
-// (the service worker keeps them for offline use).
+// GET /api/photos/{key}: the photo as uploaded (cleaned), for calibration and alignment.
+// Photos never change under a key, so they cache forever (the service worker keeps
+// them for offline use).
 func (h *handlers) getPhoto(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	f, err := h.photos.Open(key)
@@ -182,6 +200,27 @@ func (h *handlers) getPhoto(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such photo")
 		return
 	}
+	h.servePhoto(w, r, key, f)
+}
+
+// GET /api/photos/{key}/display: the copy the map shows, at most photo.DisplaySide px
+// on its longest side (the photo itself when it is smaller).
+func (h *handlers) getDisplayPhoto(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "key")
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(slowTransfer))
+	f, err := h.photos.OpenDisplay(key)
+	if errors.Is(err, photo.ErrBadKey) || errors.Is(err, fs.ErrNotExist) {
+		writeError(w, http.StatusNotFound, "not_found", "no such photo")
+		return
+	}
+	if err != nil {
+		writeStoreError(w, r, h.log, err)
+		return
+	}
+	h.servePhoto(w, r, key, f)
+}
+
+func (h *handlers) servePhoto(w http.ResponseWriter, r *http.Request, key string, f *os.File) {
 	defer func() { _ = f.Close() }()
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(slowTransfer))
 	st, err := f.Stat()
@@ -231,11 +270,12 @@ func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, r, h.log, err)
 		return
 	}
-	clean, width, height, err := photo.Clean(data)
+	clean, err := photo.Clean(data)
 	if err != nil {
 		h.writePhotoError(w, r, err)
 		return
 	}
+	width, height := clean.Width, clean.Height
 	// landmarks were tapped on the photo as the browser showed it: upright, same size
 	if err := store.CheckLandmarksOnPhoto(pairs, width, height); err != nil {
 		writeStoreError(w, r, h.log, err)
@@ -253,9 +293,8 @@ func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", msg)
 		return
 	}
-	key := uuid.NewString() + ".jpg"
-	if err := h.photos.Save(key, clean); err != nil {
-		writeStoreError(w, r, h.log, err)
+	key, ok := h.savePhoto(w, r, clean)
+	if !ok {
 		return
 	}
 	p, err := h.store.AddPhoto(context.WithoutCancel(r.Context()), store.NewPhoto{

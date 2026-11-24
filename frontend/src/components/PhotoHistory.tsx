@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { apiGet, apiSend } from '../api/client'
 import { friendlyError } from '../api/errors'
-import { fieldKey } from '../api/field'
+import { fieldKey, photoUrl } from '../api/field'
 import { fieldToday, formatDay } from '../domain/dates'
 import { fitLabel, type PhotoInfo } from './photoFit'
 
@@ -25,7 +25,7 @@ export function PhotoHistory({ onMessage }: { onMessage: (m: string) => void }) 
   return (
     <section className="card" aria-labelledby="photos-t">
       <h2 id="photos-t">Photos of the field</h2>
-      {/* collapsed: the thumbnails are full photos, heavy on mobile data */}
+      {/* collapsed: each thumbnail is a whole display copy, heavy on mobile data */}
       <button type="button" className="btn-link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         {open ? 'Hide' : 'Show'} the {photos.data.length} photos
       </button>
@@ -33,7 +33,7 @@ export function PhotoHistory({ onMessage }: { onMessage: (m: string) => void }) 
       <ul className="list">
         {photos.data.map((p) => (
           <li key={p.id} className="photo-row">
-            <img src={`/api/photos/${p.key}`} alt="" className="photo-row__thumb" loading="lazy" />
+            <img src={photoUrl(p.key, 'display')} alt="" className="photo-row__thumb" loading="lazy" />
             <span className="photo-row__text">
               <b>{day(p)}</b>
               <span className="muted small">It {fitLabel(p)}</span>

@@ -3,6 +3,7 @@ package photo
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,7 +35,14 @@ func (d *Dir) Save(key string, data []byte) error {
 	if !ValidKey(key) {
 		return ErrBadKey
 	}
-	tmp, err := os.CreateTemp(d.path, ".upload-*")
+	return saveAtomic(d.path, key, data)
+}
+
+func saveAtomic(dir, name string, data []byte) error {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".upload-*")
 	if err != nil {
 		return err
 	}
@@ -50,7 +58,7 @@ func (d *Dir) Save(key string, data []byte) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), filepath.Join(d.path, key))
+	return os.Rename(tmp.Name(), filepath.Join(dir, name))
 }
 
 // Open opens the photo stored under key.
@@ -61,10 +69,13 @@ func (d *Dir) Open(key string) (*os.File, error) {
 	return os.Open(filepath.Join(d.path, key)) //nolint:gosec // key validated above
 }
 
-// Remove deletes the photo under key (used to undo a failed upload).
+// Remove deletes the photo under key and its display copy (used to undo a failed upload).
 func (d *Dir) Remove(key string) error {
 	if !ValidKey(key) {
 		return ErrBadKey
+	}
+	if err := os.Remove(filepath.Join(d.path, displayDir, key)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
 	}
 	return os.Remove(filepath.Join(d.path, key))
 }

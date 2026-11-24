@@ -285,3 +285,14 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Browser check: screenshots 04, 05, 11 looked at; all 6 e2e specs pass.
 - Follow-ups: rough edges left: area shown instead of "Nothing logged here yet" once a scale exists; plot name label on
   the plot's top edge; duplicate confirmation and waiting bar offline; A/B handle dragging is not tested.
+
+## 2026-11-24 · F2 Display-size photo copies — merged (squash of branch commit 89bea10)
+- Change: uploads also store a display copy (longest side 2048 px, JPEG quality 82; none if the photo is already that
+  small) at `photos/display/<key>`, served by `GET /api/photos/{key}/display` (cached forever). The map, log page and
+  photo thumbnails load the copy; scale form and photo alignment keep the original. Old photos get a copy on first
+  request. Coordinates stay in the original's pixels. New e2e `display-photo.e2e.ts`.
+- Review: no blocking findings. Minor, left as is: (1) `FieldSettings` calls `fieldPhoto(field)` with the display
+  default but only needs metadata; (2) `OpenDisplay` returns ErrTooLarge (probably a 500) for a stored photo over the
+  limits, only reachable if limits are lowered after storing.
+- Browser check: full e2e 7/7, screenshot `display-photo-map.png` looked right.
+- Follow-ups: none that matter for the field.
