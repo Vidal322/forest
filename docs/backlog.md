@@ -13,7 +13,7 @@ order = priority. Each item is one squashed commit on `master`.
 ## Safety & ops
 
 ### B1 · Backups and a tested restore
-Status: todo
+Status: done (2026-11-24)
 Touches: backend/scripts, backend/Makefile, README
 Parallel: ok
 Acceptance:

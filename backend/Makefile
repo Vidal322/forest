@@ -7,7 +7,7 @@ export
 need-db-url = $(if $(DATABASE_URL),,$(error DATABASE_URL is not set — run: cp .env.example .env))
 GOOSE = $(need-db-url)GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" GOOSE_MIGRATION_DIR=internal/db/migrations goose
 
-.PHONY: help db-up db-down db-smoke migrate migrate-down migrate-status migration run test lint check
+.PHONY: help db-up db-down db-smoke backup restore backup-check migrate migrate-down migrate-status migration run test lint check
 
 help: ## list targets
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -20,6 +20,15 @@ db-down: ## stop the database (data is kept)
 
 db-smoke: ## schema smoke test (sample data + constraint checks, rolled back)
 	$(need-db-url)psql "$(DATABASE_URL)" -q -f internal/db/testdata/smoke.sql
+
+backup: ## back up the database + photos into <repo>/backups/<timestamp>/
+	$(need-db-url)scripts/backup.sh
+
+restore: ## restore a backup: make restore from=backups/<timestamp> db=<name> data=<dir> [force=1]
+	scripts/restore.sh "$(from)" "$(db)" "$(data)" "$(force)"
+
+backup-check: ## prove backups restore: back up, restore into a scratch database, compare row counts + photos
+	$(need-db-url)scripts/backup-check.sh
 
 migrate: ## apply all pending migrations
 	$(GOOSE) up

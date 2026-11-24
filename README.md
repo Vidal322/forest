@@ -61,7 +61,48 @@ The simplest setup is one machine (a home server, a small VPS, a Raspberry Pi):
 3. Open the address on the phone and use *Add to Home Screen*. From then on it opens without signal; changes made
    offline are sent when the connection comes back.
 
-Back up the database (`pg_dump`) and `backend/data/photos` — together they are the whole field record.
+### Backups
+
+The database and the photos (`backend/data/photos`) are together the whole field record. Back them up **every day**
+and keep a copy off the machine — a backup on the same disk is lost with it.
+
+```sh
+cd backend
+make backup         # → backups/<date_time>/ at the repo root: db.dump (pg_dump -Fc) + photos/; prints path and size
+make backup-check   # proves it works: backs up, restores into a scratch database, compares every table's row count
+                    # and every photo (the live data is only read); run it once after setting up, then monthly
+```
+
+`make backup` only needs `make` and Docker (it uses the database container's own `pg_dump`), so cron can run it
+outside the Nix shell. Cron runs with a bare `PATH` (`/usr/bin:/bin`), which misses Docker when it is installed as a
+snap (`/snap/bin`) or under `/usr/local/bin`, so set `PATH` in the crontab; check that it holds the folder printed by
+`command -v docker`. For example, every night at 03:30, keeping 30 days (`crontab -e`, adjust the path):
+
+```cron
+PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin
+30 3 * * * cd /srv/forest/backend && make -s backup >> $HOME/forest-backup.log 2>&1 && find ../backups -mindepth 1 -maxdepth 1 -mtime +30 -exec rm -rf {} +
+```
+
+Look at `~/forest-backup.log` now and then: a failed night only shows there (and as a `<date_time>.partial` folder).
+To back up a different database, put the override after `make`: `make backup DATABASE_URL=postgres://…/other`
+(a `DATABASE_URL=… make backup` prefix is ignored, because `backend/.env` wins).
+
+Then copy `backups/` elsewhere (another machine, a USB disk, `rsync`, a cloud drive) as often as you can afford to lose.
+
+**Restore**
+
+```sh
+cd backend
+# look first: restore into a separate database and folder, nothing live is touched
+make restore from=backups/2026-11-24_033000 db=forest_check data=/tmp/forest-check
+# replace the live data: stop the API, restore, start it again
+make restore from=backups/2026-11-24_033000 db=forest data=data force=1
+```
+
+`make restore` loads the dump into a scratch database and only swaps it in once that worked, so a broken backup never
+costs you the database you had. It refuses to overwrite the live `forest` database without `force=1`. Photos are copied
+into `<data>/photos` next to any already there. Delete a check database afterwards with
+`docker compose exec db psql -U forest -c 'DROP DATABASE forest_check'` (from `backend/`).
 
 ## Design
 
