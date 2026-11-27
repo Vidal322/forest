@@ -31,7 +31,7 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(secureHeaders)
 
 	notFound := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
+		writeError(w, http.StatusNotFound, "not_found", "este endereço não existe")
 	})
 	r.NotFound(notFound)
 	if d.StaticDir != "" {
@@ -45,7 +45,7 @@ func NewRouter(d Deps) http.Handler {
 		})
 	}
 	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed for this endpoint")
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "método não permitido neste endereço")
 	})
 
 	// Liveness: the process is up.

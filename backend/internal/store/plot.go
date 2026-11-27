@@ -41,7 +41,7 @@ func (in PlotInput) normalize() (PlotInput, error) {
 		return in, err
 	}
 	if a := in.DeclaredAreaHa; a != nil && (math.IsNaN(*a) || *a <= 0 || *a >= 100_000) {
-		return in, invalid("declared_area_ha", "must be a number of hectares above 0")
+		return in, invalid("declared_area_ha", "tem de ser um número de hectares acima de 0")
 	}
 	if in.Notes, err = optionalText("notes", in.Notes, 2000); err != nil {
 		return in, err
@@ -87,7 +87,7 @@ func (s *Store) checkGeom(ctx context.Context, field string, g *Polygon) error {
 		return err
 	}
 	if reason != "Valid Geometry" {
-		return invalid(field, "crosses itself: move the corners so the outline doesn't cross")
+		return invalid(field, "cruza-se a si próprio: move os cantos para que as linhas não se cruzem")
 	}
 	return nil
 }
@@ -118,12 +118,12 @@ func (s *Store) PutPlot(ctx context.Context, id uuid.UUID, in PlotInput) (p Plot
 		var outside *string
 		err = tx.db.QueryRow(ctx, `
 			WITH p AS (SELECT id FROM plot WHERE id = $1 AND deleted_at IS NULL FOR UPDATE)
-			SELECT COALESCE(z.label, 'a zone') FROM zone z JOIN p ON p.id = z.plot_id
+			SELECT COALESCE(z.label, 'uma zona') FROM zone z JOIN p ON p.id = z.plot_id
 			 WHERE z.deleted_at IS NULL
 			   AND NOT ST_Within(z.geom, ST_Buffer(ST_SetSRID(ST_GeomFromGeoJSON($2), 0), 1))
 			 LIMIT 1`, id, in.Geom.json()).Scan(&outside)
 		if err == nil && outside != nil {
-			return invalid("geom", "would leave %s outside the plot: include all its zones", quoteLabel(*outside))
+			return invalid("geom", "deixaria %s fora da parcela: inclui todas as zonas dela", quoteLabel(*outside))
 		}
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
@@ -142,7 +142,7 @@ func (s *Store) PutPlot(ctx context.Context, id uuid.UUID, in PlotInput) (p Plot
 		case errors.Is(err, pgx.ErrNoRows):
 			return ErrDeleted
 		case isUniqueViolation(err, "plot_name_unique"):
-			return &ConflictError{Field: "name", Message: "another plot already has this name"}
+			return &ConflictError{Field: "name", Message: "já existe outra parcela com este nome"}
 		case err != nil:
 			return err
 		}
@@ -183,7 +183,7 @@ func (s *Store) DeletePlot(ctx context.Context, id uuid.UUID) error {
 }
 
 func quoteLabel(l string) string {
-	if l == "a zone" {
+	if l == "uma zona" {
 		return l
 	}
 	return "“" + l + "”"

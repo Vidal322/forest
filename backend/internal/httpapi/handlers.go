@@ -17,7 +17,7 @@ type handlers struct {
 func (h *handlers) ready(w http.ResponseWriter, r *http.Request) {
 	if err := h.store.Ping(r.Context()); err != nil {
 		h.log.WarnContext(r.Context(), "not ready", "err", err)
-		writeError(w, http.StatusServiceUnavailable, "db_unavailable", "database not reachable")
+		writeError(w, http.StatusServiceUnavailable, "db_unavailable", "a base de dados não está acessível")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

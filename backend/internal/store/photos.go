@@ -43,18 +43,18 @@ type AlignmentInput []struct {
 // points present, sane frame coordinates.
 func CheckAlignment(in AlignmentInput) ([]photo.PointPair, error) {
 	if len(in) < 3 {
-		return nil, invalid("alignment", "tap at least 3 landmarks on both photos")
+		return nil, invalid("alignment", "têm de ser pelo menos 3, marcados nas duas fotografias")
 	}
 	if len(in) > maxAlignmentPoints {
-		return nil, invalid("alignment", "too many landmarks (max %d)", maxAlignmentPoints)
+		return nil, invalid("alignment", "são demasiados (máximo %d)", maxAlignmentPoints)
 	}
 	out := make([]photo.PointPair, len(in))
 	for i, p := range in {
 		if p.Photo == nil || p.Frame == nil {
-			return nil, invalid("alignment", "every landmark needs a point on both photos")
+			return nil, invalid("alignment", "precisam todos de um ponto em cada fotografia")
 		}
 		if !validCoord(p.Frame[0]) || !validCoord(p.Frame[1]) || !validCoord(p.Photo[0]) || !validCoord(p.Photo[1]) {
-			return nil, invalid("alignment", "has an invalid coordinate")
+			return nil, invalid("alignment", "têm uma coordenada inválida")
 		}
 		out[i] = photo.PointPair{Photo: *p.Photo, Frame: *p.Frame}
 	}
@@ -65,7 +65,7 @@ func CheckAlignment(in AlignmentInput) ([]photo.PointPair, error) {
 func CheckLandmarksOnPhoto(pairs []photo.PointPair, width, height int) error {
 	for _, p := range pairs {
 		if p.Photo[0] < 0 || p.Photo[1] < 0 || p.Photo[0] > float64(width) || p.Photo[1] > float64(height) {
-			return invalid("alignment", "a landmark is outside the photo")
+			return invalid("alignment", "têm de ficar dentro da fotografia: há um fora dela")
 		}
 	}
 	return nil
@@ -88,7 +88,7 @@ func CheckCapturedOn(day *string) error {
 	}
 	d, err := time.Parse(time.DateOnly, *day)
 	if err != nil || d.Year() < 1990 || d.After(time.Now().AddDate(0, 0, 2)) {
-		return invalid("captured_on", "must be a date (YYYY-MM-DD), not in the future")
+		return invalid("captured_on", "tem de ser uma data (AAAA-MM-DD), sem ser no futuro")
 	}
 	return nil
 }

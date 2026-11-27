@@ -29,14 +29,14 @@ func NewLine(a, b Point) *LineString {
 
 func (l *LineString) validate(field string, points int) error {
 	if l.Type != "LineString" {
-		return invalid(field, "must be a GeoJSON LineString")
+		return invalid(field, "tem de ser uma linha GeoJSON")
 	}
 	if len(l.Coordinates) != points {
-		return invalid(field, "must have exactly %d points", points)
+		return invalid(field, "tem de ter exatamente %d pontos", points)
 	}
 	for _, p := range l.Coordinates {
 		if !validCoord(p[0]) || !validCoord(p[1]) {
-			return invalid(field, "has an invalid coordinate")
+			return invalid(field, "tem uma coordenada inválida")
 		}
 	}
 	return nil
@@ -48,28 +48,28 @@ const maxRingPoints = 1000
 // normalize checks the polygon and closes its ring if the client left it open.
 func (p *Polygon) normalize(field string) error {
 	if p.Type != "Polygon" {
-		return invalid(field, "must be a GeoJSON Polygon")
+		return invalid(field, "tem de ser um polígono GeoJSON")
 	}
 	if len(p.Coordinates) != 1 {
-		return invalid(field, "must be a single outline without holes")
+		return invalid(field, "tem de ser um só contorno, sem buracos")
 	}
 	ring := p.Coordinates[0]
 	for _, pt := range ring {
 		if !validCoord(pt[0]) || !validCoord(pt[1]) {
-			return invalid(field, "has an invalid coordinate")
+			return invalid(field, "tem uma coordenada inválida")
 		}
 	}
 	if len(ring) > 0 && ring[0] != ring[len(ring)-1] {
 		ring = append(ring, ring[0])
 	}
 	if len(ring) < 4 { // 3 corners + the closing point
-		return invalid(field, "needs at least 3 corners")
+		return invalid(field, "precisa de pelo menos 3 cantos")
 	}
 	if len(ring) > maxRingPoints {
-		return invalid(field, "has too many corners (max %d)", maxRingPoints)
+		return invalid(field, "tem cantos a mais (máximo %d)", maxRingPoints)
 	}
 	if math.Abs(ringArea(ring)) < 1 {
-		return invalid(field, "is too small: its corners are (almost) on a line")
+		return invalid(field, "é pequeno demais: os cantos estão (quase) em linha")
 	}
 	p.Coordinates[0] = ring
 	return nil

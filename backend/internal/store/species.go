@@ -86,7 +86,7 @@ func (s *Store) PutSpecies(ctx context.Context, id uuid.UUID, in SpeciesInput) (
 	case errors.Is(err, pgx.ErrNoRows):
 		return sp, false, ErrDeleted // the id exists but is a tombstone
 	case isUniqueViolation(err, "species_name_unique"):
-		return sp, false, &ConflictError{Field: "scientific_name", Message: "a species with this name already exists"}
+		return sp, false, &ConflictError{Field: "scientific_name", Message: "já existe uma espécie com este nome"}
 	}
 	return sp, created, err
 }

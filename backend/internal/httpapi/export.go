@@ -11,33 +11,36 @@ import (
 	"forest/internal/store"
 )
 
-// exportTypeLabel: activity types as a spreadsheet reader would name them.
+// exportTypeLabel: activity types as the app names them.
 var exportTypeLabel = map[string]string{
-	"watering":    "Watering",
-	"sowing":      "Sowing",
-	"planting":    "Planting",
-	"fertilizing": "Fertilizing",
-	"other":       "Other",
+	"watering":    "Rega",
+	"sowing":      "Sementeira",
+	"planting":    "Plantação",
+	"fertilizing": "Adubação",
+	"other":       "Outro",
 }
 
-// exportUnitLabel: units as the app shows them (holes are "covas" in the field).
+// exportUnitLabel: units as the app shows them.
 var exportUnitLabel = map[string]string{
 	"holes":  "covas",
-	"seeds":  "seeds",
-	"trees":  "trees",
-	"litres": "litres",
+	"seeds":  "sementes",
+	"trees":  "árvores",
+	"litres": "litros",
 	"kg":     "kg",
 }
 
 // exportUnitOrder keeps several units in one cell in a stable order.
 var exportUnitOrder = []string{"holes", "seeds", "trees", "litres", "kg"}
 
-// listSep joins several zones, plots or species in one cell.
-const listSep = "; "
+// listSep joins several zones, plots, species or quantities in one cell (";" is
+// the column separator, as Portuguese spreadsheets expect).
+const listSep = ", "
 
 // GET /api/export/activities.csv — the whole activity log, oldest first, for a
-// spreadsheet. UTF-8 with a BOM, so Excel shows accents right. Names only: no ids,
-// no shapes, no coordinates.
+// spreadsheet set up for Portugal: header in Portuguese, ";" between columns (the
+// comma is the decimal separator there; every quantity is a whole number). UTF-8
+// with a BOM, so Excel shows accents right. Names only: no ids, no shapes, no
+// coordinates.
 func (h *handlers) exportActivitiesCSV(w http.ResponseWriter, r *http.Request) {
 	list, today, err := h.store.ExportActivities(r.Context())
 	if err != nil {
@@ -47,8 +50,9 @@ func (h *handlers) exportActivitiesCSV(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	buf.WriteString("\uFEFF")
 	cw := csv.NewWriter(&buf)
+	cw.Comma = ';'
 	cw.UseCRLF = true // what spreadsheets expect
-	_ = cw.Write([]string{"Date", "Type", "Zones", "Plots", "Species", "Quantity", "Notes"})
+	_ = cw.Write([]string{"Data", "Tipo", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"})
 	for _, a := range list {
 		notes := ""
 		if a.Notes != nil {
@@ -70,7 +74,7 @@ func (h *handlers) exportActivitiesCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="forest-activities-%s.csv"`, today))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="forest-atividades-%s.csv"`, today))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
 }
@@ -93,11 +97,11 @@ func exportZoneName(z store.ExportZone) string {
 	}
 	switch z.Kind {
 	case "path":
-		return "Path"
+		return "Caminho"
 	case "other":
-		return "Unnamed area"
+		return "Área sem nome"
 	}
-	return "Unnamed zone"
+	return "Zona sem nome"
 }
 
 func exportZoneNames(zones []store.ExportZone) []string {
@@ -119,7 +123,7 @@ func exportPlotNames(zones []store.ExportZone) []string {
 	return names
 }
 
-// exportSpecies: "Quercus suber (sobreiro): 20 trees" — common name and quantity when known.
+// exportSpecies: "Quercus suber (sobreiro): 20 árvores" — common name and quantity when known.
 func exportSpecies(list []store.ExportSpecies) []string {
 	out := make([]string, len(list))
 	for i, s := range list {
@@ -140,7 +144,7 @@ func quantityText(n int, unit string) string {
 }
 
 // exportQuantity: the activity's total, added up per unit over its zones
-// ("120 litres", "300 covas; 40 seeds"). With no quantity per zone, the species'
+// ("120 litros", "300 covas, 40 sementes"). With no quantity per zone, the species'
 // quantities are added up instead (a planting counted by species).
 func exportQuantity(a store.ExportActivity) string {
 	totals := map[string]int{}

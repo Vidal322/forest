@@ -4,8 +4,8 @@ import { friendlyError } from './errors'
 
 describe('friendlyError', () => {
   it('names the field in validation messages, with the server text as it arrives', () => {
-    expect(friendlyError(new ApiError(422, 'invalid', 'is required', null, 'scientific_name'))).toBe(
-      'O nome científico is required.',
+    expect(friendlyError(new ApiError(422, 'invalid', 'é obrigatório', null, 'scientific_name'))).toBe(
+      'O nome científico é obrigatório.',
     )
   })
 

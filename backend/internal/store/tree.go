@@ -66,7 +66,7 @@ func (s *Store) ListTreeCounts(ctx context.Context) ([]TreeCount, error) {
 func (s *Store) SetTreeCounts(ctx context.Context, zoneID, speciesID uuid.UUID, in TreeCountInput) (TreeCount, error) {
 	for field, n := range map[string]int{"alive": in.Alive, "dead": in.Dead} {
 		if n < 0 || n > maxTreesPerSpecies {
-			return TreeCount{}, invalid(field, "must be a whole number from 0 to %d", maxTreesPerSpecies)
+			return TreeCount{}, invalid(field, "tem de ser um número inteiro de 0 a %d", maxTreesPerSpecies)
 		}
 	}
 	out := TreeCount{ZoneID: zoneID, SpeciesID: speciesID}
@@ -92,7 +92,7 @@ func (s *Store) SetTreeCounts(ctx context.Context, zoneID, speciesID uuid.UUID, 
 			return err
 		}
 		if !speciesOK {
-			return invalid("species_id", "is not a known species")
+			return invalid("species_id", "não existe ou foi apagada")
 		}
 		// serialise count changes for this zone+species
 		if _, err := tx.db.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1::text || $2::text, 1))`, zoneID, speciesID); err != nil {

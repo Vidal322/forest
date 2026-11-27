@@ -17,7 +17,7 @@ func (h *handlers) putTreeCounts(w http.ResponseWriter, r *http.Request) {
 	}
 	speciesID, err := uuid.Parse(chi.URLParam(r, "species_id"))
 	if err != nil || speciesID == uuid.Nil {
-		writeError(w, http.StatusBadRequest, "bad_id", "species id must be a UUID")
+		writeError(w, http.StatusBadRequest, "bad_id", "o id da espécie tem de ser um UUID")
 		return
 	}
 	var in store.TreeCountInput

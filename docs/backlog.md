@@ -325,7 +325,7 @@ Acceptance:
   "Watered", "Tasks", "Cancel", …).
 
 ### P1b · Portuguese (pt-PT) in the API and the CSV export
-Status: todo
+Status: done (2026-11-27)
 Touches: backend (user-facing error messages, CSV export)
 Area: export, api-text
 Acceptance:

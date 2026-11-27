@@ -18,7 +18,7 @@ func (h *handlers) listActivities(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("zone_id"); v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "bad_id", "zone_id must be a UUID")
+			writeError(w, http.StatusBadRequest, "bad_id", "zone_id tem de ser um UUID")
 			return
 		}
 		f.ZoneID = &id
@@ -26,14 +26,14 @@ func (h *handlers) listActivities(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("plot_id"); v != "" {
 		id, err := uuid.Parse(v)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "bad_id", "plot_id must be a UUID")
+			writeError(w, http.StatusBadRequest, "bad_id", "plot_id tem de ser um UUID")
 			return
 		}
 		f.PlotID = &id
 	}
 	if v := q.Get("since"); v != "" {
 		if _, err := time.Parse(time.DateOnly, v); err != nil {
-			writeError(w, http.StatusBadRequest, "bad_query", "since must be YYYY-MM-DD")
+			writeError(w, http.StatusBadRequest, "bad_query", "since tem de ser uma data (AAAA-MM-DD)")
 			return
 		}
 		f.Since = &v
@@ -41,7 +41,7 @@ func (h *handlers) listActivities(w http.ResponseWriter, r *http.Request) {
 	if v := q.Get("limit"); v != "" {
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 {
-			writeError(w, http.StatusBadRequest, "bad_query", "limit must be a positive number")
+			writeError(w, http.StatusBadRequest, "bad_query", "limit tem de ser um número positivo")
 			return
 		}
 		f.Limit = n
@@ -75,7 +75,7 @@ func (h *handlers) putActivity(w http.ResponseWriter, r *http.Request) {
 	if errors.As(err, &vc) {
 		var b conflictBody
 		b.Error.Code = "version_conflict"
-		b.Error.Message = "this entry was changed since your edit started"
+		b.Error.Message = "este registo foi alterado depois de começares a editar"
 		b.Current = vc.Current
 		writeJSON(w, http.StatusConflict, b)
 		return

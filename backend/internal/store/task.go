@@ -49,7 +49,7 @@ type TaskInput struct {
 func (in TaskInput) normalize() (TaskInput, error) {
 	var err error
 	if (in.PlotID == nil) == (in.ZoneID == nil) {
-		return in, invalid("zone_id", "a task is on one zone or on one plot")
+		return in, invalid("zone_id", "tem de ser uma zona ou uma parcela, não as duas")
 	}
 	if in.Title, err = requiredText("title", in.Title, 200); err != nil {
 		return in, err
@@ -61,17 +61,17 @@ func (in TaskInput) normalize() (TaskInput, error) {
 		in.Kind = "other"
 	}
 	if !slices.Contains(TaskKinds, in.Kind) {
-		return in, invalid("kind", "is not a known kind of task")
+		return in, invalid("kind", "não é um tipo de tarefa conhecido")
 	}
 	if in.Status == "" {
 		in.Status = "open"
 	}
 	if !slices.Contains(TaskStatuses, in.Status) {
-		return in, invalid("status", "must be open, in_progress, done or cancelled")
+		return in, invalid("status", "tem de ser por fazer, em curso, feita ou cancelada")
 	}
 	if in.DueOn != nil {
 		if _, err := time.Parse(time.DateOnly, *in.DueOn); err != nil {
-			return in, invalid("due_on", "must be a date (YYYY-MM-DD)")
+			return in, invalid("due_on", "tem de ser uma data (AAAA-MM-DD)")
 		}
 	}
 	return in, nil
@@ -162,7 +162,7 @@ func (s *Store) PutTask(ctx context.Context, id uuid.UUID, in TaskInput) (t Task
 			}
 		}
 		if targetDeleted == nil {
-			return invalid("zone_id", "is not a known zone or plot")
+			return invalid("zone_id", "não é uma zona nem uma parcela conhecida")
 		}
 		if *targetDeleted {
 			return ErrDeleted // its zone or plot was deleted meanwhile: the task went with it
@@ -201,7 +201,7 @@ func (s *Store) PutTask(ctx context.Context, id uuid.UUID, in TaskInput) (t Task
 				return err
 			}
 			if !live {
-				return invalid("resolved_by_activity_id", "is not a known activity")
+				return invalid("resolved_by_activity_id", "não existe ou foi apagada")
 			}
 		}
 

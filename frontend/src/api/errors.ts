@@ -24,6 +24,18 @@ const FIELD_LABELS: Record<string, string> = {
   geom: 'O contorno',
   alignment: 'Os pontos de referência',
   captured_on: 'O dia da fotografia',
+  type: 'O tipo',
+  declared_area_ha: 'A área',
+  as_of: 'O dia',
+  from: 'O início',
+  to: 'O fim',
+  from_month: 'O mês de início',
+  to_month: 'O mês de fim',
+  interval_days: 'O intervalo de rega',
+  alive: 'O número de árvores vivas',
+  dead: 'O número de árvores mortas',
+  species_id: 'A espécie',
+  resolved_by_activity_id: 'A atividade',
 }
 
 function sentence(s: string): string {

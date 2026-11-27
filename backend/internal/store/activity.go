@@ -28,6 +28,14 @@ var zoneUnits = map[string][]string{
 	"other":       QuantityUnits,
 }
 
+// unitWords and inActivity name units and activity types in the app's words, for messages.
+var unitWords = map[string]string{"holes": "covas", "seeds": "sementes", "trees": "árvores", "litres": "litros", "kg": "kg"}
+
+var inActivity = map[string]string{
+	"watering": "numa rega", "sowing": "numa sementeira", "planting": "numa plantação",
+	"fertilizing": "numa adubação", "other": "noutra atividade",
+}
+
 // ActivityZone is one zone an activity applied to, with what was done there.
 type ActivityZone struct {
 	ZoneID   uuid.UUID `json:"zone_id"`
@@ -74,61 +82,61 @@ const maxQuantity = 1_000_000
 
 func checkQuantity(field string, q *int, unit *string) error {
 	if (q == nil) != (unit == nil) {
-		return invalid(field, "needs both a number and a unit, or neither")
+		return invalid(field, "indica o número e a unidade, ou nenhum dos dois")
 	}
 	if q != nil && (*q < 1 || *q > maxQuantity) {
-		return invalid(field, "must be a whole number from 1 to %d", maxQuantity)
+		return invalid(field, "a quantidade tem de ser um número inteiro de 1 a %d", maxQuantity)
 	}
 	if unit != nil && !slices.Contains(QuantityUnits, *unit) {
-		return invalid(field, "has an unknown unit")
+		return invalid(field, "há uma unidade desconhecida")
 	}
 	return nil
 }
 
 func (in ActivityInput) normalize(today string) (ActivityInput, error) {
 	if !slices.Contains(ActivityTypes, in.Type) {
-		return in, invalid("type", "must be watering, sowing, planting, fertilizing or other")
+		return in, invalid("type", "não é um tipo de atividade conhecido")
 	}
 	d, err := time.Parse(time.DateOnly, in.PerformedOn)
 	if err != nil {
-		return in, invalid("performed_on", "must be a date (YYYY-MM-DD)")
+		return in, invalid("performed_on", "tem de ser uma data (AAAA-MM-DD)")
 	}
 	t, _ := time.Parse(time.DateOnly, today)
 	if d.After(t.AddDate(0, 0, 1)) { // a day of slack for clocks and timezones
-		return in, invalid("performed_on", "is in the future")
+		return in, invalid("performed_on", "não pode ser no futuro")
 	}
 	if d.Before(t.AddDate(-30, 0, 0)) {
-		return in, invalid("performed_on", "is too far in the past")
+		return in, invalid("performed_on", "está demasiado no passado")
 	}
 	if in.Notes, err = optionalText("notes", in.Notes, 2000); err != nil {
 		return in, err
 	}
 	if len(in.Zones) == 0 {
-		return in, invalid("zones", "pick at least one zone")
+		return in, invalid("zones", "escolhe pelo menos uma zona")
 	}
 	if len(in.Zones) > 500 {
-		return in, invalid("zones", "too many zones")
+		return in, invalid("zones", "zonas a mais (máximo 500)")
 	}
 	seen := map[uuid.UUID]bool{}
 	for _, z := range in.Zones {
 		if seen[z.ZoneID] {
-			return in, invalid("zones", "has the same zone twice")
+			return in, invalid("zones", "a mesma zona aparece duas vezes")
 		}
 		seen[z.ZoneID] = true
 		if err := checkQuantity("zones", z.Quantity, z.Unit); err != nil {
 			return in, err
 		}
 		if z.Unit != nil && !slices.Contains(zoneUnits[in.Type], *z.Unit) {
-			return in, invalid("zones", "%s are not counted for %s", *z.Unit, in.Type)
+			return in, invalid("zones", "%s não se contam %s", unitWords[*z.Unit], inActivity[in.Type])
 		}
 	}
 	if len(in.Species) > 0 && in.Type != "sowing" && in.Type != "planting" {
-		return in, invalid("species", "only sowings and plantings have species")
+		return in, invalid("species", "só as sementeiras e as plantações têm espécies")
 	}
 	seen = map[uuid.UUID]bool{}
 	for i, s := range in.Species {
 		if seen[s.SpeciesID] {
-			return in, invalid("species", "has the same species twice")
+			return in, invalid("species", "a mesma espécie aparece duas vezes")
 		}
 		seen[s.SpeciesID] = true
 		if err := checkQuantity("species", s.Quantity, s.Unit); err != nil {
@@ -346,7 +354,7 @@ func (s *Store) checkReferences(ctx context.Context, in ActivityInput) error {
 		return err
 	}
 	if missing > 0 {
-		return invalid("zones", "%s deleted or unknown: pick the zones again", plural(missing, "a zone was", "%d zones were"))
+		return invalid("zones", "%s: escolhe as zonas outra vez", plural(missing, "uma zona foi apagada ou não existe", "%d zonas foram apagadas ou não existem"))
 	}
 	speciesIDs := make([]uuid.UUID, len(in.Species))
 	for i, sp := range in.Species {
@@ -359,7 +367,7 @@ func (s *Store) checkReferences(ctx context.Context, in ActivityInput) error {
 		return err
 	}
 	if missing > 0 {
-		return invalid("species", "%s deleted or unknown", plural(missing, "a species was", "%d species were"))
+		return invalid("species", "%s", plural(missing, "uma espécie foi apagada ou não existe", "%d espécies foram apagadas ou não existem"))
 	}
 	return nil
 }

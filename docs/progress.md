@@ -401,3 +401,12 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   integers only, so a decimal comma would be rejected if decimals are ever allowed; API errors and CSV header still English (P1b).
 - Browser check: full e2e suite (14) passed; phone screenshots show Portuguese text, nothing cut off.
 - Follow-ups: P1b (API messages, CSV header; export-csv.e2e still expects English), P2 (emoji, separators, arrows).
+
+## 2026-11-27 · P1b Portuguese (pt-PT) in the API and the CSV export — merged
+- Change: every API error message is in pt-PT (codes and statuses unchanged), written to read after the field label the
+  app shows. CSV export: `;` separator, Portuguese header and type/unit words, BOM and formula guard kept, file named
+  `forest-atividades-<day>.csv`. Portuguese labels added for more fields in `errors.ts`. New `messages_test.go`.
+- Review: no blocking findings. Minor, left as is: bad_json message embeds Go's English decoder error; no decimal comma
+  because quantities are integers; `agree()` hard-codes the plural fields.
+- Browser check: full e2e suite (14) passed, including export-csv.e2e.ts.
+- Follow-ups: none.

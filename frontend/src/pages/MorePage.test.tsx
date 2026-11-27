@@ -18,10 +18,10 @@ describe('MorePage export', () => {
   it('downloads the activity log under the name the server gives', async () => {
     stubFetch(
       () =>
-        new Response('\uFEFFDate,Type\r\n', {
+        new Response('\uFEFFData;Tipo\r\n', {
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
-            'Content-Disposition': 'attachment; filename="forest-activities-2026-11-24.csv"',
+            'Content-Disposition': 'attachment; filename="forest-atividades-2026-11-24.csv"',
           },
         }),
     )
@@ -40,7 +40,7 @@ describe('MorePage export', () => {
     renderApp('/more')
     await userEvent.click(await screen.findByRole('button', { name: /descarregar csv/i }))
     await waitFor(() => expect(clicked).toHaveLength(1))
-    expect(clicked[0]!.download).toBe('forest-activities-2026-11-24.csv')
+    expect(clicked[0]!.download).toBe('forest-atividades-2026-11-24.csv')
     expect(clicked[0]!.href).toBe('blob:csv')
     expect(createObjectURL).toHaveBeenCalledOnce()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()

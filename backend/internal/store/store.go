@@ -60,6 +60,23 @@ type ConflictError struct {
 
 func (e *ConflictError) Error() string { return e.Field + ": " + e.Message }
 
+// pluralFields: inputs the app names in the plural ("As notas", "Os pormenores").
+var pluralFields = map[string]bool{"notes": true, "description": true}
+
+// agree picks the message whose verb agrees with how the app names the field.
+// Messages are read after the field's name ("O nome é obrigatório"); a species'
+// note is shown after "Espécies:", so it names itself.
+func agree(field, one, many string) string {
+	switch {
+	case pluralFields[field]:
+		return many
+	case field == "species":
+		return "a nota " + one
+	}
+	return one
+}
+
+// invalid: a message in Portuguese (pt-PT) that reads after the field's name, as the app shows it.
 func invalid(field, format string, args ...any) error {
 	return &ValidationError{Field: field, Message: fmt.Sprintf(format, args...)}
 }
@@ -74,13 +91,13 @@ func isUniqueViolation(err error, constraint string) bool {
 func requiredText(field, s string, maxLen int) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return "", invalid(field, "is required")
+		return "", invalid(field, "é obrigatório")
 	}
 	if !validText(s) {
-		return "", invalid(field, "contains characters that can't be stored")
+		return "", invalid(field, "%s", agree(field, "tem caracteres que não se podem guardar", "têm caracteres que não se podem guardar"))
 	}
 	if utf8.RuneCountInString(s) > maxLen {
-		return "", invalid(field, "must be at most %d characters", maxLen)
+		return "", invalid(field, agree(field, "pode ter no máximo %d caracteres", "podem ter no máximo %d caracteres"), maxLen)
 	}
 	return s, nil
 }
@@ -95,10 +112,10 @@ func optionalText(field string, s *string, maxLen int) (*string, error) {
 		return nil, nil
 	}
 	if !validText(t) {
-		return nil, invalid(field, "contains characters that can't be stored")
+		return nil, invalid(field, "%s", agree(field, "tem caracteres que não se podem guardar", "têm caracteres que não se podem guardar"))
 	}
 	if utf8.RuneCountInString(t) > maxLen {
-		return nil, invalid(field, "must be at most %d characters", maxLen)
+		return nil, invalid(field, agree(field, "pode ter no máximo %d caracteres", "podem ter no máximo %d caracteres"), maxLen)
 	}
 	return &t, nil
 }

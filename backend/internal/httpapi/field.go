@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"math"
@@ -26,7 +27,7 @@ const maxPhotoBytes = 30 << 20
 func (h *handlers) getField(w http.ResponseWriter, r *http.Request) {
 	f, err := h.store.GetField(r.Context())
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "no_field", "the field is not set up yet")
+		writeError(w, http.StatusNotFound, "no_field", "o terreno ainda não está configurado")
 		return
 	}
 	if err != nil {
@@ -43,7 +44,7 @@ const slowTransfer = 5 * time.Minute
 func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 	// Refuse a second setup before reading (and decoding) a large upload for nothing.
 	if _, err := h.store.GetField(r.Context()); err == nil {
-		writeError(w, http.StatusConflict, "field_exists", "the field is already set up")
+		writeError(w, http.StatusConflict, "field_exists", "o terreno já está configurado")
 		return
 	} else if !errors.Is(err, store.ErrNotFound) {
 		writeStoreError(w, r, h.log, err)
@@ -58,7 +59,7 @@ func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(name) == "" {
-		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "name", "is required")
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "name", "é obrigatório")
 		return
 	}
 	clean, err := photo.Clean(data)
@@ -77,7 +78,7 @@ func (h *handlers) createField(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		_ = h.photos.Remove(key) // don't leave an orphan file behind
 		if errors.Is(err, store.ErrFieldExists) {
-			writeError(w, http.StatusConflict, "field_exists", "the field is already set up")
+			writeError(w, http.StatusConflict, "field_exists", "o terreno já está configurado")
 			return
 		}
 		writeStoreError(w, r, h.log, err)
@@ -113,7 +114,7 @@ func (h *handlers) readUpload(w http.ResponseWriter, r *http.Request, textParts 
 	r.Body = http.MaxBytesReader(w, r.Body, maxPhotoBytes+64<<10)
 	mr, err := r.MultipartReader()
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_upload", "expected a multipart/form-data upload")
+		writeError(w, http.StatusBadRequest, "bad_upload", "o envio tem de ser multipart/form-data")
 		return nil, nil, false
 	}
 	for {
@@ -135,7 +136,7 @@ func (h *handlers) readUpload(w http.ResponseWriter, r *http.Request, textParts 
 		case slices.Contains(textParts, name):
 			b, err := photo.ReadLimited(part, 64<<10)
 			if errors.Is(err, photo.ErrFileTooLarge) {
-				writeFieldError(w, http.StatusUnprocessableEntity, "invalid", name, "is too long")
+				writeFieldError(w, http.StatusUnprocessableEntity, "invalid", name, longText(name))
 				return nil, nil, false
 			}
 			if err != nil {
@@ -147,27 +148,35 @@ func (h *handlers) readUpload(w http.ResponseWriter, r *http.Request, textParts 
 		_ = part.Close()
 	}
 	if data == nil {
-		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "photo", "is missing")
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "photo", "está em falta")
 		return nil, nil, false
 	}
 	return fields, data, true
 }
 
+// longText: an upload's text part over the limit ("Os pontos de referência" are plural).
+func longText(name string) string {
+	if name == "alignment" {
+		return "têm texto a mais"
+	}
+	return "tem texto a mais"
+}
+
 func (h *handlers) writeUploadReadError(w http.ResponseWriter, err error) {
 	var tooBig *http.MaxBytesError
 	if errors.As(err, &tooBig) || errors.Is(err, photo.ErrFileTooLarge) {
-		writeFieldError(w, http.StatusRequestEntityTooLarge, "too_large", "photo", "the photo is larger than 30 MB")
+		writeFieldError(w, http.StatusRequestEntityTooLarge, "too_large", "photo", "tem mais de 30 MB")
 		return
 	}
-	writeError(w, http.StatusBadRequest, "bad_upload", "could not read the upload")
+	writeError(w, http.StatusBadRequest, "bad_upload", "não foi possível ler o envio")
 }
 
 func (h *handlers) writePhotoError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, photo.ErrNotAnImage):
-		writeFieldError(w, http.StatusUnprocessableEntity, "not_an_image", "photo", err.Error())
+		writeFieldError(w, http.StatusUnprocessableEntity, "not_an_image", "photo", "não é uma imagem PNG, JPEG ou WebP")
 	case errors.Is(err, photo.ErrTooLarge):
-		writeFieldError(w, http.StatusUnprocessableEntity, "too_large", "photo", err.Error())
+		writeFieldError(w, http.StatusUnprocessableEntity, "too_large", "photo", fmt.Sprintf("tem mais de %d píxeis por lado ou %d megapíxeis", photo.MaxSide, photo.MaxPixels/1_000_000))
 	default:
 		writeStoreError(w, r, h.log, err)
 	}
@@ -180,7 +189,7 @@ func (h *handlers) updateField(w http.ResponseWriter, r *http.Request) {
 	}
 	f, err := h.store.UpdateField(r.Context(), in)
 	if errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "no_field", "the field is not set up yet")
+		writeError(w, http.StatusNotFound, "no_field", "o terreno ainda não está configurado")
 		return
 	}
 	if err != nil {
@@ -197,7 +206,7 @@ func (h *handlers) getPhoto(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 	f, err := h.photos.Open(key)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "not_found", "no such photo")
+		writeError(w, http.StatusNotFound, "not_found", "esta fotografia não existe")
 		return
 	}
 	h.servePhoto(w, r, key, f)
@@ -210,7 +219,7 @@ func (h *handlers) getDisplayPhoto(w http.ResponseWriter, r *http.Request) {
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(slowTransfer))
 	f, err := h.photos.OpenDisplay(key)
 	if errors.Is(err, photo.ErrBadKey) || errors.Is(err, fs.ErrNotExist) {
-		writeError(w, http.StatusNotFound, "not_found", "no such photo")
+		writeError(w, http.StatusNotFound, "not_found", "esta fotografia não existe")
 		return
 	}
 	if err != nil {
@@ -237,7 +246,7 @@ func (h *handlers) servePhoto(w http.ResponseWriter, r *http.Request, key string
 // captured_on optional): add a newer photo, aligned to the frame, as the current one.
 func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
 	if _, err := h.store.GetField(r.Context()); errors.Is(err, store.ErrNotFound) {
-		writeError(w, http.StatusConflict, "no_field", "set up the field first")
+		writeError(w, http.StatusConflict, "no_field", "configura primeiro o terreno")
 		return
 	} else if err != nil {
 		writeStoreError(w, r, h.log, err)
@@ -254,7 +263,7 @@ func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
 	// cheap checks first: decoding a photo is slow
 	var in store.AlignmentInput
 	if err := json.Unmarshal([]byte(fields["alignment"]), &in); err != nil {
-		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", "is not a list of landmark pairs")
+		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", "não vieram como uma lista de pares de pontos")
 		return
 	}
 	pairs, err := store.CheckAlignment(in)
@@ -283,12 +292,12 @@ func (h *handlers) addPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	affine, residual, err := photo.FitAffine(pairs, math.Hypot(float64(width), float64(height)))
 	if err != nil {
-		msg := "needs at least 3 landmarks spread over the photo, not on one line"
+		msg := "têm de ser pelo menos 3, espalhados pela fotografia e não em linha"
 		switch {
 		case errors.Is(err, photo.ErrMirrored):
-			msg = "seems to have landmarks swapped between the two photos: match them in the same order"
+			msg = "parecem trocados entre as duas fotografias: marca-os pela mesma ordem"
 		case errors.Is(err, photo.ErrDistorted):
-			msg = "doesn't fit together: check that each landmark is the same spot on both photos"
+			msg = "não encaixam: confirma que cada ponto é o mesmo sítio nas duas fotografias"
 		}
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", "alignment", msg)
 		return

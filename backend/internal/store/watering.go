@@ -66,13 +66,13 @@ func (in WateringRuleInput) normalize() (WateringRuleInput, error) {
 		return in, err
 	}
 	if in.FromMonth < 1 || in.FromMonth > 12 {
-		return in, invalid("from_month", "must be a month from 1 to 12")
+		return in, invalid("from_month", "tem de ser um mês de 1 a 12")
 	}
 	if in.ToMonth < 1 || in.ToMonth > 12 {
-		return in, invalid("to_month", "must be a month from 1 to 12")
+		return in, invalid("to_month", "tem de ser um mês de 1 a 12")
 	}
 	if in.IntervalDays < 1 || in.IntervalDays > 365 {
-		return in, invalid("interval_days", "must be between 1 and 365 days")
+		return in, invalid("interval_days", "tem de ser entre 1 e 365 dias")
 	}
 	return in, nil
 }

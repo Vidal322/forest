@@ -17,7 +17,7 @@ func (h *handlers) listTasks(w http.ResponseWriter, r *http.Request) {
 		if v := q.Get(key); v != "" {
 			id, err := uuid.Parse(v)
 			if err != nil {
-				writeError(w, http.StatusBadRequest, "bad_id", key+" must be a UUID")
+				writeError(w, http.StatusBadRequest, "bad_id", key+" tem de ser um UUID")
 				return
 			}
 			*dst = &id
@@ -50,7 +50,7 @@ func (h *handlers) putTask(w http.ResponseWriter, r *http.Request) {
 	if errors.As(err, &vc) {
 		var b taskConflictBody
 		b.Error.Code = "version_conflict"
-		b.Error.Message = "this task was changed since your edit started"
+		b.Error.Message = "esta tarefa foi alterada depois de começares a editar"
 		b.Current = vc.Current
 		writeJSON(w, http.StatusConflict, b)
 		return

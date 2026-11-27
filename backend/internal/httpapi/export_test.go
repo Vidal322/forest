@@ -17,7 +17,7 @@ func TestExportActivitiesCSV(t *testing.T) {
 	h := newFieldRouter(t)
 	// no field yet: just the header
 	rec := send(t, h, http.MethodGet, "/api/export/activities.csv", "")
-	if rec.Code != 200 || !strings.HasPrefix(rec.Body.String(), "\uFEFFDate,Type,Zones,Plots,Species,Quantity,Notes\r\n") {
+	if rec.Code != 200 || !strings.HasPrefix(rec.Body.String(), "\uFEFFData;Tipo;Zonas;Parcelas;Espécies;Quantidade;Notas\r\n") {
 		t.Fatalf("empty export: %d %q", rec.Code, rec.Body)
 	}
 
@@ -55,7 +55,7 @@ func TestExportActivitiesCSV(t *testing.T) {
 		return id
 	}
 	put(`{"type":"watering","performed_on":"` + today + `","notes":"=1+1","zones":[{"zone_id":"` + a1 + `","quantity":50,"unit":"litres"}]}`)
-	put(`{"type":"sowing","performed_on":"` + yesterday + `","notes":"Ninhos, \"bem\" regados\ncom água",
+	put(`{"type":"sowing","performed_on":"` + yesterday + `","notes":"Ninhos; \"bem\" regados\ncom água",
 		"zones":[{"zone_id":"` + path + `","quantity":100,"unit":"holes"},{"zone_id":"` + b + `","quantity":40,"unit":"seeds"},
 		         {"zone_id":"` + a1 + `","quantity":20,"unit":"holes"}],
 		"species":[{"species_id":"` + spID + `","quantity":300,"unit":"seeds"}]}`)
@@ -73,26 +73,32 @@ func TestExportActivitiesCSV(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "text/csv; charset=utf-8" {
 		t.Errorf("content type %q", ct)
 	}
-	if cd := rec.Header().Get("Content-Disposition"); cd != `attachment; filename="forest-activities-`+today+`.csv"` {
+	if cd := rec.Header().Get("Content-Disposition"); cd != `attachment; filename="forest-atividades-`+today+`.csv"` {
 		t.Errorf("content disposition %q", cd)
 	}
 	body, ok := strings.CutPrefix(rec.Body.String(), "\uFEFF")
 	if !ok {
 		t.Fatal("no UTF-8 BOM")
 	}
-	rows, err := csv.NewReader(strings.NewReader(body)).ReadAll()
+	cr := csv.NewReader(strings.NewReader(body))
+	cr.Comma = ';'
+	rows, err := cr.ReadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := [][]string{
-		{"Date", "Type", "Zones", "Plots", "Species", "Quantity", "Notes"},
-		{earlier, "Planting", "B", "Encosta", spName + " (sobreiro): 12 trees", "12 trees", ""},
-		{yesterday, "Sowing", "Á1; B; Path", "Encosta; Vale", spName + " (sobreiro): 300 seeds", "120 covas; 40 seeds",
-			"Ninhos, \"bem\" regados\ncom água"},
-		{today, "Watering", "Á1", "Encosta", "", "50 litres", "'=1+1"},
+		{"Data", "Tipo", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"},
+		{earlier, "Plantação", "B", "Encosta", spName + " (sobreiro): 12 árvores", "12 árvores", ""},
+		{yesterday, "Sementeira", "Á1, B, Caminho", "Encosta, Vale", spName + " (sobreiro): 300 sementes", "120 covas, 40 sementes",
+			"Ninhos; \"bem\" regados\ncom água"},
+		{today, "Rega", "Á1", "Encosta", "", "50 litros", "'=1+1"},
 	}
 	if !slices.EqualFunc(rows, want, slices.Equal) {
 		t.Fatalf("rows:\n got %q\nwant %q", rows, want)
+	}
+	// a ";" inside a cell is quoted, so it stays in its column
+	if !strings.Contains(body, "\"Ninhos; \"\"bem\"\" regados") {
+		t.Errorf("a cell with ; is not quoted: %q", body)
 	}
 	if strings.Contains(body, "coordinates") || strings.Contains(body, a1) {
 		t.Error("export leaks shapes or ids")

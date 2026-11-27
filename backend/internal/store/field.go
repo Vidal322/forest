@@ -63,7 +63,7 @@ func (in FieldInput) normalize() (FieldInput, error) {
 		return in, err
 	}
 	if (in.CalibrationLine == nil) != (in.CalibrationLengthM == nil) {
-		return in, invalid("calibration_length_m", "give both the line and its length in metres, or neither")
+		return in, invalid("calibration_length_m", "e a linha da escala vão juntas: indica as duas ou nenhuma")
 	}
 	if in.CalibrationLine != nil {
 		if err := in.CalibrationLine.validate("calibration_line", 2); err != nil {
@@ -71,14 +71,14 @@ func (in FieldInput) normalize() (FieldInput, error) {
 		}
 		a, b := in.CalibrationLine.Coordinates[0], in.CalibrationLine.Coordinates[1]
 		if math.Hypot(b[0]-a[0], b[1]-a[1]) < 1 {
-			return in, invalid("calibration_line", "is too short: drag its two ends apart")
+			return in, invalid("calibration_line", "é curta demais: afasta as duas pontas")
 		}
 		if l := *in.CalibrationLengthM; math.IsNaN(l) || l <= 0 || l >= 100_000 {
-			return in, invalid("calibration_length_m", "must be a distance in metres above 0")
+			return in, invalid("calibration_length_m", "tem de ser um número de metros acima de 0")
 		}
 	}
 	if in.DefaultWaterIntervalDays < 1 || in.DefaultWaterIntervalDays > 365 {
-		return in, invalid("default_water_interval_days", "must be between 1 and 365 days")
+		return in, invalid("default_water_interval_days", "tem de ser entre 1 e 365 dias")
 	}
 	return in, nil
 }

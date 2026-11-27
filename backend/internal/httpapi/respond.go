@@ -21,7 +21,8 @@ import (
 //	{"error": {"code": "not_found", "message": "…", "field": "scientific_name"}}
 //
 // `code` is stable and machine-readable (the frontend maps it to friendly text);
-// `message` is a short English hint; `field` names the input at fault, if any.
+// `message` is a short Portuguese (pt-PT) text that reads after the field's name
+// on screen ("O nome" + "é obrigatório"); `field` names the input at fault, if any.
 type errorBody struct {
 	Error struct {
 		Code    string `json:"code"`
@@ -66,10 +67,10 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
-			writeError(w, http.StatusRequestEntityTooLarge, "too_large", "request body too large")
+			writeError(w, http.StatusRequestEntityTooLarge, "too_large", "o pedido é grande demais")
 			return false
 		}
-		writeError(w, http.StatusBadRequest, "bad_json", fmt.Sprintf("invalid JSON body: %v", err))
+		writeError(w, http.StatusBadRequest, "bad_json", fmt.Sprintf("JSON inválido: %v", err))
 		return false
 	}
 	return true
@@ -79,7 +80,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 func idParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil || id == uuid.Nil {
-		writeError(w, http.StatusBadRequest, "bad_id", "id must be a UUID")
+		writeError(w, http.StatusBadRequest, "bad_id", "o id tem de ser um UUID")
 		return uuid.Nil, false
 	}
 	return id, true
@@ -93,29 +94,29 @@ func writeStoreError(w http.ResponseWriter, r *http.Request, log *slog.Logger, e
 	switch {
 	case errors.Is(err, context.Canceled) && r.Context().Err() != nil:
 		// The client went away (e.g. lost signal mid-request): nobody to answer, nothing to alarm about.
-		log.DebugContext(r.Context(), "request cancelled", "request_id", RequestID(r.Context()))
-		writeError(w, 499, "cancelled", "request cancelled")
+		log.DebugContext(r.Context(), "pedido cancelado", "request_id", RequestID(r.Context()))
+		writeError(w, 499, "cancelled", "pedido cancelado")
 	case errors.As(err, &ve):
 		writeFieldError(w, http.StatusUnprocessableEntity, "invalid", ve.Field, ve.Message)
 	case errors.As(err, &ce):
 		writeFieldError(w, http.StatusConflict, "duplicate", ce.Field, ce.Message)
 	case errors.Is(err, store.ErrNoField):
-		writeError(w, http.StatusConflict, "no_field", "set up the field first")
+		writeError(w, http.StatusConflict, "no_field", "configura primeiro o terreno")
 	case errors.Is(err, store.ErrNotFound):
-		writeError(w, http.StatusNotFound, "not_found", "no such entry")
+		writeError(w, http.StatusNotFound, "not_found", "isto não existe")
 	case errors.Is(err, store.ErrDeleted):
-		writeError(w, http.StatusGone, "deleted", "this entry was deleted")
+		writeError(w, http.StatusGone, "deleted", "isto foi apagado")
 	case errors.Is(err, store.ErrVersionConflict):
-		writeError(w, http.StatusConflict, "version_conflict", "changed since you loaded it")
+		writeError(w, http.StatusConflict, "version_conflict", "isto foi alterado depois de o teres aberto")
 	case errors.As(err, &pgErr) && isBadInput(pgErr.Code):
 		// Input the store didn't catch but the database refused (bad characters, a CHECK,
 		// an unknown referenced id): the client's data is wrong, not the server.
 		log.WarnContext(r.Context(), "database rejected input", "code", pgErr.Code,
 			"constraint", pgErr.ConstraintName, "detail", pgErr.Message, "request_id", RequestID(r.Context()))
-		writeError(w, http.StatusUnprocessableEntity, "invalid", "the database rejected this value")
+		writeError(w, http.StatusUnprocessableEntity, "invalid", "a base de dados recusou este valor")
 	default:
 		log.ErrorContext(r.Context(), "store error", "err", err, "request_id", RequestID(r.Context()))
-		writeError(w, http.StatusInternalServerError, "internal", "unexpected server error")
+		writeError(w, http.StatusInternalServerError, "internal", "erro inesperado no servidor")
 	}
 }
 

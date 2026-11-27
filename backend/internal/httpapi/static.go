@@ -21,7 +21,7 @@ func staticApp(dir string) http.Handler {
 	root, rootErr := os.OpenRoot(dir) // lookups can't leave dir, whatever the path
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+			writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "método não permitido")
 			return
 		}
 		clean := path.Clean("/" + r.URL.Path)
@@ -49,18 +49,18 @@ func staticApp(dir string) http.Handler {
 
 func serveIndex(w http.ResponseWriter, r *http.Request, root *os.Root, rootErr error) {
 	if rootErr != nil {
-		writeError(w, http.StatusNotFound, "not_found", "the app is not built")
+		writeError(w, http.StatusNotFound, "not_found", "a aplicação não foi compilada")
 		return
 	}
 	f, err := root.Open("index.html")
 	if err != nil {
-		writeError(w, http.StatusNotFound, "not_found", "the app is not built")
+		writeError(w, http.StatusNotFound, "not_found", "a aplicação não foi compilada")
 		return
 	}
 	defer func() { _ = f.Close() }()
 	st, err := f.Stat()
 	if err != nil {
-		writeError(w, http.StatusNotFound, "not_found", "the app is not built")
+		writeError(w, http.StatusNotFound, "not_found", "a aplicação não foi compilada")
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

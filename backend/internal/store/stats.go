@@ -203,14 +203,14 @@ func (s *Store) GetPlantedStats(ctx context.Context, from, to string) (PlantedSt
 	out := PlantedStats{Plots: []PlantedPlot{}, Species: []PlantedSpecies{}}
 	f, err := time.Parse(time.DateOnly, from)
 	if err != nil {
-		return out, invalid("from", "must be a date like 2026-09-01")
+		return out, invalid("from", "tem de ser uma data como 2026-09-01")
 	}
 	t, err := time.Parse(time.DateOnly, to)
 	if err != nil {
-		return out, invalid("to", "must be a date like 2026-09-30")
+		return out, invalid("to", "tem de ser uma data como 2026-09-30")
 	}
 	if t.Before(f) {
-		return out, invalid("to", "can't be before the start date")
+		return out, invalid("to", "não pode ser antes do início")
 	}
 	out.From, out.To = f.Format(time.DateOnly), t.Format(time.DateOnly)
 

@@ -106,7 +106,7 @@ func recoverer(log *slog.Logger) func(http.Handler) http.Handler {
 					"stack", string(debug.Stack()),
 					"request_id", RequestID(r.Context()),
 				)
-				writeError(w, http.StatusInternalServerError, "internal", "unexpected server error")
+				writeError(w, http.StatusInternalServerError, "internal", "erro inesperado no servidor")
 			}()
 			next.ServeHTTP(w, r)
 		})

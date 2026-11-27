@@ -44,7 +44,7 @@ type ZoneInput struct {
 func (in ZoneInput) normalize() (ZoneInput, error) {
 	var err error
 	if in.PlotID == uuid.Nil {
-		return in, invalid("plot_id", "choose the plot this zone belongs to")
+		return in, invalid("plot_id", "está em falta: escolhe a parcela a que esta zona pertence")
 	}
 	if in.Label, err = optionalText("label", in.Label, 100); err != nil {
 		return in, err
@@ -57,7 +57,7 @@ func (in ZoneInput) normalize() (ZoneInput, error) {
 		known = known || in.Kind == k
 	}
 	if !known {
-		return in, invalid("kind", "must be cultivation, path or other")
+		return in, invalid("kind", "tem de ser cultivo, caminho ou outro")
 	}
 	if err = in.Geom.normalize("geom"); err != nil {
 		return in, err
@@ -111,14 +111,14 @@ func (s *Store) ListZones(ctx context.Context) ([]Zone, error) {
 func (s *Store) ListZonesOn(ctx context.Context, day string) ([]Zone, error) {
 	d, err := time.Parse(time.DateOnly, day)
 	if err != nil {
-		return nil, invalid("as_of", "must be a date like 2026-10-12")
+		return nil, invalid("as_of", "tem de ser uma data como 2026-10-12")
 	}
 	var future bool
 	if err := s.db.QueryRow(ctx, `SELECT $1::date > field_today()`, d.Format(time.DateOnly)).Scan(&future); err != nil {
 		return nil, err
 	}
 	if future {
-		return nil, invalid("as_of", "can't be in the future")
+		return nil, invalid("as_of", "não pode ser no futuro")
 	}
 	rows, err := s.db.Query(ctx, zoneSelectOn+` ORDER BY z.created_at, z.id`, d.Format(time.DateOnly))
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *Store) PutZone(ctx context.Context, id uuid.UUID, in ZoneInput) (z Zone
 			  FROM plot p WHERE p.id = $1 FOR SHARE`,
 			in.PlotID, in.Geom.json()).Scan(&inside, &plotDeleted)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return invalid("plot_id", "is not a known plot")
+			return invalid("plot_id", "não existe ou foi apagada")
 		}
 		if err != nil {
 			return err
@@ -171,7 +171,7 @@ func (s *Store) PutZone(ctx context.Context, id uuid.UUID, in ZoneInput) (z Zone
 			return ErrDeleted // its plot was deleted meanwhile: the zone goes with it
 		}
 		if !inside {
-			return invalid("geom", "must be inside its plot: keep every corner within the plot's outline")
+			return invalid("geom", "tem de ficar dentro da parcela: mantém todos os cantos dentro do contorno dela")
 		}
 		err = tx.db.QueryRow(ctx, `
 			INSERT INTO zone (id, plot_id, label, kind, geom, notes)
