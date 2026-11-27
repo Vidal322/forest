@@ -357,12 +357,30 @@ Acceptance:
   shrink to empty.
 - The shell and shared components pass the anti-AI checklist (whole pages are P3–P6).
 
+### P2b · Zone codes (Z1, Z2…)
+Status: todo
+Touches: backend (migration, store, API, CSV export), docs/data-model.md, frontend (types, zone list, zone sheet, zone page, tasks)
+Area: redesign, zone-code
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P2 done.
+- Owner's decision (2026-11-27): every zone has a code stored in the database, given out per plot ("Z1", "Z2"… within
+  each plot), never reused: a deleted zone keeps its code and the next zone gets the next number.
+- The database assigns it on insert (e.g. a per-plot counter on `plot` bumped under the plot lock, following the lock
+  order plot → zone), like `version`: the API never takes it from the client and same-content PUTs keep it. A zone
+  moved to another plot gets the next code there. Existing zones are numbered per plot in creation order by the
+  migration.
+- The API returns `code` on zones; a zone created offline shows no code until it syncs ("nova").
+- The code shows next to the name in the zone list, zone sheet, zone page subtitle and task rows, and as a "Código"
+  column in the CSV export. `docs/data-model.md` documents it.
+- Store and API tests: numbering per plot, no reuse after delete, concurrent inserts in one plot get distinct codes,
+  backfill order.
+
 ### P3 · Map: photo with paint marks
-Status: blocked: zones have no code (Z1, Z3…), only an optional name. Where should the code come from? (a) stored per plot, given out automatically, never reused (migration + API; show in zone list, sheet, tasks, CSV?), (b) worked out on the phone from the order of live zones (codes shift on delete), or (c) no code: status-coloured blob with the zone name or initials.
+Status: todo
 Touches: frontend (map page, FieldMap / FieldLayers, Legend, ZoneSheet look)
 Area: redesign, map
 Acceptance:
-- Read the section "Redesign Pintar" above first. Needs P2 done.
+- Read the section "Redesign Pintar" above first. Needs P2b done (zone codes come from the API).
 - Matches `mapa.html`: white zone outlines on the photo, the zone code in a paint blob coloured by status (colours in
   the tokens, caminho included), dry zones hatched, zone names in Alegreya italic with a dark halo; every zone,
   overlapping ones included, has a visible, tappable blob; labels stay readable at every zoom.
@@ -376,7 +394,7 @@ Acceptance:
 - The anti-AI checklist passes on the map; its allow-list entries go.
 
 ### P4a · Log by painting: the water tool
-Status: blocked: needs P3, which waits on where zone codes come from (a stored per plot, b order on the phone, c none); or build P4a now with zone names instead of codes?
+Status: todo
 Touches: frontend (map page, a paint-state module, log save path)
 Area: redesign, log, map
 Acceptance:
@@ -394,7 +412,7 @@ Acceptance:
 - Unit tests for the paint state (add, remove, take the last off, cancel, switch tools); the anti-AI checklist passes.
 
 ### P4b · Log by painting: plant, sow, fertilise, other
-Status: blocked: needs P4a (Regar tool), which waits on the P3 zone-code question: (a) stored per plot, (b) order on the phone, (c) no codes, or build P4a now with zone names?
+Status: todo
 Touches: frontend (paint tools, second step)
 Area: redesign, log, map
 Acceptance:
