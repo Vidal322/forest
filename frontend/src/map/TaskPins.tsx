@@ -54,7 +54,7 @@ function Pin({
   const n = spot.tasks.length
   const first = spot.tasks[0]!
   const mark = n === 1 ? TASK_KIND[first.kind].icon : String(n)
-  const text = n === 1 ? first.title : `${n} tasks`
+  const text = n === 1 ? first.title : `${n} tarefas`
   const icon = useMemo(
     () =>
       divIcon({

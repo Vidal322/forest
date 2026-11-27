@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { zoneName, type Plot, type Zone } from '../api/plots'
+import { taskCount } from '../domain/attention'
 import { byNeed, NEED_ORDER_HINT, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
 
@@ -17,7 +18,7 @@ export function ZoneList({
   today: string
   onPick: (z: Zone) => void
 }) {
-  if (zones.length === 0) return <p className="muted">No zones yet.</p>
+  if (zones.length === 0) return <p className="muted">Ainda não há zonas.</p>
   return (
     <div id={id} className="zone-list">
       <p className="zone-list__hint">{NEED_ORDER_HINT}</p>
@@ -46,7 +47,7 @@ export function ZoneList({
                           <>
                             {' '}
                             <span className="zone-list__meta">
-                              · {z.open_task_count} open task{z.open_task_count === 1 ? '' : 's'}
+                              · {taskCount(z.open_task_count)}
                             </span>
                           </>
                         )}

@@ -23,24 +23,42 @@ function ymd(iso: string): [number, number, number] {
   return [y!, m! - 1, d!]
 }
 
-/** "28 Sep", or "28 Sep 2025" when not this year. */
+const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+/** Short month names as written in Portugal ("2 nov"); Intl's pt-PT short date is "2/11", not wanted. */
+const SHORT_MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+/** "2 nov", or "2 nov 2025" when not this year. */
 export function formatDay(iso: string, today: string = fieldToday()): string {
-  const sameYear = iso.slice(0, 4) === today.slice(0, 4)
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: sameYear ? undefined : 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(...ymd(iso))))
+  const [y, m, d] = ymd(iso)
+  const year = iso.slice(0, 4) === today.slice(0, 4) ? '' : ` ${y}`
+  return `${d} ${SHORT_MONTHS[m]}${year}`
 }
 
-/** "today", "yesterday", "5 days ago", "28 Sep". */
+/** "22 de novembro", or "22 de novembro de 2025" when not this year. */
+export function formatLongDay(iso: string, today: string = fieldToday()): string {
+  const [y, m, d] = ymd(iso)
+  const year = iso.slice(0, 4) === today.slice(0, 4) ? '' : ` de ${y}`
+  return `${d} de ${MONTHS[m]}${year}`
+}
+
+/** "hoje", "ontem", "há 5 dias", "amanhã", "daqui a 3 dias", "2 nov". */
 export function relativeDay(iso: string, today: string = fieldToday()): string {
   const d = daysBetween(iso, today)
-  if (d === 0) return 'today'
-  if (d === 1) return 'yesterday'
-  if (d > 1 && d < 14) return `${d} days ago`
-  if (d === -1) return 'tomorrow'
-  if (d < -1 && d > -14) return `in ${-d} days`
+  if (d === 0) return 'hoje'
+  if (d === 1) return 'ontem'
+  if (d > 1 && d < 14) return `há ${d} dias`
+  if (d === -1) return 'amanhã'
+  if (d < -1 && d > -14) return `daqui a ${-d} dias`
   return formatDay(iso, today)
+}
+
+/** relativeDay to follow a verb: "hoje", "há 5 dias", "a 2 nov" ("feita a 2 nov"). */
+export function whenDay(iso: string, today: string = fieldToday()): string {
+  const r = relativeDay(iso, today)
+  return /^\d/.test(r) ? `a ${r}` : r
+}
+
+/** "1 dia", "3 dias". */
+export function days(n: number): string {
+  return n === 1 ? '1 dia' : `${n} dias`
 }

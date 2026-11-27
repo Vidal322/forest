@@ -64,11 +64,11 @@ export function TasksPage() {
     const open = shown.filter((t) => isOpen(t) || pinned.has(t.id))
     const days = (t: Task) => (t.due_on ? daysBetween(today, t.due_on) : null)
     return [
-      { key: 'overdue', title: 'Overdue', items: open.filter((t) => t.due_on !== null && days(t)! < 0) },
-      { key: 'today', title: 'Today', items: open.filter((t) => days(t) === 0) },
-      { key: 'week', title: 'Next 7 days', items: open.filter((t) => t.due_on !== null && days(t)! > 0 && days(t)! <= 7) },
-      { key: 'later', title: 'Later', items: open.filter((t) => t.due_on !== null && days(t)! > 7) },
-      { key: 'undated', title: 'No date', items: open.filter((t) => t.due_on === null) },
+      { key: 'overdue', title: 'Atrasadas', items: open.filter((t) => t.due_on !== null && days(t)! < 0) },
+      { key: 'today', title: 'Hoje', items: open.filter((t) => days(t) === 0) },
+      { key: 'week', title: 'Próximos 7 dias', items: open.filter((t) => t.due_on !== null && days(t)! > 0 && days(t)! <= 7) },
+      { key: 'later', title: 'Mais tarde', items: open.filter((t) => t.due_on !== null && days(t)! > 7) },
+      { key: 'undated', title: 'Sem prazo', items: open.filter((t) => t.due_on === null) },
     ].filter((g) => g.items.length > 0)
   }, [shown, today, pinned])
   const closed = shown.filter((t) => !isOpen(t) && !pinned.has(t.id))
@@ -101,7 +101,7 @@ export function TasksPage() {
   return (
     <div className="page">
       <div className="row">
-        <h1>Tasks</h1>
+        <h1>Tarefas</h1>
         <span className="spacer" />
         {editing === null && (
           <button
@@ -114,7 +114,7 @@ export function TasksPage() {
               setEditing({ mode: 'add' })
             }}
           >
-            ＋ Add task
+            ＋ Acrescentar tarefa
           </button>
         )}
       </div>
@@ -129,10 +129,10 @@ export function TasksPage() {
 
       {chipsShown && (
         <fieldset className="tasks__filter">
-          <legend className="visually-hidden">Show the tasks of</legend>
+          <legend className="visually-hidden">Mostrar as tarefas de</legend>
           <div ref={chipRow} className="row tasks__plots">
             <button type="button" className={`chip${plotFilter === null ? ' is-on' : ''}`} aria-pressed={plotFilter === null} onClick={() => setPlotChoice(null)}>
-              All plots ({openTotal})
+              Todas as parcelas ({openTotal})
             </button>
             {p.map((x) => (
               <button
@@ -163,38 +163,38 @@ export function TasksPage() {
             onReload={() => void list.refetch().then(() => setFormKey((k) => k + 1))}
           />
         ) : (
-          list.data && <p className="note">This task was deleted in the meantime.</p>
+          list.data && <p className="note">Esta tarefa foi apagada entretanto.</p>
         ))}
 
-      {offline && <p className="note">No connection. Tasks will appear as soon as there is signal.</p>}
-      {list.isPending && !offline && <p className="muted">Loading tasks…</p>}
+      {offline && <p className="note">Sem rede. As tarefas aparecem assim que houver rede.</p>}
+      {list.isPending && !offline && <p className="muted">A carregar as tarefas…</p>}
       {list.isError && (
         <div className="note warn" role="alert">
           {friendlyError(list.error)}{' '}
           <button type="button" className="btn" onClick={() => void list.refetch()}>
-            Try again
+            Tentar outra vez
           </button>
         </div>
       )}
       {plots.data && p.length === 0 ? (
-        <p className="muted">Draw a plot on the map first: tasks belong to a zone or a plot.</p>
+        <p className="muted">Desenha primeiro uma parcela no mapa: as tarefas pertencem a uma zona ou a uma parcela.</p>
       ) : (
         list.data &&
         groups.length === 0 &&
         editing === null && (
           <div className="empty">
-            <p>Nothing to do{filterName ? ` in ${filterName}` : ''}. 🌿</p>
+            <p>Nada por fazer{filterName ? ` em ${filterName}` : ''}. 🌿</p>
             {elsewhere > 0 ? (
               <>
                 <p className="muted">
-                  {elsewhere === 1 ? '1 open task' : `${elsewhere} open tasks`} in other plots.
+                  {elsewhere === 1 ? '1 tarefa por fazer noutra parcela.' : `${elsewhere} tarefas por fazer noutras parcelas.`}
                 </p>
                 <button type="button" className="btn" onClick={() => setPlotChoice(null)}>
-                  Show all plots
+                  Mostrar todas as parcelas
                 </button>
               </>
             ) : (
-              <p className="muted">Add things like “Falta semear” or “Melhorar caminho” as tasks.</p>
+              <p className="muted">Acrescenta como tarefas coisas como “Falta semear” ou “Melhorar caminho”.</p>
             )}
           </div>
         )
@@ -216,7 +216,7 @@ export function TasksPage() {
       {closed.length > 0 && (
         <section>
           <button type="button" className="btn-link" aria-expanded={showClosed} onClick={() => setShowClosed((v) => !v)}>
-            {showClosed ? 'Hide' : 'Show'} done and cancelled ({closed.length})
+            {showClosed ? 'Esconder' : 'Mostrar'} as feitas e as canceladas ({closed.length})
           </button>
           {showClosed && (
             <ul className="list">

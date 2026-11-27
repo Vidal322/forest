@@ -311,7 +311,7 @@ checks:
   table would do.
 
 ### P1 · Portuguese (pt-PT) in the frontend
-Status: todo
+Status: done (2026-11-27)
 Touches: frontend (every page and component, index.html, PWA manifest, unit and e2e tests)
 Parallel: alone
 Acceptance:

@@ -74,7 +74,7 @@ export function TaskForm({
   const code = serverError instanceof ApiError ? serverError.code : null
   // deleted (with its zone/plot) on another phone: nothing left to edit
   useEffect(() => {
-    if (code === 'deleted') onDone('This task was deleted in the meantime.')
+    if (code === 'deleted') onDone('Esta tarefa foi apagada entretanto.')
   }, [code, onDone])
   const error = localError?.text ?? (serverError ? friendlyError(serverError) : '')
   const serverField = serverError instanceof ApiError ? serverError.field : null
@@ -86,10 +86,10 @@ export function TaskForm({
     if (busy) return
     const t = title.trim()
     if (!t) {
-      setLocalError({ field: 'title', text: 'Write what needs doing.' })
+      setLocalError({ field: 'title', text: 'Escreve o que há para fazer.' })
       return firstInput.current?.focus()
     }
-    if (!where || !whereKnown) return setLocalError({ field: 'where', text: 'Choose the zone or plot.' })
+    if (!where || !whereKnown) return setLocalError({ field: 'where', text: 'Escolhe a zona ou a parcela.' })
     setLocalError(null)
     const [type, id] = where.split(':') as ['zone' | 'plot', string]
     save.mutate(
@@ -108,7 +108,7 @@ export function TaskForm({
           base_version: baseVersion,
         },
       },
-      { onSuccess: () => onDone(task ? `Saved “${t}”.` : `Added “${t}”.`) },
+      { onSuccess: () => onDone(task ? `Tarefa guardada: “${t}”.` : `Tarefa acrescentada: “${t}”.`) },
     )
   }
 
@@ -120,9 +120,9 @@ export function TaskForm({
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.head}>
       <h2 id={ids.head} ref={heading} tabIndex={-1}>
-        {task ? 'Edit task' : 'New task'}
+        {task ? 'Editar tarefa' : 'Tarefa nova'}
       </h2>
-      <label htmlFor={ids.title}>What needs doing?</label>
+      <label htmlFor={ids.title}>O que há para fazer?</label>
       <input
         id={ids.title}
         ref={firstInput}
@@ -136,7 +136,7 @@ export function TaskForm({
 
       {!fixedWhere && (
         <>
-          <label htmlFor={ids.where}>Where</label>
+          <label htmlFor={ids.where}>Onde</label>
           <select
             id={ids.where}
             value={where}
@@ -144,15 +144,15 @@ export function TaskForm({
             aria-invalid={blamed === 'where' || undefined}
             aria-describedby={describedBy('where')}
           >
-            <option value="">Choose a zone or plot…</option>
+            <option value="">Escolhe uma zona ou uma parcela…</option>
             {where && !whereKnown && (
               <option value={where} disabled>
-                (a deleted zone or plot — choose another)
+                (uma zona ou parcela apagada: escolhe outra)
               </option>
             )}
             {plots.map((p) => (
               <optgroup key={p.id} label={p.name}>
-                <option value={`plot:${p.id}`}>The whole of {p.name}</option>
+                <option value={`plot:${p.id}`}>{p.name} inteira</option>
                 {zones
                   .filter((z) => z.plot_id === p.id)
                   .map((z) => (
@@ -167,7 +167,7 @@ export function TaskForm({
       )}
 
       <fieldset className="chips-field">
-        <legend>Kind</legend>
+        <legend>Tipo</legend>
         <div className="row">
           {KIND_ORDER.map((k) => (
             <button key={k} type="button" className={`chip${kind === k ? ' is-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
@@ -178,19 +178,19 @@ export function TaskForm({
       </fieldset>
 
       <fieldset className="chips-field">
-        <legend>Due</legend>
+        <legend>Prazo</legend>
         <div className="row">
           {[
-            ['', 'No date'],
-            [addDays(today, 7), 'In a week'],
-            [addDays(today, 30), 'In a month'],
+            ['', 'Sem prazo'],
+            [addDays(today, 7), 'Daqui a uma semana'],
+            [addDays(today, 30), 'Daqui a um mês'],
           ].map(([value, label]) => (
             <button key={label} type="button" className={`chip${due === value ? ' is-on' : ''}`} aria-pressed={due === value} onClick={() => setDue(value!)}>
               {label}
             </button>
           ))}
           <label className="visually-hidden" htmlFor={ids.due}>
-            Due date
+            Dia do prazo
           </label>
           <input id={ids.due} type="date" className="log__date" value={due} onChange={(e) => setDue(e.target.value)} />
         </div>
@@ -198,14 +198,14 @@ export function TaskForm({
 
       {task && (
         <fieldset className="chips-field">
-          <legend>Status</legend>
+          <legend>Estado</legend>
           <div className="row">
             {(
               [
-                ['open', 'Open'],
-                ['in_progress', 'In progress'],
-                ['done', 'Done'],
-                ['cancelled', 'Cancelled'],
+                ['open', 'Por fazer'],
+                ['in_progress', 'Em curso'],
+                ['done', 'Feita'],
+                ['cancelled', 'Cancelada'],
               ] as [TaskStatus, string][]
             ).map(([value, label]) => (
               <button key={value} type="button" className={`chip${status === value ? ' is-on' : ''}`} aria-pressed={status === value} onClick={() => setStatus(value)}>
@@ -217,7 +217,7 @@ export function TaskForm({
       )}
 
       <label htmlFor={ids.desc}>
-        Details <span className="muted">(optional)</span>
+        Pormenores <span className="muted">(opcional)</span>
       </label>
       <textarea id={ids.desc} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={4000} />
 
@@ -226,15 +226,15 @@ export function TaskForm({
           {error}{' '}
           {code === 'version_conflict' && onReload && (
             <button type="button" className="btn btn-small" onClick={onReload}>
-              Load latest
+              Carregar a mais recente
             </button>
           )}
         </p>
       )}
       {confirming && task ? (
         <fieldset className="confirm">
-          <legend className="visually-hidden">Confirm delete</legend>
-          <p>Delete “{task.title}”? Mark it done or cancelled instead to keep a record.</p>
+          <legend className="visually-hidden">Confirmar que apagas</legend>
+          <p>Apagar “{task.title}”? Para ficar registada, marca-a antes como feita ou cancelada.</p>
           <div className="row">
             <button
               type="button"
@@ -243,23 +243,23 @@ export function TaskForm({
               onClick={() => {
                 // the task leaves the list at once: close now (a refusal shows in the sync bar)
                 del.mutate(task.id)
-                onDone(`Deleted “${task.title}”.`)
+                onDone(`Tarefa apagada: “${task.title}”.`)
               }}
             >
-              Delete
+              Apagar
             </button>
             <button ref={keepButton} type="button" className="btn" onClick={() => setConfirming(false)}>
-              Keep it
+              Não apagar
             </button>
           </div>
         </fieldset>
       ) : (
         <div className="row form__actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {saveState.busy ? 'Saving…' : task ? 'Save' : 'Add task'}
+            {saveState.busy ? 'A guardar…' : task ? 'Guardar' : 'Acrescentar tarefa'}
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-            Cancel
+            Cancelar
           </button>
           <span className="spacer" />
           {task && (
@@ -272,7 +272,7 @@ export function TaskForm({
               }}
               disabled={busy}
             >
-              Delete
+              Apagar
             </button>
           )}
         </div>

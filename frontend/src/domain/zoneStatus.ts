@@ -4,12 +4,12 @@ import { daysBetween } from './dates'
 export type ZoneStatus = 'needs-water' | 'watered' | 'planted' | 'sown' | 'unsown' | 'path'
 
 export const STATUS_LABEL: Record<ZoneStatus, string> = {
-  'needs-water': 'Needs water',
-  watered: 'Watered',
-  planted: 'Planted',
-  sown: 'Sown',
-  unsown: 'Nothing yet',
-  path: 'Path / other',
+  'needs-water': 'Por regar',
+  watered: 'Regada',
+  planted: 'Plantada',
+  sown: 'Semeada',
+  unsown: 'Sem nada',
+  path: 'Caminho ou outro',
 }
 
 /** "Watered recently" = within this many days. */
@@ -59,7 +59,7 @@ export function zoneStatus(z: ZoneState, today: string): ZoneStatus {
 }
 
 /** What the zone list's order means, in one line. */
-export const NEED_ORDER_HINT = 'Most urgent first: dry longest, then unsown or with open tasks.'
+export const NEED_ORDER_HINT = 'Primeiro as mais urgentes: as que estão sem rega há mais tempo, depois as que estão sem nada ou têm tarefas.'
 
 /**
  * How urgent a zone is, for sorting (lower = sooner), from the derived status:

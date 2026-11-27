@@ -10,7 +10,7 @@ import { NAV } from '../app/nav'
 export function MorePage() {
   return (
     <div className="page">
-      <h1>More</h1>
+      <h1>Mais</h1>
       <ul className="menu">
         {NAV.filter((n) => !n.tab).map((n) => (
           <li key={n.to}>
@@ -42,7 +42,7 @@ function ExportCard() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename ?? 'forest-activities.csv'
+      a.download = filename ?? 'forest-atividades.csv'
       document.body.append(a)
       a.click()
       a.remove()
@@ -57,16 +57,17 @@ function ExportCard() {
 
   return (
     <section className="card" aria-labelledby="export-title">
-      <h2 id="export-title">Export</h2>
-      <p className="muted">Every logged activity — date, type, zones, plots, species, quantity and notes — as a file for a spreadsheet.</p>
+      <h2 id="export-title">Exportar</h2>
+      <p className="muted">Tudo o que registaste (dia, tipo, zonas, parcelas, espécies, quantidade e notas) num ficheiro para uma folha de cálculo.</p>
       {unsent > 0 && (
         <p className="note">
-          {unsent === 1 ? '1 change' : `${unsent} changes`} saved on this phone {unsent === 1 ? 'is' : 'are'} not sent yet, so{' '}
-          {unsent === 1 ? 'it' : 'they'} won’t be in the file.
+          {unsent === 1
+            ? '1 alteração guardada neste telemóvel ainda não foi enviada, por isso não vai estar no ficheiro.'
+            : `${unsent} alterações guardadas neste telemóvel ainda não foram enviadas, por isso não vão estar no ficheiro.`}
         </p>
       )}
       <button type="button" className="btn btn-primary btn-block" onClick={() => void download()} disabled={busy}>
-        <span aria-hidden="true">⬇</span> {busy ? 'Preparing…' : 'Download CSV'}
+        <span aria-hidden="true">⬇</span> {busy ? 'A preparar…' : 'Descarregar CSV'}
       </button>
       {error && (
         <p className="note warn" role="alert">

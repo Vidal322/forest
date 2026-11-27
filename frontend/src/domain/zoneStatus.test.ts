@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, daysBetween, fieldToday, formatDay, relativeDay } from './dates'
+import { addDays, daysBetween, fieldToday, formatDay, formatLongDay, relativeDay } from './dates'
 import { byNeed, needRank, needsWater, zoneStatus, type ZoneState } from './zoneStatus'
 
 const base: ZoneState = {
@@ -57,11 +57,15 @@ describe('dates', () => {
   })
 
   it('formats days for people', () => {
-    expect(formatDay('2026-09-28', today)).toMatch(/^28 Sept?$/)
-    expect(formatDay('2025-09-28', today)).toMatch(/^28 Sept? 2025$/)
-    expect(relativeDay('2026-11-22', today)).toBe('today')
-    expect(relativeDay('2026-11-21', today)).toBe('yesterday')
-    expect(relativeDay('2026-11-17', today)).toBe('5 days ago')
+    expect(formatDay('2026-09-28', today)).toBe('28 set')
+    expect(formatDay('2025-09-28', today)).toBe('28 set 2025')
+    expect(formatLongDay('2026-11-22', today)).toBe('22 de novembro')
+    expect(formatLongDay('2025-03-02', today)).toBe('2 de março de 2025')
+    expect(relativeDay('2026-11-22', today)).toBe('hoje')
+    expect(relativeDay('2026-11-21', today)).toBe('ontem')
+    expect(relativeDay('2026-11-17', today)).toBe('há 5 dias')
+    expect(relativeDay('2026-11-23', today)).toBe('amanhã')
+    expect(relativeDay('2026-11-25', today)).toBe('daqui a 3 dias')
   })
 })
 

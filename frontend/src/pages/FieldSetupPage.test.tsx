@@ -38,8 +38,8 @@ describe('first run', () => {
   it('the map invites you to set up the field', async () => {
     fakeApi({ 'GET /api/field': () => noField })
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: 'Welcome to Forest' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Set up your field' })).toHaveAttribute('href', '/field')
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo ao Forest' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Configurar o teu terreno' })).toHaveAttribute('href', '/field')
   })
 
   it('creates the field from a name and a photo', async () => {
@@ -52,14 +52,14 @@ describe('first run', () => {
       },
     })
     renderApp('/field')
-    await userEvent.type(await screen.findByLabelText('Field name'), 'Quinta')
+    await userEvent.type(await screen.findByLabelText('Nome do terreno'), 'Quinta')
     const file = new File(['png'], 'field.png', { type: 'image/png' })
-    await userEvent.upload(screen.getByLabelText(/choose the field photo/i), file)
-    expect(screen.getByRole('img', { name: 'Preview of the field you chose' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Create field' }))
+    await userEvent.upload(screen.getByLabelText(/escolher a fotografia do terreno/i), file)
+    expect(screen.getByRole('img', { name: 'Pré-visualização do terreno que escolheste' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Criar o terreno' }))
 
-    expect(await screen.findByText('Field created. Now set the scale.')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '2 · Set the scale' })).toBeInTheDocument()
+    expect(await screen.findByText('Terreno criado. Agora marca a escala.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '2 · Marcar a escala' })).toBeInTheDocument()
     const post = api.fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
     const body = post[1]!.body as FormData
     expect(body.get('name')).toBe('Quinta')
@@ -69,11 +69,11 @@ describe('first run', () => {
   it('asks for the missing parts before uploading', async () => {
     const api = fakeApi({ 'GET /api/field': () => noField })
     renderApp('/field')
-    await userEvent.click(await screen.findByRole('button', { name: 'Create field' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Give the field a name.')
-    await userEvent.type(screen.getByLabelText('Field name'), 'Quinta')
-    await userEvent.click(screen.getByRole('button', { name: 'Create field' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose the photo of your field.')
+    await userEvent.click(await screen.findByRole('button', { name: 'Criar o terreno' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Dá um nome ao terreno.')
+    await userEvent.type(screen.getByLabelText('Nome do terreno'), 'Quinta')
+    await userEvent.click(screen.getByRole('button', { name: 'Criar o terreno' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Escolhe a fotografia do teu terreno.')
     expect(api.fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
@@ -86,10 +86,10 @@ describe('first run', () => {
       }),
     })
     renderApp('/field')
-    await userEvent.type(await screen.findByLabelText('Field name'), 'Quinta')
-    await userEvent.upload(screen.getByLabelText(/choose the field photo/i), new File(['x'], 'notes.png', { type: 'image/png' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create field' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent("That file isn't a photo the app can read.")
+    await userEvent.type(await screen.findByLabelText('Nome do terreno'), 'Quinta')
+    await userEvent.upload(screen.getByLabelText(/escolher a fotografia do terreno/i), new File(['x'], 'notes.png', { type: 'image/png' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Criar o terreno' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Esse ficheiro não é uma fotografia que a aplicação consiga ler.')
   })
 })
 
@@ -100,23 +100,23 @@ describe('scale', () => {
       'PUT /api/field': ({ body }) => ({ status: 200, body: { ...field, ...(body as object), metres_per_unit: 0.3 } }),
     })
     renderApp('/field')
-    const metres = await screen.findByLabelText('Real length of the line A–B')
+    const metres = await screen.findByLabelText('Comprimento real da linha A–B')
     // default line: across the middle third of a 1000 px photo
-    expect(screen.getByText(/Line: 334 px/)).toBeInTheDocument()
+    expect(screen.getByText(/Linha: 334 px/)).toBeInTheDocument()
     await userEvent.type(metres, '100')
     // never calibrated: the made-up line must be placed first
-    await userEvent.click(screen.getByRole('button', { name: 'Save scale' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('First move A and B')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar a escala' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Primeiro põe A e B')
     // place it by typing the positions (the keyboard alternative to dragging)
-    await userEvent.click(screen.getByText('Type the positions instead'))
+    await userEvent.click(screen.getByText('Escrever as posições à mão'))
     const bx = screen.getByLabelText('B x')
     await userEvent.clear(bx)
     await userEvent.type(bx, '633')
-    expect(screen.getByText(/Line: 300 px/)).toBeInTheDocument()
-    expect(screen.getByText(/1 px ≈ 0\.33 m/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Save scale' }))
+    expect(screen.getByText(/Linha: 300 px/)).toBeInTheDocument()
+    expect(screen.getByText(/1 px ≈ 0,33 m/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar a escala' }))
 
-    expect(await screen.findByText('Scale saved.')).toBeInTheDocument()
+    expect(await screen.findByText('Escala guardada.')).toBeInTheDocument()
     const put = api.calls.find((c) => c.method === 'PUT')!
     expect(put.body).toEqual({
       name: 'Quinta',
@@ -133,10 +133,10 @@ describe('scale', () => {
       'PUT /api/field': ({ body }) => ({ status: 200, body: { ...field, ...(body as object) } }),
     })
     renderApp('/field')
-    const metres = await screen.findByLabelText('Real length of the line A–B')
+    const metres = await screen.findByLabelText('Comprimento real da linha A–B')
     await userEvent.clear(metres)
     await userEvent.type(metres, '12,5')
-    await userEvent.click(screen.getByRole('button', { name: 'Save scale' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar a escala' }))
     await waitFor(() => expect(api.calls.find((c) => c.method === 'PUT')?.body).toMatchObject({ calibration_length_m: 12.5 }))
   })
 
@@ -148,8 +148,8 @@ describe('scale', () => {
       }),
     })
     renderApp('/field')
-    await userEvent.click(await screen.findByRole('button', { name: 'Save scale' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Type the real length of the line, in metres.')
+    await userEvent.click(await screen.findByRole('button', { name: 'Guardar a escala' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Escreve o comprimento real da linha, em metros.')
   })
 })
 
@@ -157,7 +157,7 @@ describe('the map', () => {
   it('shows the field photo once set up', async () => {
     fakeApi({ 'GET /api/field': () => ({ status: 200, body: field }) })
     renderApp('/')
-    expect(await screen.findByRole('img', { name: 'Aerial photo of the field' })).toHaveAttribute(
+    expect(await screen.findByRole('img', { name: 'Fotografia aérea do terreno' })).toHaveAttribute(
       'src',
       `/api/photos/${field.photo!.key}/display`,
     )
@@ -166,7 +166,7 @@ describe('the map', () => {
   it('places the scale line on the full-size original', async () => {
     fakeApi({ 'GET /api/field': () => ({ status: 200, body: field }) })
     renderApp('/field')
-    expect(await screen.findByRole('img', { name: 'Aerial photo of the field' })).toHaveAttribute(
+    expect(await screen.findByRole('img', { name: 'Fotografia aérea do terreno' })).toHaveAttribute(
       'src',
       `/api/photos/${field.photo!.key}`,
     )
@@ -184,10 +184,10 @@ describe('details and offline', () => {
       },
     })
     renderApp('/field')
-    await userEvent.type(await screen.findByLabelText('Field name'), 'Quinta')
-    await userEvent.upload(screen.getByLabelText(/choose the field photo/i), new File(['x'], 'f.png', { type: 'image/png' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create field' }))
-    expect(await screen.findByRole('heading', { name: '2 · Set the scale' })).toBeInTheDocument()
+    await userEvent.type(await screen.findByLabelText('Nome do terreno'), 'Quinta')
+    await userEvent.upload(screen.getByLabelText(/escolher a fotografia do terreno/i), new File(['x'], 'f.png', { type: 'image/png' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Criar o terreno' }))
+    expect(await screen.findByRole('heading', { name: '2 · Marcar a escala' })).toBeInTheDocument()
   })
 
   it('saves name and watering interval, keeping the scale', async () => {
@@ -196,15 +196,15 @@ describe('details and offline', () => {
       'PUT /api/field': ({ body }) => ({ status: 200, body: { ...field, ...(body as object) } }),
     })
     renderApp('/field')
-    const days = await screen.findByLabelText('Zones need water every')
+    const days = await screen.findByLabelText('As zonas precisam de rega de quantos em quantos dias')
     await userEvent.clear(days)
     await userEvent.type(days, '0')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Water every 1 to 365 days.')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('A rega é de 1 em 1 dia até de 365 em 365 dias.')
     await userEvent.clear(days)
     await userEvent.type(days, '4')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText('Field saved.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Terreno guardado.')).toBeInTheDocument()
     expect(api.calls.find((c) => c.method === 'PUT')?.body).toEqual({
       name: 'Quinta',
       calibration_line: null,
@@ -216,16 +216,16 @@ describe('details and offline', () => {
   it('without a connection, keeps the change on the phone and frees the form', async () => {
     const api = fakeApi({ 'GET /api/field': () => ({ status: 200, body: field }) })
     renderApp('/field')
-    const name = await screen.findByLabelText('Field name', { selector: 'input' })
+    const name = await screen.findByLabelText('Nome do terreno', { selector: 'input' })
     api.fetchMock.mockImplementation(async (input) => {
       if (String(input) === '/healthz') return new Response('{"status":"ok"}')
       throw new TypeError('Failed to fetch')
     })
     await userEvent.clear(name)
     await userEvent.type(name, 'Quinta Nova')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
-    expect(screen.getByText(/1 change saved on this phone/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText(/Guardado neste telemóvel/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
+    expect(screen.getByText(/1 alteração guardada neste telemóvel/)).toBeInTheDocument()
   })
 })

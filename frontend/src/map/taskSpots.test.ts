@@ -37,7 +37,7 @@ describe('taskSpots', () => {
       [`zone:${testZone.id}`, [125, 125], ['a', 'b']],
       [`plot:${testPlot.id}`, [200, 200], ['d']],
     ])
-    expect(spots.map(pinTitle)).toEqual(['2 tasks: Clareira', 'Task: Caminho'])
+    expect(spots.map(pinTitle)).toEqual(['2 tarefas: Clareira', 'Tarefa: Caminho'])
   })
 
   it('leaves out tasks whose place is not known here', () => {

@@ -16,10 +16,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Forest — field tracker',
+        name: 'Forest — registo do terreno',
         short_name: 'Forest',
-        description: 'Track planting, sowing and watering across your field.',
-        lang: 'en',
+        description: 'Regista plantações, sementeiras e regas no teu terreno.',
+        lang: 'pt-PT',
         start_url: '/',
         scope: '/',
         display: 'standalone',

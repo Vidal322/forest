@@ -26,7 +26,7 @@ export function ShapeEditor({
   onDone: (message: string, selectZoneId?: string) => void
 }) {
   const check = checkDraft(draft, plots, zones)
-  const what = draft.kind === 'plot' ? 'plot' : 'zone'
+  const what = draft.kind === 'plot' ? 'parcela' : 'zona'
 
   if (draft.step === 'details') {
     return draft.kind === 'plot' ? (
@@ -38,13 +38,13 @@ export function ShapeEditor({
 
   return (
     <section className="sheet sheet--compact" aria-labelledby="draw-title">
-      <h2 id="draw-title">{draft.original ? `Edit the ${what}’s outline` : `Draw a ${what}`}</h2>
+      <h2 id="draw-title">{draft.original ? `Editar o contorno da ${what}` : `Desenhar uma ${what}`}</h2>
       <p className={check.ok ? 'muted' : 'draw-hint draw-hint--bad'} aria-live="polite">
         {check.message}
       </p>
       {draft.corners.length >= 3 && (
         <p className="muted small">
-          {draft.corners.length} corners
+          {draft.corners.length} cantos
           {metresPerUnit ? ` · ${formatHa((ringArea(draft.corners) * metresPerUnit ** 2) / 10_000)}` : ''}
         </p>
       )}
@@ -57,10 +57,10 @@ export function ShapeEditor({
             setDraft({ ...draft, corners: draft.history[draft.history.length - 1] ?? [], history: draft.history.slice(0, -1) })
           }
         >
-          ↶ Undo
+          ↶ Desfazer
         </button>
         <button type="button" className="btn" onClick={() => setDraft(null)}>
-          Cancel
+          Cancelar
         </button>
         {draft.selectedCorner !== null && draft.corners.length > 3 && (
           <button
@@ -68,7 +68,7 @@ export function ShapeEditor({
             className="btn"
             onClick={() => setDraft(withCorners(draft, draft.corners.filter((_, i) => i !== draft.selectedCorner)))}
           >
-            Remove corner
+            Tirar o canto
           </button>
         )}
         <span className="spacer" />
@@ -78,7 +78,7 @@ export function ShapeEditor({
           disabled={!check.ok}
           onClick={() => setDraft({ ...draft, step: 'details' })}
         >
-          Next
+          Seguinte
         </button>
       </div>
     </section>
@@ -134,29 +134,29 @@ function DetailsShell({
       )}
       {confirming && onDelete ? (
         <fieldset className="confirm">
-          <legend className="visually-hidden">Confirm delete</legend>
+          <legend className="visually-hidden">Confirmar que apagas</legend>
           <p>{deleteQuestion}</p>
           <div className="row">
             <button type="button" className="btn btn-danger" onClick={onDelete} disabled={busy}>
               {deleteLabel}
             </button>
             <button type="button" className="btn" onClick={() => setConfirming(false)} disabled={busy}>
-              Keep it
+              Não apagar
             </button>
           </div>
         </fieldset>
       ) : (
         <div className="row form__actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? 'A guardar…' : 'Guardar'}
           </button>
           <button type="button" className="btn" onClick={onBack} disabled={busy}>
-            ← Outline
+            ← Contorno
           </button>
           <span className="spacer" />
           {onDelete && (
             <button type="button" className="btn btn-link-danger" onClick={() => setConfirming(true)} disabled={busy}>
-              Delete
+              Apagar
             </button>
           )}
         </div>
@@ -168,8 +168,8 @@ function DetailsShell({
 function nextPlotName(plots: Plot[]): string {
   const used = new Set(plots.map((p) => p.name.toLowerCase()))
   let n = plots.length + 1
-  while (used.has(`plot ${n}`)) n++
-  return `Plot ${n}`
+  while (used.has(`parcela ${n}`)) n++
+  return `Parcela ${n}`
 }
 
 function PlotDetails({
@@ -187,7 +187,7 @@ function PlotDetails({
 }) {
   const original = draft.original as Plot | null
   const [name, setName] = useState(original?.name ?? nextPlotName(plots))
-  const [declared, setDeclared] = useState(original?.declared_area_ha != null ? String(original.declared_area_ha) : '')
+  const [declared, setDeclared] = useState(original?.declared_area_ha != null ? String(original.declared_area_ha).replace('.', ',') : '')
   const [notes, setNotes] = useState(original?.notes ?? '')
   const [localError, setLocalError] = useState('')
   const save = plotsApi.useSave()
@@ -201,10 +201,10 @@ function PlotDetails({
     e.preventDefault()
     if (busy) return
     const ha = declared.trim() === '' ? null : Number(declared.replace(',', '.'))
-    if (!name.trim()) return setLocalError('Give the plot a name.')
+    if (!name.trim()) return setLocalError('Dá um nome à parcela.')
     const clash = plots.find((p) => p.id !== draft.id && p.name.trim().toLowerCase() === name.trim().toLowerCase())
-    if (clash) return setLocalError(`Another plot is already called “${clash.name}”.`)
-    if (ha !== null && !(ha > 0 && ha < 100_000)) return setLocalError('The hectares on the old map must be a number above 0.')
+    if (clash) return setLocalError(`${NAME_TAKEN} “${clash.name}”.`)
+    if (ha !== null && !(ha > 0 && ha < 100_000)) return setLocalError('Os hectares no mapa antigo têm de ser um número acima de 0.')
     setLocalError('')
     const n = name.trim()
     save.mutate(
@@ -212,39 +212,39 @@ function PlotDetails({
         id: draft.id,
         input: { name: n, geom: { type: 'Polygon', coordinates: [closeRing(draft.corners)] }, declared_area_ha: ha, notes: notes.trim() || null },
       },
-      { onSuccess: () => onDone(original ? `Saved ${n}.` : `Added ${n}.`) },
+      { onSuccess: () => onDone(original ? `${n} guardada.` : `${n} acrescentada.`) },
     )
   }
 
   const serverField = error instanceof ApiError ? error.field : null
   return (
     <DetailsShell
-      title={original ? `Edit ${original.name}` : 'New plot'}
+      title={original ? `Editar ${original.name}` : 'Parcela nova'}
       error={localError || (error ? friendlyError(error) : '')}
       busy={busy}
       onBack={() => setDraft({ ...draft, step: 'shape' })}
       onSubmit={submit}
-      deleteLabel="Delete plot"
+      deleteLabel="Apagar a parcela"
       deleteQuestion={deleteQuestion(
-        original?.name ?? 'this plot',
-        [plural(zoneCount, 'zone'), plural(taken.tasks, 'open task'), plural(taken.trees, 'counted tree')],
+        original?.name ?? 'esta parcela',
+        [plural(zoneCount, 'zona', 'zonas'), plural(taken.tasks, 'tarefa por fazer', 'tarefas por fazer'), plural(taken.trees, 'árvore contada', 'árvores contadas')],
       )}
-      onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`Deleted ${original.name}.`) }) : undefined}
+      onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`${original.name} apagada.`) }) : undefined}
     >
-      <label htmlFor={ids.name}>Name</label>
+      <label htmlFor={ids.name}>Nome</label>
       <input
         id={ids.name}
         value={name}
         onChange={(e) => setName(e.target.value)}
         maxLength={100}
-        aria-invalid={serverField === 'name' || localError.startsWith('Another plot') || undefined}
+        aria-invalid={serverField === 'name' || localError.startsWith(NAME_TAKEN) || undefined}
       />
       <label htmlFor={ids.ha}>
-        Hectares on the old map <span className="muted">(optional)</span>
+        Hectares no mapa antigo <span className="muted">(opcional)</span>
       </label>
-      <input id={ids.ha} inputMode="decimal" value={declared} onChange={(e) => setDeclared(e.target.value)} placeholder="6.2" />
+      <input id={ids.ha} inputMode="decimal" value={declared} onChange={(e) => setDeclared(e.target.value)} placeholder="6,2" />
       <label htmlFor={ids.notes}>
-        Notes <span className="muted">(optional)</span>
+        Notas <span className="muted">(opcional)</span>
       </label>
       <textarea id={ids.notes} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
     </DetailsShell>
@@ -252,9 +252,9 @@ function PlotDetails({
 }
 
 const KINDS: { value: ZoneKind; label: string; hint: string }[] = [
-  { value: 'cultivation', label: 'Planting', hint: 'sown, planted, watered' },
-  { value: 'path', label: 'Path', hint: 'never needs water' },
-  { value: 'other', label: 'Other', hint: 'rocks, a shed, …' },
+  { value: 'cultivation', label: 'Cultivo', hint: 'semeia-se, planta-se, rega-se' },
+  { value: 'path', label: 'Caminho', hint: 'nunca precisa de rega' },
+  { value: 'other', label: 'Outro', hint: 'pedras, um barracão, …' },
 ]
 
 function ZoneDetails({
@@ -285,7 +285,7 @@ function ZoneDetails({
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
-    if (!plotId) return setLocalError('This zone is no longer inside a plot. Go back to the outline and fix it.')
+    if (!plotId) return setLocalError('Esta zona já não está dentro de uma parcela. Volta ao contorno e corrige-o.')
     setLocalError('')
     const l = label.trim() || null
     save.mutate(
@@ -293,28 +293,28 @@ function ZoneDetails({
         id: draft.id,
         input: { plot_id: plotId, label: l, kind, geom: { type: 'Polygon', coordinates: [closeRing(draft.corners)] }, notes: notes.trim() || null },
       },
-      { onSuccess: () => onDone(original ? `Saved ${l ?? name}.` : `Added ${l ?? 'a zone'}.`, draft.id) },
+      { onSuccess: () => onDone(original ? `${l ?? name} guardada.` : l ? `${l} acrescentada.` : 'Zona acrescentada.', draft.id) },
     )
   }
 
-  const name = original ? zoneName(original) : 'zone'
+  const name = original ? zoneName(original) : 'esta zona'
   return (
     <DetailsShell
-      title={original ? `Edit ${name}` : `New zone${plot ? ` in ${plot.name}` : ''}`}
+      title={original ? `Editar ${name}` : `Zona nova${plot ? ` em ${plot.name}` : ''}`}
       error={localError || (error ? friendlyError(error) : '')}
       busy={busy}
       onBack={() => setDraft({ ...draft, step: 'shape' })}
       onSubmit={submit}
-      deleteLabel="Delete zone"
-      deleteQuestion={deleteQuestion(name, [plural(taken.tasks, 'open task'), plural(taken.trees, 'counted tree')])}
-      onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`Deleted ${name}.`) }) : undefined}
+      deleteLabel="Apagar a zona"
+      deleteQuestion={deleteQuestion(name, [plural(taken.tasks, 'tarefa por fazer', 'tarefas por fazer'), plural(taken.trees, 'árvore contada', 'árvores contadas')])}
+      onDelete={original ? () => del.mutate(draft.id, { onSuccess: () => onDone(`${name} apagada.`) }) : undefined}
     >
       <label htmlFor={ids.label}>
-        Name <span className="muted">(optional)</span>
+        Nome <span className="muted">(opcional)</span>
       </label>
       <input id={ids.label} value={label} onChange={(e) => setLabel(e.target.value)} maxLength={100} placeholder="Ninhos de outubro" />
       <fieldset className="choice">
-        <legend id={ids.kind}>What is it?</legend>
+        <legend id={ids.kind}>O que é?</legend>
         {KINDS.map((k) => (
           <label key={k.value} className={`choice__opt${kind === k.value ? ' is-on' : ''}`}>
             <input type="radio" name="zone-kind" value={k.value} checked={kind === k.value} onChange={() => setKind(k.value)} />
@@ -324,22 +324,24 @@ function ZoneDetails({
         ))}
       </fieldset>
       <label htmlFor={ids.notes}>
-        Notes <span className="muted">(optional)</span>
+        Notas <span className="muted">(opcional)</span>
       </label>
       <textarea id={ids.notes} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
     </DetailsShell>
   )
 }
 
-function plural(n: number, word: string): string | null {
-  return n > 0 ? `${n} ${word}${n === 1 ? '' : 's'}` : null
+function plural(n: number, one: string, many: string): string | null {
+  return n > 0 ? `${n} ${n === 1 ? one : many}` : null
 }
 
-/** "Delete Plot 1 with its 3 zones and 2 open tasks? What was logged there is kept." */
+const NAME_TAKEN = 'Já há outra parcela com o nome'
+
+/** "Apagar Parcela 1, com 3 zonas e 2 tarefas por fazer? O que registaste lá fica guardado." */
 function deleteQuestion(name: string, along: (string | null)[]): string {
   const parts = along.filter(Boolean) as string[]
-  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
-  return `Delete ${name}${list ? ` with its ${list}` : ''}? What was logged there is kept.`
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} e ${parts[parts.length - 1]}` : parts[0]
+  return `Apagar ${name}${list ? `, com ${list}` : ''}? O que registaste lá fica guardado.`
 }
 
 /** Open tasks and counted trees that a delete takes along (shown before confirming). */

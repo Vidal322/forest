@@ -35,13 +35,13 @@ describe('ZoneList', () => {
       zone('H dry today', { last_planted_on: '2026-11-15' }), // due today
     ]
     render(<ZoneList plots={[testPlot]} zones={zones} today={today} onPick={pick} />, { wrapper })
-    expect(screen.getByText(/Most urgent first/)).toBeInTheDocument()
+    expect(screen.getByText(/Primeiro as mais urgentes/)).toBeInTheDocument()
     const names = within(screen.getByRole('region', { name: testPlot.name }))
       .getAllByRole('button')
       .map((b) => b.textContent!.match(/^[A-H]/)![0])
     expect(names.join('')).toBe('ECHDFGAB')
-    expect(screen.getByRole('button', { name: /F path with a task · 2 open tasks/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /G watered with a task · 1 open task(?!s)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /F path with a task · 2 tarefas por fazer/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /G watered with a task · 1 tarefa por fazer/ })).toBeInTheDocument()
   })
 
   it('follows the day: a zone that dries out moves up', () => {

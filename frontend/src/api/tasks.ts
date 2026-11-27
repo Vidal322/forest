@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { formatDay, relativeDay } from '../domain/dates'
+import { daysBetween, formatDay, relativeDay } from '../domain/dates'
 import { ACTIVITY, type Activity } from './activities'
 import { defineEntity } from './entity'
 import { zoneName, type Plot, type Zone } from './plots'
@@ -36,13 +36,19 @@ export interface TaskInput {
 }
 
 export const TASK_KIND: Record<TaskKind, { label: string; icon: string }> = {
-  sow: { label: 'Sow', icon: '🕳️' },
-  plant: { label: 'Plant', icon: '🌱' },
-  water: { label: 'Water', icon: '💧' },
-  fertilize: { label: 'Fertilize', icon: '🧪' },
-  add_nests: { label: 'Add nests', icon: '🪺' },
-  improve_path: { label: 'Improve path', icon: '🛤️' },
-  other: { label: 'Other', icon: '•' },
+  sow: { label: 'Semear', icon: '🕳️' },
+  plant: { label: 'Plantar', icon: '🌱' },
+  water: { label: 'Regar', icon: '💧' },
+  fertilize: { label: 'Adubar', icon: '🧪' },
+  add_nests: { label: 'Fazer ninhos', icon: '🪺' },
+  improve_path: { label: 'Melhorar o caminho', icon: '🛤️' },
+  other: { label: 'Outro', icon: '•' },
+}
+
+/** When an open task is due: "para hoje", "para amanhã", "para daqui a 3 dias", "para 2 dez", "atrasada desde 20 nov". */
+export function dueLabel(due: string, today: string): string {
+  if (daysBetween(today, due) < 0) return `atrasada desde ${formatDay(due, today)}`
+  return `para ${relativeDay(due, today)}`
 }
 
 export const isOpen = (t: Pick<Task, 'status'>) => t.status === 'open' || t.status === 'in_progress'
@@ -127,14 +133,14 @@ export function taskPlotId(t: Pick<Task, 'plot_id' | 'zone_id'>, zones: Zone[]):
   return zones.find((z) => z.id === t.zone_id)?.plot_id
 }
 
-/** Where a task is: "Clareira · Plot 1" or "Plot 2". */
+/** Where a task is: "Clareira · Parcela 1" or "Parcela 2". */
 export function taskPlace(t: Task, plots: Plot[], zones: Zone[]): string {
   if (t.zone_id) {
     const z = zones.find((x) => x.id === t.zone_id)
     const p = z && plots.find((x) => x.id === z.plot_id)
-    return z ? `${zoneName(z)}${p ? ` · ${p.name}` : ''}` : 'A deleted zone'
+    return z ? `${zoneName(z)}${p ? ` · ${p.name}` : ''}` : 'Uma zona apagada'
   }
-  return plots.find((p) => p.id === t.plot_id)?.name ?? 'A deleted plot'
+  return plots.find((p) => p.id === t.plot_id)?.name ?? 'Uma parcela apagada'
 }
 
 export type ResolvedLink = { to: string; label: string }
@@ -153,7 +159,7 @@ export function resolvedLink(task: Task, entries: Activity[], zones: Zone[], tod
     a.zones.find((z) => z.zone_id === task.zone_id)?.zone_id ??
     a.zones.find((z) => task.plot_id !== null && plotOf(z.zone_id) === task.plot_id)?.zone_id ??
     a.zones[0]!.zone_id
-  // the day as the zone's history shows it: "24 Nov (today)"
+  // the day as the zone's history shows it: "24 nov (hoje)"
   const day = formatDay(a.performed_on, today)
   const rel = relativeDay(a.performed_on, today)
   return {

@@ -15,6 +15,7 @@ import {
 } from '../api/field'
 import { SAVED_ON_PHONE } from '../api/outbox'
 import { Flash } from '../components/Flash'
+import { formatNumber } from '../domain/numbers'
 import { FieldMap } from '../components/FieldMap'
 import { useFlash, type FlashState } from '../hooks/useFlash'
 import { PhotoAlignment } from '../components/PhotoAlignment'
@@ -32,19 +33,19 @@ export function FieldSetupPage() {
 
   return (
     <div className="page">
-      <h1>Field setup</h1>
+      <h1>Configurar o terreno</h1>
       <Flash flash={flash} />
-      {offline && <p className="note">No connection. Field setup needs signal.</p>}
-      {field.isPending && !offline && <p className="muted">Loading…</p>}
+      {offline && <p className="note">Sem rede. Para configurar o terreno é preciso rede.</p>}
+      {field.isPending && !offline && <p className="muted">A carregar…</p>}
       {field.isError && (
         <div className="note warn" role="alert">
           {friendlyError(field.error)}{' '}
           <button type="button" className="btn" onClick={() => void field.refetch()}>
-            Try again
+            Tentar outra vez
           </button>
         </div>
       )}
-      {field.data === null && <CreateFieldForm onCreated={() => flash.show('Field created. Now set the scale.')} />}
+      {field.data === null && <CreateFieldForm onCreated={() => flash.show('Terreno criado. Agora marca a escala.')} />}
       {field.data && <FieldSettings field={field.data} flash={flash} />}
     </div>
   )
@@ -61,8 +62,8 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (create.isPending) return
-    if (!name.trim()) return setLocalError({ field: 'name', text: 'Give the field a name.' })
-    if (!file) return setLocalError({ field: 'photo', text: 'Choose the photo of your field.' })
+    if (!name.trim()) return setLocalError({ field: 'name', text: 'Dá um nome ao terreno.' })
+    if (!file) return setLocalError({ field: 'photo', text: 'Escolhe a fotografia do teu terreno.' })
     setLocalError(null)
     create.mutate({ name: name.trim(), photo: file }, { onSuccess: onCreated })
   }
@@ -73,13 +74,13 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.title}>
-      <h2 id={ids.title}>1 · Your field and its photo</h2>
+      <h2 id={ids.title}>1 · O teu terreno e a fotografia</h2>
       <p className="muted">
-        A satellite screenshot or a drone photo, cropped to your field. Everything you draw later sits on this
-        picture.
+        Uma captura de ecrã de satélite ou uma fotografia de drone, cortada à volta do teu terreno. Tudo o que
+        desenhares depois fica por cima desta imagem.
       </p>
 
-      <label htmlFor={ids.name}>Field name</label>
+      <label htmlFor={ids.name}>Nome do terreno</label>
       <input
         id={ids.name}
         value={name}
@@ -91,7 +92,7 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
       />
 
       <p className="label-like" aria-hidden="true">
-        Photo
+        Fotografia
       </p>
       <label className="photo-pick">
         <input
@@ -107,16 +108,16 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
           aria-describedby={errorFor('photo')}
         />
         <span aria-hidden="true">📷</span>
-        <span>{file ? `${file.name} — tap to change` : 'Choose the field photo'}</span>
+        <span>{file ? `${file.name} (toca para mudar)` : 'Escolher a fotografia do terreno'}</span>
         <span className="muted small">
-          {file ? `${(file.size / 1_048_576).toFixed(1)} MB` : 'PNG, JPG or WebP, up to 30 MB'}
+          {file ? `${formatNumber(Math.round((file.size / 1_048_576) * 10) / 10)} MB` : 'PNG, JPG ou WebP, até 30 MB'}
         </span>
       </label>
-      {preview && <img className="photo-preview" src={preview} alt="Preview of the field you chose" />}
+      {preview && <img className="photo-preview" src={preview} alt="Pré-visualização do terreno que escolheste" />}
 
       <p className="note privacy">
-        🔒 The server keeps only the pixels: all EXIF / GPS data is removed on upload. Crop out any coordinates,
-        place names or addresses shown <em>in</em> the picture before uploading.
+        🔒 O servidor guarda só os píxeis: todos os dados EXIF e de GPS são apagados no envio. Antes de enviares, corta
+        as coordenadas, nomes de sítios ou moradas que apareçam <em>dentro</em> da imagem.
       </p>
 
       {error && (
@@ -125,7 +126,7 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
         </p>
       )}
       <button type="submit" className="btn btn-primary btn-block" disabled={create.isPending}>
-        {create.isPending ? 'Uploading…' : 'Create field'}
+        {create.isPending ? 'A enviar…' : 'Criar o terreno'}
       </button>
     </form>
   )
@@ -180,23 +181,23 @@ function FieldSettings({ field, flash }: { field: Field; flash: FlashState }) {
       <PhotoAlignment field={field} onDone={flash.show} />
       <PhotoHistory onMessage={flash.show} />
       <section className="card" aria-labelledby="frame-facts">
-        <h2 id="frame-facts">What is stored</h2>
+        <h2 id="frame-facts">O que fica guardado</h2>
         <dl className="facts">
-          <dt>Photo</dt>
+          <dt>Fotografia</dt>
           <dd>
-            {field.frame_width} × {field.frame_height} pixels
+            {field.frame_width} × {field.frame_height} píxeis
           </dd>
-          <dt>Positions</dt>
-          <dd>pixels of this photo, from its top-left corner</dd>
-          <dt>Scale</dt>
-          <dd>{field.metres_per_unit ? formatScale(field.metres_per_unit) : 'not set'}</dd>
+          <dt>Posições</dt>
+          <dd>píxeis desta fotografia, a contar do canto superior esquerdo</dd>
+          <dt>Escala</dt>
+          <dd>{field.metres_per_unit ? formatScale(field.metres_per_unit) : 'por marcar'}</dd>
           <dt>GPS</dt>
-          <dd>never stored</dd>
+          <dd>nunca é guardado</dd>
         </dl>
-        <p className="muted small">Nobody can place this field on a real map from the data.</p>
+        <p className="muted small">Com estes dados, ninguém consegue pôr este terreno num mapa real.</p>
         {photo && (
           <p>
-            <Link to="/">Open the map →</Link>
+            <Link to="/">Abrir o mapa →</Link>
           </p>
         )}
       </section>
@@ -230,9 +231,9 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
   // A never-calibrated field starts with a made-up line: it must be placed before saving.
   const [placed, setPlaced] = useState(field.calibration_line !== null)
   const [announced, setAnnounced] = useState(() => lineLength(lineOf(...initialLine(field))))
-  const [metres, setMetres] = useState(field.calibration_length_m ? String(field.calibration_length_m) : '')
+  const [metres, setMetres] = useState(field.calibration_length_m ? String(field.calibration_length_m).replace('.', ',') : '')
   const [localError, setLocalError] = useState('')
-  const { busy, error: serverError, save } = useFieldSave(flash, 'Scale saved.')
+  const { busy, error: serverError, save } = useFieldSave(flash, 'Escala guardada.')
   const ids = { metres: useId(), err: useId(), title: useId() }
 
   const units = lineLength(lineOf(line[0], line[1]))
@@ -247,9 +248,9 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
-    if (!placed) return setLocalError('First move A and B onto the ends of something you know the length of.')
-    if (m === null) return setLocalError('Type the real length of the line, in metres.')
-    if (units < 1) return setLocalError('Drag the two ends of the line apart.')
+    if (!placed) return setLocalError('Primeiro põe A e B nas pontas de uma coisa cujo comprimento conheças.')
+    if (m === null) return setLocalError('Escreve o comprimento real da linha, em metros.')
+    if (units < 1) return setLocalError('Afasta as duas pontas da linha.')
     setLocalError('')
     save({ ...inputOf(field), calibration_line: lineOf(line[0], line[1]), calibration_length_m: m })
   }
@@ -258,10 +259,10 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
 
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.title}>
-      <h2 id={ids.title}>2 · Set the scale</h2>
+      <h2 id={ids.title}>2 · Marcar a escala</h2>
       <p className="muted">
-        Drag the handles <b>A</b> and <b>B</b> onto the ends of something whose length you know — a path, a wall, or
-        the map’s own scale bar — then type that length. Zoom in for a precise fit.
+        Arrasta as pegas <b>A</b> e <b>B</b> para as pontas de uma coisa cujo comprimento conheças (um caminho, um muro
+        ou a própria barra de escala do mapa) e depois escreve esse comprimento. Aproxima o mapa para acertar bem.
       </p>
       {photo && (
         <div className="setup-map">
@@ -272,8 +273,8 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
       )}
 
       <details>
-        <summary>Type the positions instead</summary>
-        <p className="muted small">In pixels of the photo, from its top-left corner (x to the right, y down).</p>
+        <summary>Escrever as posições à mão</summary>
+        <p className="muted small">Em píxeis da fotografia, a contar do canto superior esquerdo (x para a direita, y para baixo).</p>
         <div className="coords">
           {(['A', 'B'] as const).map((name, i) =>
             (['x', 'y'] as const).map((axis, j) => (
@@ -294,7 +295,7 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
         </div>
       </details>
 
-      <label htmlFor={ids.metres}>Real length of the line A–B</label>
+      <label htmlFor={ids.metres}>Comprimento real da linha A–B</label>
       <div className="input-row">
         <input
           id={ids.metres}
@@ -305,14 +306,14 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
           aria-describedby={error ? ids.err : undefined}
           aria-invalid={(Boolean(localError) && m === null) || undefined}
         />
-        <span>metres</span>
+        <span>metros</span>
       </div>
       <p className="muted small">
-        Line: {Math.round(units)} px{preview ? ` → ${formatScale(preview)}` : ''}
+        Linha: {Math.round(units)} px{preview ? ` → ${formatScale(preview)}` : ''}
       </p>
       {/* announced only after a drag ends, not on every movement */}
       <p className="visually-hidden" aria-live="polite">
-        Line is {Math.round(announced)} pixels long.
+        A linha tem {Math.round(announced)} píxeis.
       </p>
       {error && (
         <p id={ids.err} className="form__error" role="alert">
@@ -320,7 +321,7 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
         </p>
       )}
       <button type="submit" className="btn btn-primary" disabled={busy}>
-        {busy ? 'Saving…' : 'Save scale'}
+        {busy ? 'A guardar…' : 'Guardar a escala'}
       </button>
     </form>
   )
@@ -328,12 +329,12 @@ function ScaleForm({ field, flash }: { field: Field; flash: FlashState }) {
 
 function PointInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   const id = useId()
-  const [text, setText] = useState(String(value))
+  const [text, setText] = useState(String(value).replace('.', ','))
   // follow drags made on the map while this box isn't being edited
   const [shown, setShown] = useState(value)
   if (shown !== value) {
     setShown(value)
-    setText(String(value))
+    setText(String(value).replace('.', ','))
   }
   return (
     <div>
@@ -359,15 +360,15 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
   const [name, setName] = useState(field.name)
   const [days, setDays] = useState(String(field.default_water_interval_days))
   const [localError, setLocalError] = useState<{ field: 'name' | 'days'; text: string } | null>(null)
-  const { busy, error: serverError, save } = useFieldSave(flash, 'Field saved.')
+  const { busy, error: serverError, save } = useFieldSave(flash, 'Terreno guardado.')
   const ids = { name: useId(), days: useId(), err: useId(), title: useId() }
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
     const n = Number(days)
-    if (!name.trim()) return setLocalError({ field: 'name', text: 'Give the field a name.' })
-    if (!Number.isInteger(n) || n < 1 || n > 365) return setLocalError({ field: 'days', text: 'Water every 1 to 365 days.' })
+    if (!name.trim()) return setLocalError({ field: 'name', text: 'Dá um nome ao terreno.' })
+    if (!Number.isInteger(n) || n < 1 || n > 365) return setLocalError({ field: 'days', text: 'A rega é de 1 em 1 dia até de 365 em 365 dias.' })
     setLocalError(null)
     save({ ...inputOf(field), name: name.trim(), default_water_interval_days: n })
   }
@@ -378,8 +379,8 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
 
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.title}>
-      <h2 id={ids.title}>Name and watering</h2>
-      <label htmlFor={ids.name}>Field name</label>
+      <h2 id={ids.title}>Nome e rega</h2>
+      <label htmlFor={ids.name}>Nome do terreno</label>
       <input
         id={ids.name}
         value={name}
@@ -388,7 +389,7 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
         aria-invalid={blamed === 'name' || undefined}
         aria-describedby={errorFor('name')}
       />
-      <label htmlFor={ids.days}>Zones need water every</label>
+      <label htmlFor={ids.days}>As zonas precisam de rega de quantos em quantos dias</label>
       <div className="input-row">
         <input
           id={ids.days}
@@ -401,11 +402,11 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
           aria-invalid={blamed === 'days' || undefined}
           aria-describedby={errorFor('days')}
         />
-        <span>days</span>
+        <span>dias</span>
       </div>
       <p className="muted small">
-        A zone “needs water” when nothing was watered, sown or planted there for this long — unless a season
-        below says otherwise.
+        Uma zona fica “por regar” quando ninguém a regou, semeou ou plantou durante este tempo, a não ser que uma
+        estação abaixo diga outra coisa.
       </p>
       {error && (
         <p id={ids.err} className="form__error" role="alert">
@@ -413,7 +414,7 @@ function DetailsForm({ field, flash }: { field: Field; flash: FlashState }) {
         </p>
       )}
       <button type="submit" className="btn btn-primary" disabled={busy}>
-        {busy ? 'Saving…' : 'Save'}
+        {busy ? 'A guardar…' : 'Guardar'}
       </button>
     </form>
   )

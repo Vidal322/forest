@@ -46,22 +46,22 @@ export interface DraftCheck {
 /** Check a drawing like the server will, with words that say how to fix it. */
 export function checkDraft(d: Draft, plots: Plot[], zones: Zone[]): DraftCheck {
   const n = d.corners.length
-  if (n < 3) return { ok: false, message: `Tap the map to add corners — ${n} of at least 3.` }
-  if (selfIntersects(d.corners)) return { ok: false, message: 'The outline crosses itself. Drag a corner to untangle it, or Undo.' }
-  if (ringArea(d.corners) < 1) return { ok: false, message: 'The shape is too thin. Spread the corners out.' }
+  if (n < 3) return { ok: false, message: `Toca no mapa para marcar os cantos (${n} de pelo menos 3).` }
+  if (selfIntersects(d.corners)) return { ok: false, message: 'O contorno cruza-se a si próprio. Arrasta um canto para o desfazer, ou toca em Desfazer.' }
+  if (ringArea(d.corners) < 1) return { ok: false, message: 'A forma é estreita demais. Afasta mais os cantos.' }
 
   if (d.kind === 'zone') {
     const fits = (p: Plot) => ringInsideRing(d.corners, ringOf(p))
     const current = d.original ? plots.find((p) => p.id === (d.original as Zone).plot_id) : undefined
     const plot = current && fits(current) ? current : plots.find(fits)
-    if (!plot) return { ok: false, message: 'Keep the whole zone inside one plot.' }
-    return { ok: true, message: `In ${plot.name}. Drag corners to adjust, or tap to add more.`, plotId: plot.id }
+    if (!plot) return { ok: false, message: 'Mantém a zona toda dentro de uma parcela.' }
+    return { ok: true, message: `Em ${plot.name}. Arrasta os cantos para acertar, ou toca para marcar mais.`, plotId: plot.id }
   }
 
   const own = d.original ? zones.filter((z) => z.plot_id === d.id) : []
   const outside = own.find((z) => !ringInsideRing(openRing(z.geom.coordinates[0] ?? []), d.corners))
-  if (outside) return { ok: false, message: `${outside.label ?? 'A zone'} would end up outside. Include all its zones.` }
-  return { ok: true, message: 'Drag corners to adjust, or tap to add more.' }
+  if (outside) return { ok: false, message: `${outside.label ?? 'Uma zona'} ficaria de fora. Inclui todas as zonas da parcela.` }
+  return { ok: true, message: 'Arrasta os cantos para acertar, ou toca para marcar mais.' }
 }
 
 /** The draft after a change of corners, remembered for Undo. */

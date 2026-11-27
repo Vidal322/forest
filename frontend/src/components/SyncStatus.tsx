@@ -25,13 +25,15 @@ export function SyncStatus() {
     <div className="sync">
       {waiting > 0 && (
         <output className="sync__waiting">
-          <span aria-hidden="true">⏳</span> {waiting === 1 ? '1 change' : `${waiting} changes`} saved on this phone,
-          waiting for a connection.
+          <span aria-hidden="true">⏳</span>{' '}
+          {waiting === 1
+            ? '1 alteração guardada neste telemóvel, à espera de rede.'
+            : `${waiting} alterações guardadas neste telemóvel, à espera de rede.`}
         </output>
       )}
       {failed.map((m) => (
         <p key={m.mutationId} className="sync__failed" role="alert">
-          {describe(m.state.variables)} could not be saved: {friendlyError(m.state.error)}{' '}
+          {describe(m.state.variables)} não foi guardado: {friendlyError(m.state.error)}{' '}
           <button type="button" className="btn btn-small" onClick={() => qc.getMutationCache().remove(m)}>
             OK
           </button>
@@ -41,9 +43,9 @@ export function SyncStatus() {
   )
 }
 
-/** "“Falta semear”" for a write whose input has a title/name, else "A change". */
+/** "“Falta semear”" for a write whose input has a title/name, else "Um registo". */
 function describe(variables: unknown): string {
   const input = (variables as { input?: Record<string, unknown> } | undefined)?.input
   const name = input?.title ?? input?.name ?? input?.scientific_name ?? input?.label
-  return typeof name === 'string' && name ? `“${name}”` : 'A change'
+  return typeof name === 'string' && name ? `“${name}”` : 'Um registo'
 }

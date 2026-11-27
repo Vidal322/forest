@@ -83,12 +83,12 @@ describe('LogPage', () => {
   it('waters every zone that needs it in three taps', async () => {
     const api = logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: 'All that need water (1)' }))
-    expect(screen.getByText('Clareira selected')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Todas as zonas por regar (1)' }))
+    expect(screen.getByText('Escolhida: Clareira')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
 
-    expect(await screen.findByText('Logged: watered Clareira today.')).toBeInTheDocument()
+    expect(await screen.findByText('Rega guardada em Clareira, hoje.')).toBeInTheDocument()
     expect(putBody(api)).toEqual({
       type: 'watering',
       performed_on: fieldToday(),
@@ -98,25 +98,25 @@ describe('LogPage', () => {
       base_version: null,
     })
     // the form is ready for the next entry
-    expect(screen.getByText('No zones selected')).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma zona escolhida')).toBeInTheDocument()
   })
 
   it('logs a sowing with covas per zone and a seed mix', async () => {
     const api = logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: 'Pick from a list' }))
-    const list = screen.getByRole('group', { name: 'Zones' })
+    await userEvent.click(await screen.findByRole('button', { name: 'Escolher numa lista' }))
+    const list = screen.getByRole('group', { name: 'Zonas' })
     await userEvent.click(within(list).getByRole('checkbox', { name: /Clareira/ }))
     await userEvent.click(within(list).getByRole('checkbox', { name: /Encosta/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Sowed/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Per zone…' }))
+    await userEvent.click(screen.getByRole('button', { name: /Sementeira/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Por zona…' }))
     await userEvent.type(screen.getByRole('textbox', { name: /Clareira, covas/ }), '100')
     await userEvent.type(screen.getByRole('textbox', { name: /Encosta, covas/ }), '80')
     await userEvent.click(screen.getByRole('button', { name: 'sobreiro' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Yesterday' }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ontem' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
 
-    expect(await screen.findByText(/Logged: sowed Clareira and Encosta on/)).toBeInTheDocument()
+    expect(await screen.findByText(/Sementeira guardada em Clareira e Encosta, a /)).toBeInTheDocument()
     const body = putBody(api)
     expect(body.type).toBe('sowing')
     expect(body.zones).toEqual(
@@ -131,100 +131,100 @@ describe('LogPage', () => {
   it('says what is missing before saving', async () => {
     logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /^Save/ }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Tap the zones you worked on')
-    await userEvent.click(screen.getByRole('button', { name: /All that need water/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Choose what you did')
+    await userEvent.click(await screen.findByRole('button', { name: /^Guardar/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Toca nas zonas onde trabalhaste')
+    await userEvent.click(screen.getByRole('button', { name: /Todas as zonas por regar/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Escolhe o que fizeste')
   })
 
   it('starts with the zone chosen on the map', async () => {
     logApi()
     renderApp(`/log?zone=${freshZone.id}`)
-    expect(await screen.findByText('Encosta selected')).toBeInTheDocument()
+    expect(await screen.findByText('Escolhida: Encosta')).toBeInTheDocument()
   })
 
   it('without a connection, keeps the entry on the phone and recolours the map', async () => {
     const api = logApi()
     const { queryClient } = renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Todas as zonas por regar/ }))
     api.fetchMock.mockImplementation(async (input) => {
       if (String(input) === '/healthz') return new Response('{"status":"ok"}')
       throw new TypeError('Failed to fetch')
     })
-    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    expect(await screen.findByText(/Saved on this phone/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    expect(await screen.findByText(/Guardado neste telemóvel/)).toBeInTheDocument()
     const zones = queryClient.getQueryData<Zone[]>(['zones'])!
     expect(zones.find((z) => z.id === dryZone.id)?.last_watered_on).toBe(fieldToday())
-    expect(screen.queryByRole('button', { name: /All that need water/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Todas as zonas por regar/ })).not.toBeInTheDocument()
   })
 
   it('keeps the entry when the server refuses it, and says why', async () => {
     const api = logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Todas as zonas por regar/ }))
     api.fetchMock.mockImplementation(async (input, init) => {
       if (init?.method === 'PUT')
         return new Response('{"error":{"code":"invalid","message":"pick the zones again","field":"zones"}}', { status: 422 })
       return new Response(String(input) === '/healthz' ? '{"status":"ok"}' : '[]')
     })
-    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Zones: pick the zones again.')
-    expect(screen.getByRole('button', { name: /Watered/ })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Zonas: pick the zones again.')
+    expect(screen.getByRole('button', { name: /Rega/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('drops a count typed for another kind of work', async () => {
     const api = logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Sowed/ }))
-    await userEvent.type(screen.getByLabelText(/How many covas/), '100')
-    await userEvent.click(screen.getByRole('button', { name: /More/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Other/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    await screen.findByText(/Logged: logged Clareira/)
+    await userEvent.click(await screen.findByRole('button', { name: /Todas as zonas por regar/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Sementeira/ }))
+    await userEvent.type(screen.getByLabelText(/Quantidade \(covas\)/), '100')
+    await userEvent.click(screen.getByRole('button', { name: /Mais…/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Outro/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    await screen.findByText(/Registo guardado em Clareira/)
     expect((putBody(api).zones as { quantity: unknown }[])[0]!.quantity).toBeNull()
   })
 
   it('refuses a typed day in the future', async () => {
     logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
-    fireEvent.change(screen.getByLabelText('Another day'), { target: { value: '2999-01-01' } })
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    expect(screen.getByRole('alert')).toHaveTextContent("The day can't be after today.")
+    await userEvent.click(await screen.findByRole('button', { name: /Todas as zonas por regar/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    fireEvent.change(screen.getByLabelText('Outro dia'), { target: { value: '2999-01-01' } })
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent('O dia não pode ser depois de hoje.')
   })
 
   it('undoes the entry just logged in one tap', async () => {
     const api = logApi()
     renderApp('/log')
-    await userEvent.click(await screen.findByRole('button', { name: /All that need water/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-    await screen.findByText(/Logged: watered Clareira today/)
+    await userEvent.click(await screen.findByRole('button', { name: /Todas as zonas por regar/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+    await screen.findByText(/Rega guardada em Clareira, hoje/)
     const id = api.calls.find((c) => c.method === 'PUT')!.path.split('/').pop()
-    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
-    expect(await screen.findByText('Entry removed.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Anular' }))
+    expect(await screen.findByText('Registo anulado.')).toBeInTheDocument()
     await waitFor(() => expect(api.calls.some((c) => c.method === 'DELETE' && c.path === `/api/activities/${id}`)).toBe(true))
   })
 
   describe('closing tasks with the entry', () => {
     async function pickClareira(type: RegExp) {
-      await userEvent.click(await screen.findByRole('button', { name: 'All that need water (1)' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Todas as zonas por regar (1)' }))
       await userEvent.click(screen.getByRole('button', { name: type }))
     }
 
     it('lists the open tasks of the chosen zones and their plot, the matching kind ticked', async () => {
       logApi([sowTask, pathTask, otherTask, doneTask])
       renderApp('/log')
-      await userEvent.click(await screen.findByRole('button', { name: 'All that need water (1)' }))
+      await userEvent.click(await screen.findByRole('button', { name: 'Todas as zonas por regar (1)' }))
       // nothing to choose from before saying what was done
-      expect(screen.queryByRole('group', { name: 'Also done' })).not.toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: /Sowed/ }))
-      const group = await screen.findByRole('group', { name: 'Also done' })
+      expect(screen.queryByRole('group', { name: 'Também ficou feito' })).not.toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: /Sementeira/ }))
+      const group = await screen.findByRole('group', { name: 'Também ficou feito' })
       const boxes = within(group).getAllByRole('checkbox')
       expect(boxes.map((b) => b.closest('label')!.textContent)).toEqual([
         expect.stringContaining('Falta semear'),
@@ -233,19 +233,19 @@ describe('LogPage', () => {
       expect(within(group).getByRole('checkbox', { name: /Falta semear/ })).toBeChecked()
       expect(within(group).getByRole('checkbox', { name: /Melhorar caminho/ })).not.toBeChecked()
       // another kind of work: nothing ticked by default
-      await userEvent.click(screen.getByRole('button', { name: /Watered/ }))
+      await userEvent.click(screen.getByRole('button', { name: /Rega/ }))
       expect(within(group).getByRole('checkbox', { name: /Falta semear/ })).not.toBeChecked()
     })
 
     it('marks the ticked tasks done by the new entry, sent after it with their version', async () => {
       const api = logApi([sowTask, pathTask])
       const { queryClient } = renderApp('/log')
-      await pickClareira(/Sowed/)
-      const group = await screen.findByRole('group', { name: 'Also done' })
+      await pickClareira(/Sementeira/)
+      const group = await screen.findByRole('group', { name: 'Também ficou feito' })
       await userEvent.click(within(group).getByRole('checkbox', { name: /Melhorar caminho/ }))
-      await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+      await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
 
-      expect(await screen.findByText('Logged: sowed Clareira today. Done: Falta semear, Melhorar caminho.')).toBeInTheDocument()
+      expect(await screen.findByText('Sementeira guardada em Clareira, hoje. Tarefas feitas: Falta semear, Melhorar caminho.')).toBeInTheDocument()
       const closes = () => puts(api).filter((c) => c.path.startsWith('/api/tasks/'))
       await waitFor(() => expect(closes()).toHaveLength(2))
       expect(closes().map((c) => c.path).sort()).toEqual([`/api/tasks/${sowTask.id}`, `/api/tasks/${pathTask.id}`])
@@ -274,23 +274,23 @@ describe('LogPage', () => {
       const waterPlot: Task = { ...pathTask, id: '40000000-0000-4000-8000-000000000005', title: 'Regar talhão', kind: 'water' }
       logApi([waterPlot])
       renderApp('/log')
-      await pickClareira(/Watered/)
-      const group = await screen.findByRole('group', { name: 'Also done' })
+      await pickClareira(/Rega/)
+      const group = await screen.findByRole('group', { name: 'Também ficou feito' })
       // one zone of two: listed, not ticked
       expect(within(group).getByRole('checkbox', { name: /Regar talhão/ })).not.toBeChecked()
-      expect(screen.getByRole('button', { name: /^Save/ })).toHaveAccessibleName('Save — Watered Clareira')
-      await userEvent.click(screen.getByRole('button', { name: 'Pick from a list' }))
-      await userEvent.click(within(screen.getByRole('group', { name: 'Zones' })).getByRole('checkbox', { name: /Encosta/ }))
+      expect(screen.getByRole('button', { name: /^Guardar/ })).toHaveAccessibleName('Guardar rega em Clareira')
+      await userEvent.click(screen.getByRole('button', { name: 'Escolher numa lista' }))
+      await userEvent.click(within(screen.getByRole('group', { name: 'Zonas' })).getByRole('checkbox', { name: /Encosta/ }))
       expect(within(group).getByRole('checkbox', { name: /Regar talhão/ })).toBeChecked()
       // the Save button says a task will be closed, even when the list is scrolled out of sight
-      expect(screen.getByRole('button', { name: /^Save/ })).toHaveAccessibleName('Save — Watered 2 zones · closes 1 task')
+      expect(screen.getByRole('button', { name: /^Guardar/ })).toHaveAccessibleName('Guardar rega em 2 zonas · fecha 1 tarefa')
     })
 
     it('a refused entry leaves its tasks open and ticked, reported once', async () => {
       const api = logApi([sowTask])
       const { queryClient } = renderApp('/log')
-      await pickClareira(/Sowed/)
-      const group = await screen.findByRole('group', { name: 'Also done' })
+      await pickClareira(/Sementeira/)
+      const group = await screen.findByRole('group', { name: 'Também ficou feito' })
       const real = api.fetchMock.getMockImplementation()!
       const refused: string[] = []
       api.fetchMock.mockImplementation(async (input, init) => {
@@ -305,8 +305,8 @@ describe('LogPage', () => {
           )
         return real(input, init)
       })
-      await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-      expect(await screen.findByRole('alert')).toHaveTextContent('Zones: pick the zones again.')
+      await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('Zonas: pick the zones again.')
       // the task write behind it was sent, failed, and is not reported again in the sync bar
       await waitFor(() => expect(refused).toContain(`/api/tasks/${sowTask.id}`))
       expect(refused[0]).toMatch(/^\/api\/activities\//)
@@ -318,7 +318,7 @@ describe('LogPage', () => {
       await waitFor(() => expect(taskWrite().state.status).toBe('error'))
       expect(isShownInline(taskWrite().mutationId)).toBe(true)
       expect(screen.getAllByRole('alert')).toHaveLength(1)
-      expect(screen.queryByText(/could not be saved/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/não foi guardado/)).not.toBeInTheDocument()
       // still open on the phone, and still ticked for the next try
       await waitFor(() =>
         expect(queryClient.getQueryData<Task[]>(['tasks'])!.find((t) => t.id === sowTask.id)?.status).toBe('open'),
@@ -329,26 +329,26 @@ describe('LogPage', () => {
     it('leaves a task unticked alone', async () => {
       const api = logApi([sowTask])
       renderApp('/log')
-      await pickClareira(/Sowed/)
-      await userEvent.click(within(await screen.findByRole('group', { name: 'Also done' })).getByRole('checkbox', { name: /Falta semear/ }))
-      await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-      expect(await screen.findByText('Logged: sowed Clareira today.')).toBeInTheDocument()
+      await pickClareira(/Sementeira/)
+      await userEvent.click(within(await screen.findByRole('group', { name: 'Também ficou feito' })).getByRole('checkbox', { name: /Falta semear/ }))
+      await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+      expect(await screen.findByText('Sementeira guardada em Clareira, hoje.')).toBeInTheDocument()
       expect(puts(api).filter((c) => c.path.startsWith('/api/tasks/'))).toEqual([])
     })
 
     it('offline: the task is done on the phone at once, and queued behind the entry', async () => {
       const api = logApi([sowTask])
       const { queryClient, unmount } = renderApp('/log')
-      await pickClareira(/Sowed/)
-      await screen.findByRole('group', { name: 'Also done' })
+      await pickClareira(/Sementeira/)
+      await screen.findByRole('group', { name: 'Também ficou feito' })
       onlineManager.setOnline(false)
       // unmounted before going back online: the queue stays paused and never reaches later tests
       onTestFinished(() => {
         unmount()
         onlineManager.setOnline(true)
       })
-      await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-      expect(await screen.findByText(/Saved on this phone\..* Done: Falta semear\./)).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+      expect(await screen.findByText(/Guardado neste telemóvel\..* Tarefa feita: Falta semear\./)).toBeInTheDocument()
       const task = queryClient.getQueryData<Task[]>(['tasks'])!.find((t) => t.id === sowTask.id)!
       expect(task.status).toBe('done')
       // one ordered queue: the entry first, then the task that points at it
@@ -366,13 +366,13 @@ describe('LogPage', () => {
     it('Undo removes the entry and reopens its tasks', async () => {
       const api = logApi([sowTask])
       renderApp('/log')
-      await pickClareira(/Sowed/)
-      await screen.findByRole('group', { name: 'Also done' })
-      await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
-      await screen.findByText(/Done: Falta semear/)
+      await pickClareira(/Sementeira/)
+      await screen.findByRole('group', { name: 'Também ficou feito' })
+      await userEvent.click(screen.getByRole('button', { name: /^Guardar/ }))
+      await screen.findByText(/Tarefa feita: Falta semear/)
       const taskPuts = () => puts(api).filter((c) => c.path === `/api/tasks/${sowTask.id}`)
       await waitFor(() => expect(taskPuts()).toHaveLength(1))
-      await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Anular' }))
       await waitFor(() => expect(api.calls.some((c) => c.method === 'DELETE')).toBe(true))
       const reopen = taskPuts()[1]!
       // sent from the version the closing produced

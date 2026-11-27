@@ -5,7 +5,7 @@ import { Browser, Map as LeafletMap, latLng, latLngBounds, type LatLng, type Lat
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Zone } from '../api/plots'
 import type { Task } from '../api/tasks'
-import { addDays, fieldToday, formatDay } from '../domain/dates'
+import { addDays, fieldToday, formatLongDay } from '../domain/dates'
 import { fakeApi } from '../test/fakeApi'
 import { testField, testPlot, testZone } from '../test/fixtures'
 import { renderApp } from '../test/render'
@@ -34,7 +34,7 @@ describe('MapPage', () => {
   it('labels plots with their measured area and zones with their name', async () => {
     mapApi()
     renderApp('/')
-    expect(await screen.findByText('Plot 1 · 3.69 ha')).toBeInTheDocument()
+    expect(await screen.findByText('Plot 1 · 3,69 ha')).toBeInTheDocument()
     // the zone is 150 units wide: at the fitted zoom (−0.5 on an 800 px map) that is ~106 px, room for a label
     expect(await screen.findByText('Clareira')).toBeInTheDocument()
   })
@@ -50,16 +50,16 @@ describe('MapPage', () => {
     })
     await userEvent.click(zonePath)
     const sheet = await screen.findByRole('region', { name: 'Clareira' })
-    expect(sheet).toHaveTextContent('Needs water') // sown long ago, never watered
-    expect(sheet).toHaveTextContent('Sown')
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(sheet).toHaveTextContent('Por regar') // sown long ago, never watered
+    expect(sheet).toHaveTextContent('Sementeira')
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }))
     expect(screen.queryByRole('region', { name: 'Clareira' })).not.toBeInTheDocument()
   })
 
   it('reaches zones without the map, through the zone list', async () => {
     mapApi()
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
     const heading = await screen.findByRole('heading', { name: 'Clareira' })
     expect(heading).toHaveFocus()
@@ -70,14 +70,14 @@ describe('MapPage', () => {
   it('sums up what needs attention, collapsed, and opens a zone from it', async () => {
     mapApi()
     renderApp('/')
-    const pill = await screen.findByRole('button', { name: /1 zone needs attention/ })
+    const pill = await screen.findByRole('button', { name: /1 zona precisa de atenção/ })
     expect(pill).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('region', { name: /Need water/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Por regar/ })).not.toBeInTheDocument()
     await userEvent.click(pill)
-    const water = screen.getByRole('region', { name: 'Need water: 1' })
+    const water = screen.getByRole('region', { name: 'Por regar: 1' })
     await userEvent.click(within(water).getByRole('button', { name: /Clareira/ }))
     expect(await screen.findByRole('heading', { name: 'Clareira' })).toHaveFocus()
-    expect(screen.queryByRole('region', { name: /Need water/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Por regar/ })).not.toBeInTheDocument()
   })
 
   it('centres a zone picked from the list above the sheet, even at the bottom edge of the field', async () => {
@@ -87,9 +87,9 @@ describe('MapPage', () => {
     mapApi({ 'GET /api/zones': () => ({ status: 200, body: [testZone, corner] }) })
     const setView = vi.spyOn(LeafletMap.prototype, 'setView')
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: /2 zones need attention/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /2 zonas precisam de atenção/ }))
     setView.mockClear()
-    await userEvent.click(within(screen.getByRole('region', { name: 'Not sown yet: 1' })).getByRole('button', { name: /Canto/ }))
+    await userEvent.click(within(screen.getByRole('region', { name: 'Ainda sem nada: 1' })).getByRole('button', { name: /Canto/ }))
     expect(await screen.findByRole('heading', { name: 'Canto' })).toHaveFocus()
     expect(setView).toHaveBeenCalledTimes(1)
     const map = setView.mock.contexts[0] as LeafletMap
@@ -107,29 +107,29 @@ describe('MapPage', () => {
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('heading', { name: 'Canto' })).not.toBeInTheDocument()
     expect((map.options.maxBounds as LatLngBounds).contains(view)).toBe(false)
-    expect(screen.getByRole('button', { name: /2 zones need attention/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2 zonas precisam de atenção/ })).toBeInTheDocument()
   })
 
   it('hides the attention pill while a zone’s sheet is open', async () => {
     mapApi()
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
     await screen.findByRole('heading', { name: 'Clareira' })
-    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /precisa/ })).not.toBeInTheDocument()
   })
 
   it('says so when nothing needs attention', async () => {
     mapApi({ 'GET /api/zones': () => ({ status: 200, body: [{ ...testZone, kind: 'path' }] }) })
     renderApp('/')
-    expect(await screen.findByRole('button', { name: /Nothing needs attention/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Nenhuma zona precisa de nada/ })).toBeInTheDocument()
   })
 
   it('has a legend for the colours, with the layers', async () => {
     mapApi()
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Layers' }))
-    expect(screen.getByRole('list', { name: 'Map colours' })).toHaveTextContent('Needs water')
+    await userEvent.click(await screen.findByRole('button', { name: 'Camadas' }))
+    expect(screen.getByRole('list', { name: 'Cores do mapa' })).toHaveTextContent('Por regar')
   })
 
   it('shows the zones as they were on a past day, with a clear way back to today', async () => {
@@ -139,51 +139,51 @@ describe('MapPage', () => {
       'GET /api/zones\\?as_of=.*': () => ({ status: 200, body: [{ ...testZone, last_sown_on: day, needs_water: false }] }),
     })
     renderApp('/')
-    await screen.findByRole('button', { name: /1 zone needs attention/ })
-    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: day } })
-    expect(await screen.findByText(`Viewing ${formatDay(day)}`)).toBeInTheDocument()
-    expect(screen.getByText(/3 days ago/)).toBeInTheDocument()
+    await screen.findByRole('button', { name: /1 zona precisa de atenção/ })
+    await userEvent.click(screen.getByRole('button', { name: 'Camadas' }))
+    fireEvent.change(screen.getByLabelText('Dia'), { target: { value: day } })
+    expect(await screen.findByText(`A ver ${formatLongDay(day)}`)).toBeInTheDocument()
+    expect(screen.getByText(/há 3 dias/)).toBeInTheDocument()
     // "needs attention" is about today: not shown while looking back
-    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /precisa/ })).not.toBeInTheDocument()
     await waitFor(() => expect(calls.some((c) => c.path === `/api/zones?as_of=${day}`)).toBe(true))
-    await waitFor(() => expect(screen.queryByText(/loading/)).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(/a carregar/)).not.toBeInTheDocument())
 
     // the zone's sheet tells that day's state
-    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Camadas' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
     const sheet = await screen.findByRole('region', { name: 'Clareira' })
-    expect(sheet).toHaveTextContent(`On ${formatDay(day)}:`)
-    expect(sheet).toHaveTextContent('Sown')
-    expect(sheet).not.toHaveTextContent('Needs water')
+    expect(sheet).toHaveTextContent(`A ${formatLongDay(day)}:`)
+    expect(sheet).toHaveTextContent('Sementeira')
+    expect(sheet).not.toHaveTextContent('Por regar')
     // its actions act on today, and say so
-    expect(sheet).toHaveTextContent('Logging and editing act on today.')
-    expect(within(sheet).getByRole('link', { name: '＋ Log for today' })).toHaveAttribute('href', `/log?zone=${testZone.id}`)
-    expect(within(sheet).getByRole('button', { name: '✎ Edit zone today' })).toBeInTheDocument()
-    expect(within(sheet).queryByRole('link', { name: '＋ Log activity' })).not.toBeInTheDocument()
+    expect(sheet).toHaveTextContent('O que registares ou editares fica com o dia de hoje.')
+    expect(within(sheet).getByRole('link', { name: '＋ Registar hoje' })).toHaveAttribute('href', `/log?zone=${testZone.id}`)
+    expect(within(sheet).getByRole('button', { name: '✎ Editar a zona hoje' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: '＋ Registar' })).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Back to today' }))
-    expect(screen.queryByText(/Viewing/)).not.toBeInTheDocument()
-    expect(sheet).toHaveTextContent('Needs water')
-    expect(sheet).not.toHaveTextContent('act on today')
-    expect(within(sheet).getByRole('link', { name: '＋ Log activity' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: '✎ Edit zone' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar a hoje' }))
+    expect(screen.queryByText(/A ver /)).not.toBeInTheDocument()
+    expect(sheet).toHaveTextContent('Por regar')
+    expect(sheet).not.toHaveTextContent('fica com o dia de hoje')
+    expect(within(sheet).getByRole('link', { name: '＋ Registar' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: '✎ Editar a zona' })).toBeInTheDocument()
   })
 
   it('says so when a past day cannot be loaded', async () => {
     mapApi({ 'GET /api/zones\\?as_of=.*': () => ({ status: 500, body: { error: { code: 'internal', message: 'boom' } } }) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Layers' }))
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: addDays(fieldToday(), -10) } })
-    expect(await screen.findByText(/Viewing/)).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Camadas' }))
+    fireEvent.change(screen.getByLabelText('Dia'), { target: { value: addDays(fieldToday(), -10) } })
+    expect(await screen.findByText(/A ver /)).toBeInTheDocument()
     await waitFor(() => expect(document.querySelector('.asof-banner--warn')).not.toBeNull(), { timeout: 5000 })
   })
 
   it('invites you to draw when there are no plots yet', async () => {
     mapApi({ 'GET /api/plots': () => ({ status: 200, body: [] }), 'GET /api/zones': () => ({ status: 200, body: [] }) })
     renderApp('/')
-    expect(await screen.findByText(/No plots yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/Ainda não há parcelas/)).toBeInTheDocument()
   })
 })
 
@@ -220,30 +220,30 @@ describe('task pins', () => {
       },
     })
     renderApp('/')
-    const pin = await screen.findByRole('button', { name: 'Task: Regar' })
-    expect(screen.getByRole('button', { name: 'Task: Refazer caminho' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Task: Já feito' })).not.toBeInTheDocument()
+    const pin = await screen.findByRole('button', { name: 'Tarefa: Regar' })
+    expect(screen.getByRole('button', { name: 'Tarefa: Refazer caminho' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tarefa: Já feito' })).not.toBeInTheDocument()
 
     fireEvent.click(pin)
     const sheet = await screen.findByRole('region', { name: 'Clareira' })
     expect(within(sheet).getByRole('heading', { name: 'Clareira' })).toHaveFocus()
-    expect(sheet).toHaveTextContent('Tasks in this zone · Plot 1')
+    expect(sheet).toHaveTextContent('Tarefas desta zona · Plot 1')
     expect(sheet).not.toHaveTextContent('Já feito')
     // not over the sheet
-    expect(screen.queryByRole('button', { name: /needs attention/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /precisa/ })).not.toBeInTheDocument()
 
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Done: Regar' }))
-    expect(within(sheet).getByText(/Done: Regar\./)).toBeInTheDocument()
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Feita: Regar' }))
+    expect(within(sheet).getByText(/Tarefa feita: Regar\./)).toBeInTheDocument()
     // stays in the sheet, ticked, so it can be undone
-    expect(within(sheet).getByRole('button', { name: 'Done: Regar' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(sheet).getByRole('button', { name: 'Feita: Regar' })).toHaveAttribute('aria-pressed', 'true')
     await waitFor(() => expect(puts).toEqual([expect.objectContaining({ status: 'done', base_version: 1 })]))
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Tarefa: Regar' })).not.toBeInTheDocument())
 
     // the plot's own pin: tasks for the whole plot
-    fireEvent.click(screen.getByRole('button', { name: 'Task: Refazer caminho' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tarefa: Refazer caminho' }))
     const plotSheet = await screen.findByRole('region', { name: 'Plot 1' })
-    expect(plotSheet).toHaveTextContent('Tasks for the whole plot')
-    expect(within(plotSheet).getByRole('link', { name: 'All tasks' })).toHaveAttribute('href', '/tasks')
+    expect(plotSheet).toHaveTextContent('Tarefas da parcela inteira')
+    expect(within(plotSheet).getByRole('link', { name: 'Todas as tarefas' })).toHaveAttribute('href', '/tasks')
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('region', { name: 'Plot 1' })).not.toBeInTheDocument()
   })
@@ -259,25 +259,25 @@ describe('task pins', () => {
       },
     })
     renderApp('/')
-    fireEvent.click(await screen.findByRole('button', { name: '2 tasks: Clareira' }))
+    fireEvent.click(await screen.findByRole('button', { name: '2 tarefas: Clareira' }))
     const sheet = await screen.findByRole('region', { name: 'Clareira' })
     const rows = () => within(sheet).getAllByRole('listitem').map((li) => li.textContent)
     expect(rows()).toEqual([expect.stringContaining('Regar'), expect.stringContaining('Semear')])
     // a ticked task keeps its row, so the next tap doesn't land on another one
-    await userEvent.click(within(sheet).getByRole('button', { name: 'Done: Regar' }))
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Feita: Regar' }))
     expect(rows()).toEqual([expect.stringContaining('Regar'), expect.stringContaining('Semear')])
     // the pin now stands for the one task left
-    expect(await screen.findByRole('button', { name: 'Task: Semear' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Tarefa: Semear' })).toBeInTheDocument()
   })
 
   it('tapping a zone after a pin swaps the pin’s sheet for the zone’s', async () => {
     mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
     const { container } = renderApp('/')
-    fireEvent.click(await screen.findByRole('button', { name: 'Task: Regar' }))
-    expect(await screen.findByText('Tasks in this zone · Plot 1')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Tarefa: Regar' }))
+    expect(await screen.findByText('Tarefas desta zona · Plot 1')).toBeInTheDocument()
     await userEvent.click(container.querySelector('path.map-zone')!)
-    expect(await screen.findByRole('link', { name: /Log activity/ })).toBeInTheDocument()
-    expect(screen.queryByText('Tasks in this zone · Plot 1')).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /^＋ Registar$/ })).toBeInTheDocument()
+    expect(screen.queryByText('Tarefas desta zona · Plot 1')).not.toBeInTheDocument()
   })
 })
 
@@ -285,47 +285,47 @@ describe('layers', () => {
   it('switches plots, zones and tasks off and on, remembered on the phone', async () => {
     mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
     const first = renderApp('/')
-    await screen.findByRole('button', { name: 'Task: Regar' })
-    await userEvent.click(screen.getByRole('button', { name: 'Layers' }))
-    const group = screen.getByRole('group', { name: 'Show on the map' })
-    await userEvent.click(within(group).getByRole('checkbox', { name: 'Tasks' }))
-    await userEvent.click(within(group).getByRole('checkbox', { name: 'Zones' }))
-    expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Tarefa: Regar' })
+    await userEvent.click(screen.getByRole('button', { name: 'Camadas' }))
+    const group = screen.getByRole('group', { name: 'Mostrar no mapa' })
+    await userEvent.click(within(group).getByRole('checkbox', { name: 'Tarefas' }))
+    await userEvent.click(within(group).getByRole('checkbox', { name: 'Zonas' }))
+    expect(screen.queryByRole('button', { name: 'Tarefa: Regar' })).not.toBeInTheDocument()
     expect(first.container.querySelector('path.map-zone')).toBeNull()
-    expect(screen.getByText('Plot 1 · 3.69 ha')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Layers, 2 off' })).toBeInTheDocument()
+    expect(screen.getByText('Plot 1 · 3,69 ha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Camadas, 2 escondidas' })).toBeInTheDocument()
     first.unmount()
 
     // next time the app opens
     const again = renderApp('/')
-    expect(await screen.findByText('Plot 1 · 3.69 ha')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Layers, 2 off' })).toBeInTheDocument()
+    expect(await screen.findByText('Plot 1 · 3,69 ha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Camadas, 2 escondidas' })).toBeInTheDocument()
     expect(again.container.querySelector('path.map-zone')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Task: Regar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tarefa: Regar' })).not.toBeInTheDocument()
 
     // a zone picked from the list still shows with zones off
-    await userEvent.click(screen.getByRole('button', { name: 'Zones' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
     await screen.findByRole('heading', { name: 'Clareira' })
     expect(again.container.querySelectorAll('path.map-zone')).toHaveLength(1)
     await userEvent.keyboard('{Escape}')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Layers, 2 off' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Plots' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Zones' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Tasks' }))
-    expect(screen.queryByText('Plot 1 · 3.69 ha')).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Task: Regar' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Camadas, 2 escondidas' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Parcelas' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Zonas' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Tarefas' }))
+    expect(screen.queryByText('Plot 1 · 3,69 ha')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Tarefa: Regar' })).toBeInTheDocument()
     expect(again.container.querySelector('path.map-zone')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Layers, 1 off' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Camadas, 1 escondida' })).toBeInTheDocument()
   })
 
   it('shows everything when the stored choice is unreadable', async () => {
     localStorage.setItem('forest.map.layers', '{not json')
     mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
     renderApp('/')
-    expect(await screen.findByRole('button', { name: 'Task: Regar' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Layers' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Tarefa: Regar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Camadas' })).toBeInTheDocument()
   })
 })
 
@@ -346,9 +346,9 @@ describe('drawing', () => {
       return new Response(path === '/healthz' ? '{"status":"ok"}' : '[]')
     })
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Draw' }))
-    await userEvent.click(screen.getByRole('button', { name: /A plot/ }))
-    expect(screen.getByText(/0 of at least 3/)).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(screen.getByRole('button', { name: /Uma parcela/ }))
+    expect(screen.getByText(/0 de pelo menos 3/)).toBeInTheDocument()
 
     const mapEl = container.querySelector('.leaflet-container')!
     for (const [x, y] of [
@@ -358,12 +358,12 @@ describe('drawing', () => {
     ]) {
       fireEvent.click(mapEl, { clientX: x, clientY: y })
     }
-    expect(await screen.findByText(/Drag corners to adjust/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByLabelText('Name')).toHaveValue('Plot 1')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText(/Arrasta os cantos para acertar/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
+    expect(screen.getByLabelText('Nome')).toHaveValue('Parcela 1')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
 
-    expect(await screen.findByText('Added Plot 1.')).toBeInTheDocument()
+    expect(await screen.findByText('Parcela 1 acrescentada.')).toBeInTheDocument()
     const put = api.fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!
     const body = JSON.parse(String(put[1]!.body))
     expect(put[0]).toMatch(/^\/api\/plots\/[0-9a-f-]{36}$/)
@@ -375,30 +375,30 @@ describe('drawing', () => {
   it('cannot draw a zone before there is a plot', async () => {
     mapApi({ 'GET /api/plots': () => ({ status: 200, body: [] }), 'GET /api/zones': () => ({ status: 200, body: [] }) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Draw' }))
-    expect(screen.getByRole('button', { name: /A zone/ })).toBeDisabled()
-    expect(screen.getByText(/Draw a plot first/)).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    expect(screen.getByRole('button', { name: /Uma zona/ })).toBeDisabled()
+    expect(screen.getByText(/Desenha primeiro uma parcela/)).toBeInTheDocument()
   })
 
   it('edits a zone from its sheet', async () => {
     mapApi()
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Edit zone/ }))
-    expect(screen.getByRole('heading', { name: 'Edit the zone’s outline' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByLabelText(/Name/)).toHaveValue('Clareira')
-    await userEvent.click(screen.getByRole('button', { name: '← Outline' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.getByRole('button', { name: '＋ Draw' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Editar a zona/ }))
+    expect(screen.getByRole('heading', { name: 'Editar o contorno da zona' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
+    expect(screen.getByLabelText(/Nome/)).toHaveValue('Clareira')
+    await userEvent.click(screen.getByRole('button', { name: '← Contorno' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(screen.getByRole('button', { name: '＋ Desenhar' })).toBeInTheDocument()
   })
 
   it('undoes corners, and refuses a plot name that is taken', async () => {
     const api = mapApi()
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Draw' }))
-    await userEvent.click(screen.getByRole('button', { name: /A plot/ }))
+    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(screen.getByRole('button', { name: /Uma parcela/ }))
     const mapEl = container.querySelector('.leaflet-container')!
     for (const [x, y] of [
       [500, 100],
@@ -408,15 +408,15 @@ describe('drawing', () => {
     ]) {
       fireEvent.click(mapEl, { clientX: x, clientY: y })
     }
-    expect(await screen.findByText(/4 corners/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Undo/ }))
-    expect(screen.getByText(/3 corners/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
-    const name = screen.getByLabelText('Name')
+    expect(await screen.findByText(/4 cantos/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Desfazer/ }))
+    expect(screen.getByText(/3 cantos/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
+    const name = screen.getByLabelText('Nome')
     await userEvent.clear(name)
     await userEvent.type(name, 'plot 1')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Another plot is already called “Plot 1”.')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Já há outra parcela com o nome “Plot 1”.')
     expect(api.fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
   })
 
@@ -431,8 +431,8 @@ describe('drawing', () => {
       return new Response(path.startsWith('/api/') ? '[]' : '{"status":"ok"}')
     })
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Draw' }))
-    await userEvent.click(screen.getByRole('button', { name: /A zone/ }))
+    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(screen.getByRole('button', { name: /Uma zona/ }))
     const mapEl = container.querySelector('.leaflet-container')!
     // well inside Plot 1 (0–400 frame units, shown from the top-left of the map)
     for (const [x, y] of [
@@ -442,11 +442,11 @@ describe('drawing', () => {
     ]) {
       fireEvent.click(mapEl, { clientX: x, clientY: y })
     }
-    expect(await screen.findByText(/In Plot 1/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
-    await userEvent.type(screen.getByLabelText(/Name/), 'Nova')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText('Added Nova.')).toBeInTheDocument()
+    expect(await screen.findByText(/Em Plot 1/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
+    await userEvent.type(screen.getByLabelText(/Nome/), 'Nova')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Nova acrescentada.')).toBeInTheDocument()
     const put = api.fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')!
     expect(JSON.parse(String(put[1]!.body))).toMatchObject({ plot_id: testPlot.id, label: 'Nova', kind: 'cultivation' })
   })
@@ -463,14 +463,14 @@ describe('drawing', () => {
       },
     })
     const { queryClient } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     await userEvent.click(screen.getByRole('button', { name: /Clareira/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Edit zone/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await userEvent.click(screen.getByRole('button', { name: /Editar a zona/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
     await waitFor(() => expect(queryClient.getQueryData(['tasks'])).toBeDefined())
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(screen.getByRole('group', { name: 'Confirm delete' })).toHaveTextContent('Delete Clareira with its 1 open task?')
-    await userEvent.click(screen.getByRole('button', { name: 'Delete zone' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar' }))
+    expect(screen.getByRole('group', { name: 'Confirmar que apagas' })).toHaveTextContent('Apagar Clareira, com 1 tarefa por fazer?')
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar a zona' }))
     await waitFor(() => expect(queryClient.getQueryData(['tasks'])).toEqual([]))
   })
 
@@ -517,39 +517,39 @@ describe('drawing', () => {
     )
     // the tasks and the map were both seen online before
     const { router, queryClient } = renderApp('/tasks')
-    await screen.findByRole('button', { name: 'Done: Regar' })
+    await screen.findByRole('button', { name: 'Feita: Regar' })
     await act(() => router.navigate('/'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     const order = () =>
       within(screen.getByRole('region', { name: testPlot.name }))
         .getAllByRole('button')
         .map((b) => b.textContent)
-    expect(order()).toEqual([expect.stringMatching(/^Clareira · 1 open task/), expect.stringMatching(/^Alto/)])
+    expect(order()).toEqual([expect.stringMatching(/^Clareira · 1 tarefa por fazer/), expect.stringMatching(/^Alto/)])
 
     onlineManager.setOnline(false)
     onTestFinished(() => onlineManager.setOnline(true))
     await act(() => router.navigate('/tasks'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Done: Regar' }))
-    expect(await screen.findByText('Done: Regar.')).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Feita: Regar' }))
+    expect(await screen.findByText('Tarefa feita: Regar.')).toBeInTheDocument()
     await act(() => router.navigate('/'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     // nothing left to do in Clareira: back in name order, before the outbox is sent
     expect(order()).toEqual([expect.stringMatching(/^Alto/), expect.stringMatching(/^Clareira$|^Clareira[^·]/)])
     expect(puts).toEqual([])
 
     // reopened, still offline: counted again
     await act(() => router.navigate('/tasks'))
-    await userEvent.click(await screen.findByRole('button', { name: /Show done/ }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Done: Regar' }))
+    await userEvent.click(await screen.findByRole('button', { name: /Mostrar as feitas/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Feita: Regar' }))
     await act(() => router.navigate('/'))
-    await userEvent.click(await screen.findByRole('button', { name: 'Zones' }))
-    expect(order()[0]).toMatch(/^Clareira · 1 open task/)
+    await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
+    expect(order()[0]).toMatch(/^Clareira · 1 tarefa por fazer/)
 
     // meanwhile a second task was added there elsewhere: once synced, the server's count wins
     tasks = [...tasks, { ...task, id: '40000000-0000-4000-8000-000000000009', title: 'Semear' }]
     onlineManager.setOnline(true)
     await waitFor(() => expect(puts).toHaveLength(2))
-    await waitFor(() => expect(order()[0]).toMatch(/^Clareira · 2 open tasks/))
+    await waitFor(() => expect(order()[0]).toMatch(/^Clareira · 2 tarefas por fazer/))
     expect(queryClient.getQueryData<Zone[]>(['zones'])!.find((z) => z.id === clareira.id)!.open_task_count).toBe(2)
   })
 })

@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
-import { isOpen, TASK_KIND, type ResolvedLink, type Task } from '../api/tasks'
-import { fieldToday, relativeDay } from '../domain/dates'
+import { dueLabel, isOpen, TASK_KIND, type ResolvedLink, type Task } from '../api/tasks'
+import { fieldToday, whenDay } from '../domain/dates'
 import type { Toast } from '../hooks/useTaskToggle'
 
 /** The short message with an optional Undo, shown above the lists. */
@@ -12,7 +12,7 @@ export function ToastLine({ toast, onUndo }: { toast: Toast | null; onUndo: () =
           {toast.text}{' '}
           {toast.undo && (
             <button type="button" className="btn-link" onClick={onUndo}>
-              Undo
+              Anular
             </button>
           )}
         </span>
@@ -41,20 +41,20 @@ export function TaskRow({
 }) {
   const open = isOpen(task)
   const overdue = open && task.due_on !== null && task.due_on < today
-  const closedOn = task.completed_at ? relativeDay(fieldToday(new Date(task.completed_at)), today) : null
+  const closedOn = task.completed_at ? whenDay(fieldToday(new Date(task.completed_at)), today) : null
   const content = (
     <>
       <span className="task__title">
-        {onEdit && <span className="visually-hidden">Edit: </span>}
+        {onEdit && <span className="visually-hidden">Editar: </span>}
         <span aria-hidden="true">{TASK_KIND[task.kind].icon}</span> {task.title}
       </span>
       <span className="task__meta">
         {[
           place,
-          open && task.due_on ? `due ${relativeDay(task.due_on, today)}` : null,
-          task.status === 'in_progress' ? 'in progress' : null,
-          task.status === 'done' && closedOn ? `done ${closedOn}` : null,
-          task.status === 'cancelled' ? 'cancelled' : null,
+          open && task.due_on ? dueLabel(task.due_on, today) : null,
+          task.status === 'in_progress' ? 'em curso' : null,
+          task.status === 'done' && closedOn ? `feita ${closedOn}` : null,
+          task.status === 'cancelled' ? 'cancelada' : null,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -63,7 +63,7 @@ export function TaskRow({
   )
   return (
     <li className={`task${open ? '' : ' task--closed'}${overdue ? ' task--overdue' : ''}`}>
-      <button type="button" className="task__tick" aria-pressed={!open} aria-label={`Done: ${task.title}`} onClick={onToggle}>
+      <button type="button" className="task__tick" aria-pressed={!open} aria-label={`Feita: ${task.title}`} onClick={onToggle}>
         <span className="task__tick-circle" aria-hidden="true">
           {open ? '' : '✓'}
         </span>
@@ -78,7 +78,7 @@ export function TaskRow({
         )}
         {resolvedBy && (
           <Link className="task__link" to={resolvedBy.to}>
-            <span className="visually-hidden">Done by the log entry:</span> {resolvedBy.label} →
+            <span className="visually-hidden">Feita com o registo:</span> {resolvedBy.label} →
           </Link>
         )}
       </div>

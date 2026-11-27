@@ -1,10 +1,13 @@
 import { useId, useState, type FormEvent } from 'react'
 import type { Species } from '../api/species'
 import { MAX_TREES, useSetTreeCounts, useTreeCounts } from '../api/trees'
+import { formatNumber } from '../domain/numbers'
+
+const KEY_LABEL = { alive: 'vivas', dead: 'mortas' } as const
 
 const speciesName = (species: Species[], id: string) => {
   const s = species.find((x) => x.id === id)
-  return s ? (s.common_name ?? s.scientific_name) : 'a deleted species'
+  return s ? (s.common_name ?? s.scientific_name) : 'uma espécie apagada'
 }
 
 /** Trees by species in a zone (alive / dead), editable: "counting dead is enough". */
@@ -19,11 +22,11 @@ export function ZoneTrees({ zoneId, species, onMessage }: { zoneId: string; spec
   return (
     <section aria-labelledby="zone-trees">
       <div className="row section-head">
-        <h2 id="zone-trees">Trees by species</h2>
+        <h2 id="zone-trees">Árvores por espécie</h2>
         <span className="spacer" />
         {!editing && species.length > 0 && (
           <button type="button" className="btn btn-small" onClick={() => setEditing(true)}>
-            ✎ Count trees
+            ✎ Contar árvores
           </button>
         )}
       </div>
@@ -39,14 +42,14 @@ export function ZoneTrees({ zoneId, species, onMessage }: { zoneId: string; spec
           onCancel={() => setEditing(false)}
         />
       ) : rows.length === 0 ? (
-        <p className="muted">{species.length === 0 ? 'Add species first to count trees.' : 'No trees counted here yet.'}</p>
+        <p className="muted">{species.length === 0 ? 'Para contar árvores, acrescenta primeiro as espécies.' : 'Ainda não contaste árvores aqui.'}</p>
       ) : (
         <table className="trees">
           <thead>
             <tr>
-              <th scope="col">Species</th>
-              <th scope="col">Alive</th>
-              <th scope="col">Dead</th>
+              <th scope="col">Espécie</th>
+              <th scope="col">Vivas</th>
+              <th scope="col">Mortas</th>
             </tr>
           </thead>
           <tbody>
@@ -100,7 +103,7 @@ function TreeCountsForm({
       const a = Number(r.alive || 0)
       const d = Number(r.dead || 0)
       if (![a, d].every((n) => Number.isInteger(n) && n >= 0 && n <= MAX_TREES))
-        return setError(`Counts are whole numbers from 0 to ${MAX_TREES.toLocaleString('en-GB')}.`)
+        return setError(`As quantidades são números inteiros de 0 a ${formatNumber(MAX_TREES)}.`)
       parsed.push({ zone_id: zoneId, species_id: r.species_id, alive: a, dead: d })
     }
     setError('')
@@ -111,7 +114,7 @@ function TreeCountsForm({
     // Each species is its own change in the outbox (kept on the phone, sent in order).
     // The form closes at once; if the server refuses one, the sync bar says so.
     for (const c of changed) set.mutate(c)
-    onDone(changed.length === 0 ? 'Nothing changed.' : 'Tree counts updated.')
+    onDone(changed.length === 0 ? 'Nada mudou.' : 'Contagem de árvores guardada.')
   }
 
   const update = (i: number, key: 'alive' | 'dead', value: string) => setForm((f) => f.map((r, j) => (j === i ? { ...r, [key]: value } : r)))
@@ -120,14 +123,14 @@ function TreeCountsForm({
       f.map((r, j) => {
         if (j !== i) return r
         const next = Math.min(MAX_TREES, Math.max(0, (Number(r[key]) || 0) + by))
-        setAnnounce(`${label} ${key}: ${next}`)
+        setAnnounce(`${label}, ${KEY_LABEL[key]}: ${next}`)
         return { ...r, [key]: String(next) }
       }),
     )
 
   return (
-    <form className="card" onSubmit={submit} noValidate aria-label="Count trees">
-      <p className="muted small">How many of each species stand in this zone now. Moving a tree from alive to dead records that it died.</p>
+    <form className="card" onSubmit={submit} noValidate aria-label="Contar árvores">
+      <p className="muted small">Quantas árvores de cada espécie há agora nesta zona. Passar uma árvore de viva para morta regista que morreu.</p>
       {form.map((r, i) => {
         const label = speciesName(species, r.species_id)
         return (
@@ -135,12 +138,12 @@ function TreeCountsForm({
             <legend>{label}</legend>
             {(['alive', 'dead'] as const).map((key) => (
               <div key={key} className="stepper">
-                <span className="stepper__label">{key === 'alive' ? 'Alive' : 'Dead'}</span>
-                <button type="button" className="btn btn-icon" aria-label={`One ${key} ${label} less`} onClick={() => step(i, key, -1, label)}>
+                <span className="stepper__label">{key === 'alive' ? 'Vivas' : 'Mortas'}</span>
+                <button type="button" className="btn btn-icon" aria-label={`${label}, menos uma ${key === 'alive' ? 'viva' : 'morta'}`} onClick={() => step(i, key, -1, label)}>
                   −
                 </button>
-                <input inputMode="numeric" aria-label={`${label}, ${key}`} value={r[key]} onChange={(e) => update(i, key, e.target.value)} />
-                <button type="button" className="btn btn-icon" aria-label={`One ${key} ${label} more`} onClick={() => step(i, key, 1, label)}>
+                <input inputMode="numeric" aria-label={`${label}, ${KEY_LABEL[key]}`} value={r[key]} onChange={(e) => update(i, key, e.target.value)} />
+                <button type="button" className="btn btn-icon" aria-label={`${label}, mais uma ${key === 'alive' ? 'viva' : 'morta'}`} onClick={() => step(i, key, 1, label)}>
                   +
                 </button>
               </div>
@@ -150,13 +153,13 @@ function TreeCountsForm({
       })}
       {unused.length > 0 && (
         <>
-          <label htmlFor={addId}>Add a species</label>
+          <label htmlFor={addId}>Acrescentar uma espécie</label>
           <select
             id={addId}
             value=""
             onChange={(e) => e.target.value && setForm((f) => [...f, { species_id: e.target.value, alive: '0', dead: '0' }])}
           >
-            <option value="">Choose…</option>
+            <option value="">Escolher…</option>
             {unused.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.common_name ?? s.scientific_name}
@@ -175,10 +178,10 @@ function TreeCountsForm({
       )}
       <div className="row form__actions">
         <button type="submit" className="btn btn-primary">
-          Save
+          Guardar
         </button>
         <button type="button" className="btn" onClick={onCancel}>
-          Cancel
+          Cancelar
         </button>
       </div>
     </form>

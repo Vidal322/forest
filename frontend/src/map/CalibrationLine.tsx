@@ -39,7 +39,7 @@ export function CalibrationLine({
         icon={icons[0]}
         draggable
         keyboard={false}
-        title="Start of the scale line (drag)"
+        title="Início da linha da escala (arrasta)"
         eventHandlers={{ drag: move(0), dragend: (e) => (move(0)(e), onDragEnd?.()) }}
       />
       <Marker
@@ -47,7 +47,7 @@ export function CalibrationLine({
         icon={icons[1]}
         draggable
         keyboard={false}
-        title="End of the scale line (drag)"
+        title="Fim da linha da escala (arrasta)"
         eventHandlers={{ drag: move(1), dragend: (e) => (move(1)(e), onDragEnd?.()) }}
       />
     </>

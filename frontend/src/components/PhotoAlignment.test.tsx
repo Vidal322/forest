@@ -41,13 +41,13 @@ describe('PhotoAlignment', () => {
       'POST /api/field/photos': () => ({ status: 201, body: { residual_px: 1.2, alignment_points: [1, 2, 3, 4] } }),
     })
     const { container } = renderApp('/field')
-    await userEvent.upload(await screen.findByLabelText(/Choose the newer photo/), new File(['x'], 'new.png', { type: 'image/png' }))
-    expect(await screen.findByText('Landmark 1: tap it on the new photo.')).toBeInTheDocument()
+    await userEvent.upload(await screen.findByLabelText(/Escolher a fotografia mais recente/), new File(['x'], 'new.png', { type: 'image/png' }))
+    expect(await screen.findByText('Ponto 1: toca nele na fotografia nova.')).toBeInTheDocument()
     const map = () => container.querySelector('.setup-map.is-active .leaflet-container')!
 
     // a tap outside the photo is refused with a hint
     fireEvent.click(map(), { clientX: 5, clientY: 5 })
-    expect(screen.getByRole('alert')).toHaveTextContent('Tap on the photo itself.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Toca dentro da fotografia.')
 
     for (const [x, y] of [
       [100, 100],
@@ -56,19 +56,19 @@ describe('PhotoAlignment', () => {
       [120, 330],
     ]) {
       fireEvent.click(map(), { clientX: x, clientY: y }) // new photo
-      expect(await screen.findByText(/now tap the same spot on the current map/)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Current map' })).toHaveAttribute('aria-pressed', 'true')
+      expect(await screen.findByText(/agora toca no mesmo sítio no mapa atual/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mapa atual' })).toHaveAttribute('aria-pressed', 'true')
       fireEvent.click(map(), { clientX: x, clientY: y }) // current map
     }
-    expect(screen.getByText('4 landmarks matched')).toBeInTheDocument()
+    expect(screen.getByText('4 pontos de referência marcados')).toBeInTheDocument()
     // a wrong pair can be removed on its own
-    await userEvent.click(screen.getByRole('button', { name: 'Remove landmark 4' }))
-    expect(screen.getByText(/3 landmarks matched/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Tirar o ponto 4' }))
+    expect(screen.getByText(/3 pontos de referência marcados/)).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Use the new photo' }))
-    expect(await screen.findByText(/New photo aligned: it lines up very well/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Usar a fotografia nova' }))
+    expect(await screen.findByText(/Fotografia nova alinhada\. Encaixa muito bem/)).toBeInTheDocument()
     // the form is ready for another photo, not this one again
-    expect(screen.queryByRole('button', { name: 'Use the new photo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Usar a fotografia nova' })).not.toBeInTheDocument()
 
     const post = api.fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
     const pairs = JSON.parse(String((post[1]!.body as FormData).get('alignment')))
@@ -81,8 +81,8 @@ describe('PhotoAlignment', () => {
   it('needs 3 landmarks', async () => {
     fakeApi({ 'GET /api/field': () => ({ status: 200, body: testField }) })
     renderApp('/field')
-    await userEvent.upload(await screen.findByLabelText(/Choose the newer photo/), new File(['x'], 'new.png', { type: 'image/png' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Use the new photo' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Match at least 3 landmarks (0 so far).')
+    await userEvent.upload(await screen.findByLabelText(/Escolher a fotografia mais recente/), new File(['x'], 'new.png', { type: 'image/png' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar a fotografia nova' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Marca pelo menos 3 pontos de referência (para já, 0).')
   })
 })

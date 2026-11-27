@@ -31,8 +31,8 @@ test('the species page shows where each species is used', async ({ page, request
   expect(trees.ok(), await trees.text()).toBeTruthy()
 
   await page.goto('/species')
-  const suber = page.getByRole('button', { name: 'Edit Quercus suber' })
-  await expect(suber).toContainText('2 zones · 12 trees alive · sown 28 Jun 2025')
-  await expect(page.getByRole('button', { name: 'Edit Arbutus unedo' })).toContainText('Not used yet')
+  const suber = page.getByRole('button', { name: 'Editar Quercus suber' })
+  await expect(suber).toContainText('2 zonas · 12 árvores vivas · semeada a 28 jun 2025')
+  await expect(page.getByRole('button', { name: 'Editar Arbutus unedo' })).toContainText('Ainda não foi usada')
   await shot(page, 'species-usage')
 })

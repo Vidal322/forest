@@ -7,7 +7,7 @@ test('the map opens on a set-up field with a plot and a zone', async ({ page, re
   await putZone(request, plotId, 'Smoke zone')
 
   await page.goto('/')
-  await expect(page.getByText('Set up your field')).toHaveCount(0)
+  await expect(page.getByText('Configurar o teu terreno')).toHaveCount(0)
   await expect(page.locator('.leaflet-container')).toBeVisible()
   await shot(page, 'smoke-map')
 })

@@ -95,7 +95,7 @@ export const wateringRules = defineEntity<WateringRule, WateringRuleInput>({
   alsoRefresh: [['zones'], ['plot-stats']], // the interval in effect changes the colours
 })
 
-export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+export const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
 /** The months a rule covers (ranges may wrap past December). */
 export function ruleMonths(r: Pick<WateringRule, 'from_month' | 'to_month'>): number[] {

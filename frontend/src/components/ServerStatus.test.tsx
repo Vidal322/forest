@@ -23,15 +23,15 @@ describe('ServerStatus', () => {
   it('shows Online when /healthz answers', async () => {
     vi.stubGlobal('fetch', vi.fn<FetchFn>(ok))
     render(<ServerStatus />)
-    expect(screen.getByText('Connecting…')).toBeInTheDocument()
-    expect(await screen.findByText('Online')).toBeInTheDocument()
+    expect(screen.getByText('A ligar…')).toBeInTheDocument()
+    expect(await screen.findByText('Com rede')).toBeInTheDocument()
   })
 
   it('says "Server unreachable" when the device is online but the API is not', async () => {
     vi.stubGlobal('fetch', vi.fn<FetchFn>(down))
     render(<ServerStatus />)
-    expect(await screen.findByText('Server unreachable')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(/retrying automatically/)
+    expect(await screen.findByText('Servidor sem resposta')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/a tentar outra vez sozinho/)
   })
 
   it('says "No connection" without even trying when the device is offline', async () => {
@@ -39,32 +39,32 @@ describe('ServerStatus', () => {
     const fetchMock = vi.fn<FetchFn>(ok)
     vi.stubGlobal('fetch', fetchMock)
     render(<ServerStatus />)
-    expect(await screen.findByText('No connection')).toBeInTheDocument()
+    expect(await screen.findByText('Sem rede')).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('does not trust a 200 that is not our health body (captive portal)', async () => {
     vi.stubGlobal('fetch', vi.fn<FetchFn>(() => Promise.resolve(new Response('{"hello":"portal"}', { status: 200 }))))
     render(<ServerStatus />)
-    expect(await screen.findByText('Server unreachable')).toBeInTheDocument()
+    expect(await screen.findByText('Servidor sem resposta')).toBeInTheDocument()
   })
 
   it('recovers on the next poll and announces it', async () => {
     const fetchMock = vi.fn<FetchFn>(down)
     vi.stubGlobal('fetch', fetchMock)
     render(<ServerStatus intervalMs={1000} />)
-    expect(await screen.findByText('Server unreachable')).toBeInTheDocument()
+    expect(await screen.findByText('Servidor sem resposta')).toBeInTheDocument()
 
     fetchMock.mockImplementation(ok)
     await act(() => vi.advanceTimersByTimeAsync(1000))
-    expect(await screen.findByText('Online')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Back online.')
+    expect(await screen.findByText('Com rede')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Com rede outra vez.')
   })
 
   it('stays quiet for screen readers on a normal load', async () => {
     vi.stubGlobal('fetch', vi.fn<FetchFn>(ok))
     render(<ServerStatus />)
-    await screen.findByText('Online')
+    await screen.findByText('Com rede')
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
@@ -72,20 +72,20 @@ describe('ServerStatus', () => {
     const fetchMock = vi.fn<FetchFn>(down)
     vi.stubGlobal('fetch', fetchMock)
     render(<ServerStatus intervalMs={60_000} />)
-    await screen.findByText('Server unreachable')
+    await screen.findByText('Servidor sem resposta')
 
     fetchMock.mockImplementation(ok)
     act(() => {
       window.dispatchEvent(new Event('online'))
     })
-    expect(await screen.findByText('Online')).toBeInTheDocument()
+    expect(await screen.findByText('Com rede')).toBeInTheDocument()
   })
 
   it('does not poll while the tab is hidden', async () => {
     const fetchMock = vi.fn<FetchFn>(ok)
     vi.stubGlobal('fetch', fetchMock)
     render(<ServerStatus intervalMs={1000} />)
-    await screen.findByText('Online')
+    await screen.findByText('Com rede')
     const callsBefore = fetchMock.mock.calls.length
 
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
@@ -111,12 +111,12 @@ describe('ServerStatus', () => {
     act(() => {
       window.dispatchEvent(new Event('online')) // starts a newer check, which answers ok
     })
-    expect(await screen.findByText('Online')).toBeInTheDocument()
+    expect(await screen.findByText('Com rede')).toBeInTheDocument()
 
     // the old request finally "answers" with an error page — must be ignored
     releaseSlow(new Response('oops', { status: 500 }))
     await act(() => vi.advanceTimersByTimeAsync(10))
-    expect(screen.getByText('Online')).toBeInTheDocument()
+    expect(screen.getByText('Com rede')).toBeInTheDocument()
   })
 
   it('aborts its request and stops polling when unmounted', async () => {

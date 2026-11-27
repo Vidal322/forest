@@ -23,13 +23,13 @@ afterAll(() => {
   browser.any3d = realAny3d
 })
 
-const photoImg = () => screen.getByRole('img', { name: 'Aerial photo of the field' })
-const zoomOut = () => screen.getByRole('button', { name: 'Zoom out' })
+const photoImg = () => screen.getByRole('img', { name: 'Fotografia aérea do terreno' })
+const zoomOut = () => screen.getByRole('button', { name: 'Afastar' })
 
 describe('FieldMap', () => {
   it('shows the field photo inside a labelled map region', () => {
     render(<FieldMap photo={photo} />)
-    const region = screen.getByRole('region', { name: 'Field map' })
+    const region = screen.getByRole('region', { name: 'Mapa do terreno' })
     expect(region).toContainElement(photoImg())
     expect(photoImg()).toHaveAttribute('src', '/placeholder-field.svg')
   })
@@ -65,16 +65,16 @@ describe('FieldMap', () => {
     setViewport(390, 700)
     render(<FieldMap photo={photo} />)
     const fitted = parseFloat(photoImg().style.width)
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Aproximar' }))
     await waitFor(() => expect(parseFloat(photoImg().style.width)).toBeGreaterThan(fitted))
 
-    await userEvent.click(screen.getByRole('button', { name: /whole field/i }))
+    await userEvent.click(screen.getByRole('button', { name: /terreno todo/i }))
     await waitFor(() => expect(parseFloat(photoImg().style.width)).toBeCloseTo(fitted, 0))
   })
 
   it('does not break before the map has a size (hidden or not laid out)', async () => {
     render(<FieldMap photo={photo} />)
-    await userEvent.click(screen.getByRole('button', { name: /whole field/i }))
+    await userEvent.click(screen.getByRole('button', { name: /terreno todo/i }))
     expect(photoImg()).toBeInTheDocument()
   })
 })

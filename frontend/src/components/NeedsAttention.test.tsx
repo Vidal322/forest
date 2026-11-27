@@ -43,25 +43,25 @@ describe('attention', () => {
   })
 
   it('says how many zones need attention', () => {
-    expect(attentionLabel(0)).toBe('✓ Nothing needs attention')
-    expect(attentionLabel(1)).toBe('1 zone needs attention')
-    expect(attentionLabel(4)).toBe('4 zones need attention')
+    expect(attentionLabel(0)).toBe('✓ Nenhuma zona precisa de nada')
+    expect(attentionLabel(1)).toBe('1 zona precisa de atenção')
+    expect(attentionLabel(4)).toBe('4 zonas precisam de atenção')
   })
 
   it('lists each group with its count, and picks a zone on tap', async () => {
     const onPick = vi.fn<(z: Zone) => void>()
     render(<NeedsAttention plots={[testPlot]} summary={attention(zones, today)} today={today} onPick={onPick} />)
-    const water = screen.getByRole('region', { name: 'Need water: 2' })
-    expect(within(water).getAllByRole('button')[0]).toHaveTextContent(`Dry 10 days, 1 task${testPlot.name} · dry 17 days`)
-    expect(screen.getByRole('region', { name: 'Not sown yet: 1' })).toBeInTheDocument()
-    const tasks = screen.getByRole('region', { name: 'Open tasks: 2' })
-    expect(within(tasks).getByRole('button', { name: /Path, 2 tasks.*2 open tasks/ })).toBeInTheDocument()
+    const water = screen.getByRole('region', { name: 'Por regar: 2' })
+    expect(within(water).getAllByRole('button')[0]).toHaveTextContent(`Dry 10 days, 1 task${testPlot.name} · sem rega há 17 dias`)
+    expect(screen.getByRole('region', { name: 'Ainda sem nada: 1' })).toBeInTheDocument()
+    const tasks = screen.getByRole('region', { name: 'Tarefas por fazer: 2' })
+    expect(within(tasks).getByRole('button', { name: /Path, 2 tasks.*2 tarefas por fazer/ })).toBeInTheDocument()
     await userEvent.click(within(tasks).getByRole('button', { name: /Path, 2 tasks/ }))
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ label: 'Path, 2 tasks' }))
   })
 
   it('says when nothing needs attention', () => {
     render(<NeedsAttention plots={[testPlot]} summary={attention(zones.slice(0, 1), today)} today={today} onPick={() => {}} />)
-    expect(screen.getByText(/No zone needs water or sowing/)).toBeInTheDocument()
+    expect(screen.getByText(/Nenhuma zona está por regar ou por semear/)).toBeInTheDocument()
   })
 })

@@ -84,7 +84,7 @@ export function DrawLayer({
             icon={i === selected ? selectedIcon : cornerIcon}
             draggable
             keyboard={false}
-            title={`Corner ${i + 1}: drag to move, tap to select`}
+            title={`Canto ${i + 1}: arrasta para mover, toca para escolher`}
             eventHandlers={{
               click: (e: LeafletEvent) => {
                 DomEvent.stopPropagation(e)

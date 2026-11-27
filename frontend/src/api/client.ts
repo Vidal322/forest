@@ -73,8 +73,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     res = await fetch(path, { ...init, signal, headers: h })
   } catch (err) {
     if (callerSignal?.aborted) throw callerSignal.reason ?? err // the caller cancelled: not an error to show
-    if (timeout.aborted) throw new ApiError(0, 'timeout', 'The server took too long to answer', null)
-    throw new ApiError(0, 'network', 'Could not reach the server', null)
+    if (timeout.aborted) throw new ApiError(0, 'timeout', 'O servidor demorou demasiado a responder', null)
+    throw new ApiError(0, 'network', 'Não foi possível chegar ao servidor', null)
   }
 
   const requestId = res.headers.get('X-Request-Id')
@@ -82,7 +82,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!res.ok) {
     let code = 'unknown'
-    let message = `Request failed (${res.status})`
+    let message = `O pedido falhou (${res.status})`
     let field: string | null = null
     try {
       const body = JSON.parse(text) as ErrorBody
@@ -99,7 +99,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   try {
     return JSON.parse(text) as T
   } catch {
-    throw new ApiError(res.status, 'bad_response', 'Unexpected response from the server', requestId)
+    throw new ApiError(res.status, 'bad_response', 'Resposta inesperada do servidor', requestId)
   }
 }
 
@@ -114,14 +114,14 @@ export async function apiDownload(path: string, type: string, timeoutMs = 30_000
   try {
     res = await fetch(path, { signal: timeout, cache: 'no-store' })
   } catch {
-    if (timeout.aborted) throw new ApiError(0, 'timeout', 'The server took too long to answer', null)
-    throw new ApiError(0, 'network', 'Could not reach the server', null)
+    if (timeout.aborted) throw new ApiError(0, 'timeout', 'O servidor demorou demasiado a responder', null)
+    throw new ApiError(0, 'network', 'Não foi possível chegar ao servidor', null)
   }
   const requestId = res.headers.get('X-Request-Id')
   if (!res.ok) {
     // the usual {"error": …} body
     let code = 'unknown'
-    let message = `Request failed (${res.status})`
+    let message = `O pedido falhou (${res.status})`
     try {
       const body = (await res.json()) as ErrorBody
       if (typeof body.error?.code === 'string') code = body.error.code
@@ -132,7 +132,7 @@ export async function apiDownload(path: string, type: string, timeoutMs = 30_000
     throw new ApiError(res.status, code, message, requestId)
   }
   if (!(res.headers.get('Content-Type') ?? '').startsWith(type)) {
-    throw new ApiError(res.status, 'bad_response', 'Unexpected response from the server', requestId)
+    throw new ApiError(res.status, 'bad_response', 'Resposta inesperada do servidor', requestId)
   }
   const blob = await res.blob()
   const filename = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? null

@@ -391,3 +391,13 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   stats screenshot read at phone size. Repeating the whole suite with --repeat-each=3 collides on fixed names in other
   specs ("Display zone", "Old sowing"); not touched.
 - Follow-ups: optional `scroll-margin-top` on stats cards; e2e specs that reuse fixed names break under repeat-each.
+
+## 2026-11-27 · P1 Portuguese (pt-PT) in the frontend — merged
+- Change: every page, button, empty state, error, confirmation, aria-label, title and alt text is in European
+  Portuguese ("tu"). `<html lang="pt-PT">`, PWA name "Forest — registo do terreno", pt-PT dates ("2 nov", "22 de novembro",
+  "hoje", "há 5 dias") and numbers ("0,41 ha") through `domain/dates.ts` and `domain/numbers.ts`. Leaflet zoom buttons
+  translated. Desktop top bar shows "Terreno" to fit. New `portuguese.test.tsx` and `portuguese.e2e.ts`.
+- Review: no blocking findings. Minor: zone page highlights "Mais" in the tab bar (pre-existing); log quantities are
+  integers only, so a decimal comma would be rejected if decimals are ever allowed; API errors and CSV header still English (P1b).
+- Browser check: full e2e suite (14) passed; phone screenshots show Portuguese text, nothing cut off.
+- Follow-ups: P1b (API messages, CSV header; export-csv.e2e still expects English), P2 (emoji, separators, arrows).

@@ -26,16 +26,16 @@ test('a plot’s page: reached from its label on the map and from the stats', as
   await expect(page).toHaveURL(new RegExp(`/plots/${plotId}$`))
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
 
-  const zones = page.getByRole('region', { name: 'Zones' }).getByRole('link')
-  await expect(zones).toHaveText([/^Clareira · 1 open task/, /^Rochas/])
-  await expect(page.getByRole('region', { name: 'To do' })).toContainText('Semear clareira')
-  const recent = page.getByRole('region', { name: 'Recent activity' }).getByRole('link')
+  const zones = page.getByRole('region', { name: 'Zonas' }).getByRole('link')
+  await expect(zones).toHaveText([/^Clareira · 1 tarefa por fazer/, /^Rochas/])
+  await expect(page.getByRole('region', { name: 'Tarefas', exact: true })).toContainText('Semear clareira')
+  const recent = page.getByRole('region', { name: 'Últimos registos' }).getByRole('link')
   await expect(recent).toHaveCount(1)
-  await expect(recent).toContainText('Watered · 200 litres')
+  await expect(recent).toContainText('Rega · 200 litros')
   await shot(page, 'plot-page')
 
   // the stats open at this plot's card, whose name leads back here
-  await page.getByRole('link', { name: `Stats for ${name}` }).click()
+  await page.getByRole('link', { name: `Estatísticas de ${name}` }).click()
   const card = page.getByRole('link', { name })
   await expect(card).toBeInViewport()
   // only the page scrolled to the card: the top bar and the tabs are still where they were (the whole app used to slide up)
@@ -47,7 +47,7 @@ test('a plot’s page: reached from its label on the map and from the stats', as
   await expect(page).toHaveURL(new RegExp(`/plots/${plotId}$`))
 
   // a log entry opens in its zone's history
-  await page.getByRole('region', { name: 'Recent activity' }).getByRole('link').click()
+  await page.getByRole('region', { name: 'Últimos registos' }).getByRole('link').click()
   await expect(page).toHaveURL(new RegExp(`/zones/${wet}#entry-`))
   await expect(page.getByRole('heading', { level: 1, name: 'Rochas' })).toBeVisible()
 })

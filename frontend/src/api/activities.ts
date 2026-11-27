@@ -41,12 +41,13 @@ export interface ActivityInput {
   base_version: number | null
 }
 
-export const ACTIVITY: Record<ActivityType, { label: string; past: string; icon: string; unit: QuantityUnit | null }> = {
-  watering: { label: 'Watered', past: 'watered', icon: '💧', unit: 'litres' },
-  sowing: { label: 'Sowed', past: 'sowed', icon: '🕳️', unit: 'holes' },
-  planting: { label: 'Planted', past: 'planted', icon: '🌱', unit: 'trees' },
-  fertilizing: { label: 'Fertilized', past: 'fertilized', icon: '🧪', unit: 'kg' },
-  other: { label: 'Other', past: 'logged', icon: '•', unit: null },
+/** `label` names the kind ("Rega"); `noun` goes after a verb ("Guardar rega"), `saved` confirms it. */
+export const ACTIVITY: Record<ActivityType, { label: string; noun: string; saved: string; icon: string; unit: QuantityUnit | null }> = {
+  watering: { label: 'Rega', noun: 'rega', saved: 'Rega guardada', icon: '💧', unit: 'litres' },
+  sowing: { label: 'Sementeira', noun: 'sementeira', saved: 'Sementeira guardada', icon: '🕳️', unit: 'holes' },
+  planting: { label: 'Plantação', noun: 'plantação', saved: 'Plantação guardada', icon: '🌱', unit: 'trees' },
+  fertilizing: { label: 'Adubação', noun: 'adubação', saved: 'Adubação guardada', icon: '🧪', unit: 'kg' },
+  other: { label: 'Outro', noun: 'registo', saved: 'Registo guardado', icon: '•', unit: null },
 }
 
 /** Units a quantity per zone can be in, by type (the server refuses others; totals add these up). */
@@ -60,9 +61,9 @@ export const ZONE_UNITS: Record<ActivityType, QuantityUnit[]> = {
 
 export const UNIT_LABEL: Record<QuantityUnit, string> = {
   holes: 'covas',
-  seeds: 'seeds',
-  trees: 'trees',
-  litres: 'litres',
+  seeds: 'sementes',
+  trees: 'árvores',
+  litres: 'litros',
   kg: 'kg',
 }
 
@@ -120,11 +121,11 @@ export const activities = defineEntity<Activity, ActivityInput>({
   versioned: true,
 })
 
-/** "Clareira", "Clareira and Rochas", "A, B and C", or "4 zones" */
+/** "Clareira", "Clareira e Rochas", "A, B e C", or "4 zonas" */
 export function zonesPhrase(names: string[]): string {
   if (names.length === 1) return names[0]!
-  if (names.length <= 3) return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-  return `${names.length} zones`
+  if (names.length <= 3) return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+  return `${names.length} zonas`
 }
 
 /** The server's default page size for GET /api/activities. */

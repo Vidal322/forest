@@ -103,7 +103,7 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
     setUrl(urlRef.current)
     setPairs([])
     setView('photo')
-    setLocalError(f && f.size > MAX_BYTES ? 'The photo is too big to upload (max 30 MB).' : '')
+    setLocalError(f && f.size > MAX_BYTES ? 'A fotografia é grande demais para enviar (máximo 30 MB).' : '')
   }
 
   const upload = useMutation({
@@ -138,10 +138,10 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (upload.isPending) return
-    if (!file) return setLocalError('Choose the new photo.')
-    if (file.size > MAX_BYTES) return setLocalError('The photo is too big to upload (max 30 MB).')
-    if (tooManyPixels) return setLocalError('The photo has too many pixels (max 12 000 per side, 40 megapixels). Make it smaller first.')
-    if (complete.length < 3) return setLocalError(`Match at least 3 landmarks (${complete.length} so far).`)
+    if (!file) return setLocalError('Escolhe a fotografia nova.')
+    if (file.size > MAX_BYTES) return setLocalError('A fotografia é grande demais para enviar (máximo 30 MB).')
+    if (tooManyPixels) return setLocalError('A fotografia tem píxeis a mais (máximo 12 000 por lado, 40 megapíxeis). Reduz primeiro o tamanho.')
+    if (complete.length < 3) return setLocalError(`Marca pelo menos 3 pontos de referência (para já, ${complete.length}).`)
     setLocalError('')
     const body = new FormData()
     body.append('photo', file)
@@ -154,7 +154,7 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
         setCaptured('')
         setInputKey((k) => k + 1)
         upload.reset()
-        onDone(`New photo aligned: it ${fitLabel(p)}. The map now shows it under your drawings.`)
+        onDone(`Fotografia nova alinhada. ${fitLabel(p)}. O mapa mostra-a agora por baixo dos teus desenhos.`)
       },
     })
   }
@@ -162,26 +162,26 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
   const error = localError || (upload.error ? friendlyError(upload.error) : '')
   const step =
     waitingFor === 'photo'
-      ? `Landmark ${pairs.length + 1}: tap it on the new photo.`
-      : `Landmark ${open + 1}: now tap the same spot on the current map.`
+      ? `Ponto ${pairs.length + 1}: toca nele na fotografia nova.`
+      : `Ponto ${open + 1}: agora toca no mesmo sítio no mapa atual.`
 
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.head}>
-      <h2 id={ids.head}>Newer photo? Align it</h2>
+      <h2 id={ids.head}>Fotografia mais recente? Alinha-a</h2>
       <p className="muted small">
-        Plots and zones stay where they are. Tap the same landmark — a rock, a path bend, a building corner — first on the
-        new photo, then on the current map. Do this at least 3 times, spread over the field. (This needs pointing at the
-        pictures; it can't be done by keyboard.)
+        As parcelas e as zonas ficam onde estão. Toca no mesmo ponto de referência (uma pedra, uma curva do caminho, o canto
+        de um edifício) primeiro na fotografia nova e depois no mapa atual. Faz isto pelo menos 3 vezes, espalhadas pelo
+        terreno. (É preciso apontar nas imagens; não dá para fazer com o teclado.)
       </p>
       <label className="photo-pick">
         <input key={inputKey} id={ids.file} type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => pick(e.target.files?.[0] ?? null)} />
         <span aria-hidden="true">📷</span>
-        <span>{file ? `${file.name} — tap to change` : 'Choose the newer photo'}</span>
+        <span>{file ? `${file.name} (toca para mudar)` : 'Escolher a fotografia mais recente'}</span>
       </label>
 
       {size === 'unreadable' && (
         <p className="form__error" role="alert">
-          That file isn't a photo the app can read. Use a PNG, JPG or WebP image.
+          Esse ficheiro não é uma fotografia que a aplicação consiga ler. Usa uma imagem PNG, JPG ou WebP.
         </p>
       )}
 
@@ -191,10 +191,10 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
             {step}
           </p>
           <fieldset className="row align-switch">
-            <legend className="visually-hidden">Show</legend>
+            <legend className="visually-hidden">Mostrar</legend>
             {(['photo', 'frame'] as const).map((v) => (
               <button key={v} type="button" className={`chip${view === v ? ' is-on' : ''}`} aria-pressed={view === v} onClick={() => setView(v)}>
-                {v === 'photo' ? 'New photo' : 'Current map'}
+                {v === 'photo' ? 'Fotografia nova' : 'Mapa atual'}
               </button>
             ))}
           </fieldset>
@@ -206,8 +206,8 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
                   points={photoPoints}
                   openIndex={open}
                   bounds={imageSize}
-                  onTap={(p) => (waitingFor === 'photo' ? tap('photo', p) : setLocalError('Switch to the current map to place this landmark there.'))}
-                  onOutside={() => setLocalError('Tap on the photo itself.')}
+                  onTap={(p) => (waitingFor === 'photo' ? tap('photo', p) : setLocalError('Passa para o mapa atual para marcar lá este ponto.'))}
+                  onOutside={() => setLocalError('Toca dentro da fotografia.')}
                 />
               </FieldMap>
             ) : (
@@ -216,32 +216,32 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
                   points={framePoints}
                   openIndex={open}
                   bounds={{ width: current.width, height: current.height }}
-                  onTap={(p) => (waitingFor === 'frame' ? tap('frame', p) : setLocalError('First tap the landmark on the new photo.'))}
-                  onOutside={() => setLocalError('Tap on the map itself.')}
+                  onTap={(p) => (waitingFor === 'frame' ? tap('frame', p) : setLocalError('Primeiro toca no ponto na fotografia nova.'))}
+                  onOutside={() => setLocalError('Toca dentro do mapa.')}
                 />
               </FieldMap>
             )}
           </div>
           <div className="row" aria-live="polite">
             <span className="muted">
-              {complete.length} landmark{complete.length === 1 ? '' : 's'} matched
-              {complete.length < 3 ? ' — at least 3 needed' : complete.length < 4 ? ' — a 4th makes it more precise' : ''}
+              {complete.length === 1 ? '1 ponto de referência marcado' : `${complete.length} pontos de referência marcados`}
+              {complete.length < 3 ? ' (são precisos pelo menos 3)' : complete.length < 4 ? ' (um 4.º torna-o mais preciso)' : ''}
             </span>
           </div>
           {pairs.length > 0 && (
-            <ul className="pair-chips" aria-label="Landmarks">
+            <ul className="pair-chips" aria-label="Pontos de referência">
               {pairs.map((p, i) => (
                 <li key={i}>
-                  <button type="button" className="chip" onClick={() => removePair(i)} aria-label={`Remove landmark ${i + 1}`}>
+                  <button type="button" className="chip" onClick={() => removePair(i)} aria-label={`Tirar o ponto ${i + 1}`}>
                     {i + 1}
-                    {p.frame ? '' : ' (half)'} ✕
+                    {p.frame ? '' : ' (só num)'} ✕
                   </button>
                 </li>
               ))}
             </ul>
           )}
           <label htmlFor={ids.date}>
-            When was the photo taken? <span className="muted">(optional)</span>
+            Quando foi tirada a fotografia? <span className="muted">(opcional)</span>
           </label>
           <input id={ids.date} type="date" value={captured} onChange={(e) => setCaptured(e.target.value)} />
         </>
@@ -254,7 +254,7 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
       )}
       {file && size !== 'unreadable' && (
         <button type="submit" className="btn btn-primary" disabled={upload.isPending}>
-          {upload.isPending ? 'Uploading…' : 'Use the new photo'}
+          {upload.isPending ? 'A enviar…' : 'Usar a fotografia nova'}
         </button>
       )}
     </form>

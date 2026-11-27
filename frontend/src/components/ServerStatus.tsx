@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { useServerStatus, type ServerStatus as Status } from '../hooks/useServerStatus'
 
 const LABEL: Record<Status, string> = {
-  checking: 'Connecting…',
-  online: 'Online',
-  'no-network': 'No connection',
-  unreachable: 'Server unreachable',
+  checking: 'A ligar…',
+  online: 'Com rede',
+  'no-network': 'Sem rede',
+  unreachable: 'Servidor sem resposta',
 }
 
 // (Say "saved on this device" here once the offline queue exists.)
 const ANNOUNCE: Partial<Record<Status, string>> = {
-  'no-network': 'No connection. This device is offline; it will reconnect automatically.',
-  unreachable: "Server unreachable. It isn't answering right now; retrying automatically.",
+  'no-network': 'Sem rede. Este aparelho está sem ligação; volta a ligar-se sozinho.',
+  unreachable: 'Servidor sem resposta. Não está a responder agora; a tentar outra vez sozinho.',
 }
 
 /** Small pill in the top bar showing whether the API is reachable. */
@@ -23,7 +23,7 @@ export function ServerStatus({ intervalMs }: { intervalMs?: number }) {
     <span className={`status status--${status}`}>
       <span className="status__dot" aria-hidden="true" />
       {LABEL[status]}
-      {/* Screen readers hear only problems and recoveries — not "Connecting… Online" on every load. */}
+      {/* Screen readers hear only problems and recoveries — not "A ligar… Com rede" on every load. */}
       <output className="visually-hidden" aria-live="polite">
         {announcement}
       </output>
@@ -31,7 +31,7 @@ export function ServerStatus({ intervalMs }: { intervalMs?: number }) {
   )
 }
 
-const BACK_ONLINE = 'Back online.'
+const BACK_ONLINE = 'Com rede outra vez.'
 
 /** What the live region should say, updated only when the status changes. */
 function useAnnouncement(status: Status): string {

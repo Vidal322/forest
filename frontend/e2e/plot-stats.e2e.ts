@@ -30,12 +30,12 @@ test('plot stats show watering coverage and activity per week, without sideways 
 
   await page.goto('/stats')
   const card = page.getByRole('region', { name })
-  await expect(card).toContainText('2 of 3 cultivation zones (67%)')
-  const weeks = card.getByRole('list', { name: /Activities logged per week/ }).getByRole('listitem')
+  await expect(card).toContainText('2 de 3 zonas de cultivo (67 %)')
+  const weeks = card.getByRole('list', { name: /Registos por semana/ }).getByRole('listitem')
   await expect(weeks).toHaveCount(8)
-  await expect(weeks.nth(7)).toContainText('last 7 days: 1 activity')
-  await expect(weeks.nth(5)).toContainText('14–20 days ago: 1 activity')
-  await expect(weeks.nth(2)).toContainText('35–41 days ago: 1 activity')
+  await expect(weeks.nth(7)).toContainText('últimos 7 dias: 1 registo')
+  await expect(weeks.nth(5)).toContainText('há 14 a 20 dias: 1 registo')
+  await expect(weeks.nth(2)).toContainText('há 35 a 41 dias: 1 registo')
 
   const overflow = await page.evaluate<number>('document.documentElement.scrollWidth - document.documentElement.clientWidth')
   expect(overflow).toBeLessThanOrEqual(0)

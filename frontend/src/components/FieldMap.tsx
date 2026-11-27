@@ -1,7 +1,7 @@
 import 'leaflet/dist/leaflet.css'
 import { Browser, type Map as LeafletMap } from 'leaflet'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ImageOverlay, MapContainer } from 'react-leaflet'
+import { ImageOverlay, MapContainer, ZoomControl } from 'react-leaflet'
 import { isIdentity, type Affine } from '../map/affine'
 import { AffineImage } from '../map/AffineImage'
 import { FRAME_CRS, fitZoom, frameBounds } from '../map/frame'
@@ -74,7 +74,7 @@ export function FieldMap({
   }, [map, bounds, width, height])
 
   return (
-    <section className="fieldmap" aria-label="Field map">
+    <section className="fieldmap" aria-label="Mapa do terreno">
       <MapContainer
         ref={setMap}
         className="fieldmap__map"
@@ -89,19 +89,22 @@ export function FieldMap({
         zoomSnap={0.25}
         zoomDelta={0.5}
         attributionControl={false}
+        // Leaflet's own control is titled in English
+        zoomControl={false}
         scrollWheelZoom={wheelZoom}
         doubleClickZoom={doubleTapZoom}
       >
+        <ZoomControl position="topleft" zoomInTitle="Aproximar" zoomOutTitle="Afastar" />
         {photo.image && !isIdentity(photo.image.affine) ? (
           <AffineImage
             url={photo.url}
             width={photo.image.width}
             height={photo.image.height}
             affine={photo.image.affine}
-            alt="Aerial photo of the field"
+            alt="Fotografia aérea do terreno"
           />
         ) : (
-          <ImageOverlay url={photo.url} bounds={bounds} alt="Aerial photo of the field" />
+          <ImageOverlay url={photo.url} bounds={bounds} alt="Fotografia aérea do terreno" />
         )}
         {children}
       </MapContainer>
@@ -111,7 +114,7 @@ export function FieldMap({
         onClick={() => map?.fitBounds(bounds, { animate: !prefersReducedMotion() })}
         disabled={!map}
       >
-        <span aria-hidden="true">⤢</span> Whole field
+        <span aria-hidden="true">⤢</span> Terreno todo
       </button>
     </section>
   )

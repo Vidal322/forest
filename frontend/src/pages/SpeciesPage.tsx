@@ -58,7 +58,7 @@ export function SpeciesPage() {
     <div className="page">
       <div className="row">
         <h1 ref={heading} tabIndex={-1}>
-          Species
+          Espécies
         </h1>
         <span className="spacer" />
         {editing === null && (
@@ -69,11 +69,11 @@ export function SpeciesPage() {
             className="btn btn-primary"
             onClick={() => open({ mode: 'add' }, 'species-add')}
           >
-            ＋ Add species
+            ＋ Acrescentar espécie
           </button>
         )}
       </div>
-      <p className="muted">Picked when you log a planting or a sowing.</p>
+      <p className="muted">Escolhes estas espécies quando registas uma plantação ou uma sementeira.</p>
 
       <Flash flash={flash} />
 
@@ -87,40 +87,40 @@ export function SpeciesPage() {
       )}
 
       {offlineNoData && (
-        <p className="note">No connection. The species list will appear as soon as there is signal.</p>
+        <p className="note">Sem rede. A lista de espécies aparece assim que houver rede.</p>
       )}
-      {list.isPending && !offlineNoData && <p className="muted">Loading species…</p>}
+      {list.isPending && !offlineNoData && <p className="muted">A carregar as espécies…</p>}
       {list.isError && (
         <div className="note warn" role="alert">
           {friendlyError(list.error)}{' '}
           <button type="button" className="btn" onClick={() => void list.refetch()}>
-            Try again
+            Tentar outra vez
           </button>
         </div>
       )}
 
       {list.data && list.data.length === 0 && editing === null && (
         <div className="empty">
-          <p>No species yet.</p>
-          <p className="muted">Add the trees and seeds you use, e.g. “Quercus suber — sobreiro”.</p>
+          <p>Ainda não há espécies.</p>
+          <p className="muted">Acrescenta as árvores e as sementes que usas, por exemplo “Quercus suber”, sobreiro.</p>
         </div>
       )}
 
       {list.data && list.data.length > 0 && (
         <>
           <label className="search">
-            <span className="visually-hidden">Search species</span>
+            <span className="visually-hidden">Procurar espécies</span>
             <input
               type="search"
-              placeholder="🔍 Search species"
+              placeholder="🔍 Procurar espécies"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
           {shown.length === 0 ? (
-            <p className="muted">No species match “{query}”.</p>
+            <p className="muted">Nenhuma espécie corresponde a “{query}”.</p>
           ) : (
-            <ul className="list" aria-label="Species">
+            <ul className="list" aria-label="Espécies">
               {shown.map((s) => (
                 <li key={s.id}>
                   <button
@@ -130,7 +130,7 @@ export function SpeciesPage() {
                     // one form at a time, so a half-typed edit is never thrown away
                     disabled={editing !== null}
                     onClick={() => open({ mode: 'edit', species: s }, `species-${s.id}`)}
-                    aria-label={`Edit ${s.scientific_name}`}
+                    aria-label={`Editar ${s.scientific_name}`}
                     aria-describedby={stats.data ? `species-usage-${s.id}` : undefined}
                   >
                     <span className="list__title">
@@ -152,12 +152,12 @@ export function SpeciesPage() {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** "2 zones · 120 trees alive · sown 28 Sep · planted 3 Oct", or "Not used yet". */
+/** "2 zonas · 120 árvores vivas · semeada a 28 set · plantada a 3 out", or "Ainda não foi usada". */
 function usage(st: SpeciesStats | undefined): string {
-  if (!st || (st.zone_count === 0 && st.alive_tree_count === 0 && !st.last_sown_on && !st.last_planted_on)) return 'Not used yet'
-  const parts = [plural(st.zone_count, 'zone', 'zones'), `${plural(st.alive_tree_count, 'tree', 'trees')} alive`]
-  if (st.last_sown_on) parts.push(`sown ${formatDay(st.last_sown_on)}`)
-  if (st.last_planted_on) parts.push(`planted ${formatDay(st.last_planted_on)}`)
+  if (!st || (st.zone_count === 0 && st.alive_tree_count === 0 && !st.last_sown_on && !st.last_planted_on)) return 'Ainda não foi usada'
+  const parts = [plural(st.zone_count, 'zona', 'zonas'), plural(st.alive_tree_count, 'árvore viva', 'árvores vivas')]
+  if (st.last_sown_on) parts.push(`semeada a ${formatDay(st.last_sown_on)}`)
+  if (st.last_planted_on) parts.push(`plantada a ${formatDay(st.last_planted_on)}`)
   return parts.join(' · ')
 }
 
@@ -217,7 +217,7 @@ function SpeciesForm({
     if (busy) return
     const name = scientific.trim()
     if (!name) {
-      setLocalError('Scientific name is required.')
+      setLocalError('Escreve o nome científico.')
       firstInput.current?.focus()
       return
     }
@@ -227,22 +227,22 @@ function SpeciesForm({
         id: species?.id ?? newId(),
         input: { scientific_name: name, common_name: common.trim() || null, notes: notes.trim() || null },
       },
-      { onSuccess: () => onDone(species ? `Saved ${name}.` : `Added ${name}.`) },
+      { onSuccess: () => onDone(species ? `Espécie guardada: ${name}.` : `Espécie acrescentada: ${name}.`) },
     )
   }
 
   const remove = () => {
     if (!species || busy) return
-    del.mutate(species.id, { onSuccess: () => onDone(`Deleted ${species.scientific_name}.`) })
+    del.mutate(species.id, { onSuccess: () => onDone(`Espécie apagada: ${species.scientific_name}.`) })
   }
 
   const describedBy = (field: string) => (errorText && (fieldError === field || (localError && field === 'scientific_name')) ? ids.err : undefined)
 
   return (
     <form className="card form" onSubmit={submit} aria-labelledby={ids.title} noValidate>
-      <h2 id={ids.title}>{species ? 'Edit species' : 'Add species'}</h2>
+      <h2 id={ids.title}>{species ? 'Editar espécie' : 'Acrescentar espécie'}</h2>
 
-      <label htmlFor={ids.sci}>Scientific name</label>
+      <label htmlFor={ids.sci}>Nome científico</label>
       <input
         id={ids.sci}
         ref={firstInput}
@@ -259,7 +259,7 @@ function SpeciesForm({
       />
 
       <label htmlFor={ids.common}>
-        Common name <span className="muted">(optional)</span>
+        Nome comum <span className="muted">(opcional)</span>
       </label>
       <input
         id={ids.common}
@@ -272,14 +272,14 @@ function SpeciesForm({
       />
 
       <label htmlFor={ids.notes}>
-        Notes <span className="muted">(optional)</span>
+        Notas <span className="muted">(opcional)</span>
       </label>
       <textarea
         id={ids.notes}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         rows={2}
-        placeholder="e.g. likes wet soil"
+        placeholder="por exemplo, gosta de solo húmido"
         maxLength={2000}
         aria-invalid={fieldError === 'notes' || undefined}
         aria-describedby={describedBy('notes')}
@@ -293,13 +293,13 @@ function SpeciesForm({
 
       {confirmDelete ? (
         <fieldset className="confirm">
-          <legend className="visually-hidden">Confirm delete</legend>
+          <legend className="visually-hidden">Confirmar que apagas</legend>
           <p>
-            Delete <i>{species?.scientific_name}</i>? Past plantings and sowings keep it.
+            Apagar <i>{species?.scientific_name}</i>? As plantações e as sementeiras que já registaste continuam com ela.
           </p>
           <div className="row">
             <button type="button" className="btn btn-danger" onClick={remove} disabled={busy}>
-              {delState.busy ? 'Deleting…' : 'Delete'}
+              {delState.busy ? 'A apagar…' : 'Apagar'}
             </button>
             <button
               ref={keepButton}
@@ -311,17 +311,17 @@ function SpeciesForm({
               }}
               disabled={busy}
             >
-              Keep it
+              Não apagar
             </button>
           </div>
         </fieldset>
       ) : (
         <div className="row form__actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {saveState.busy ? 'Saving…' : species ? 'Save' : 'Add'}
+            {saveState.busy ? 'A guardar…' : species ? 'Guardar' : 'Acrescentar'}
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-            Cancel
+            Cancelar
           </button>
           <span className="spacer" />
           {species && (
@@ -335,7 +335,7 @@ function SpeciesForm({
               }}
               disabled={busy}
             >
-              Delete
+              Apagar
             </button>
           )}
         </div>

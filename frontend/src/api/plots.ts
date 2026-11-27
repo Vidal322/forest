@@ -121,13 +121,17 @@ export function withStateOf(zones: Zone[], past: Zone[]): Zone[] {
 
 /** The zone's label, or a description for unlabelled zones. */
 export function zoneName(z: Zone): string {
-  return z.label ?? (z.kind === 'path' ? 'Path' : z.kind === 'other' ? 'Unnamed area' : 'Unnamed zone')
+  return z.label ?? (z.kind === 'path' ? 'Caminho' : z.kind === 'other' ? 'Área sem nome' : 'Zona sem nome')
 }
 
-export const KIND_LABEL: Record<ZoneKind, string> = { cultivation: 'Planting', path: 'Path', other: 'Other' }
+export const KIND_LABEL: Record<ZoneKind, string> = { cultivation: 'Cultivo', path: 'Caminho', other: 'Outro' }
 
+const HA_2 = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const HA_1 = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+/** "0,41 ha", "12,5 ha". */
 export function formatHa(ha: number): string {
-  return `${ha < 10 ? ha.toFixed(2) : ha.toFixed(1)} ha`
+  return `${(ha < 10 ? HA_2 : HA_1).format(ha)} ha`
 }
 
 type Related = { id?: string; plot_id?: string | null; zone_id?: string | null; species_id?: string }

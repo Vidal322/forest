@@ -94,20 +94,20 @@ export function ActivityEditForm({
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
-    if (zoneIds.length === 0) return setLocalError('Keep at least one zone (or delete the entry).')
-    if (!day || day > today) return setLocalError("The day can't be after today.")
+    if (zoneIds.length === 0) return setLocalError('Deixa pelo menos uma zona (ou apaga o registo).')
+    if (!day || day > today) return setLocalError('O dia não pode ser depois de hoje.')
     const zoneRows = []
     for (const zoneId of zoneIds) {
       const c = type === 'other' && !unit ? null : parseCount(counts[zoneId] ?? '')
-      if (c === 'bad') return setLocalError('Quantities are whole numbers, like 100.')
-      if (c !== null && !unit) return setLocalError('Choose a unit for the quantity.')
+      if (c === 'bad') return setLocalError('As quantidades são números inteiros, como 100.')
+      if (c !== null && !unit) return setLocalError('Escolhe a unidade da quantidade.')
       zoneRows.push({ zone_id: zoneId, quantity: c, unit: c === null ? null : unit })
     }
     const sp = []
     if (hasSpecies) {
       for (const [id, text] of Object.entries(chosenSpecies)) {
         const c = parseCount(text)
-        if (c === 'bad') return setLocalError('Counts per species are whole numbers.')
+        if (c === 'bad') return setLocalError('As quantidades por espécie são números inteiros.')
         const before = activity.species.find((s) => s.species_id === id)
         sp.push({
           species_id: id,
@@ -123,28 +123,28 @@ export function ActivityEditForm({
         id: activity.id,
         input: { type, performed_on: day, notes: notes.trim() || null, zones: zoneRows, species: sp, base_version: baseVersion },
       },
-      { onSuccess: () => onDone('Entry saved.') },
+      { onSuccess: () => onDone('Registo guardado.') },
     )
   }
 
   return (
     <form className="card" onSubmit={submit} noValidate aria-labelledby={ids.head}>
       <h2 id={ids.head} ref={heading} tabIndex={-1}>
-        Edit entry
+        Editar registo
       </h2>
       {(droppedZones > 0 || droppedSpecies > 0) && (
         <p className="note">
           {[
-            droppedZones > 0 && `${droppedZones} deleted zone${droppedZones === 1 ? '' : 's'}`,
-            droppedSpecies > 0 && `${droppedSpecies} deleted species`,
+            droppedZones > 0 && (droppedZones === 1 ? '1 zona apagada' : `${droppedZones} zonas apagadas`),
+            droppedSpecies > 0 && (droppedSpecies === 1 ? '1 espécie apagada' : `${droppedSpecies} espécies apagadas`),
           ]
             .filter(Boolean)
-            .join(' and ')}{' '}
-          will be left out when you save.
+            .join(' e ')}{' '}
+          {droppedZones + droppedSpecies === 1 ? 'fica de fora quando guardares.' : 'ficam de fora quando guardares.'}
         </p>
       )}
       <fieldset className="chips-field">
-        <legend>What was done</legend>
+        <legend>O que foi feito</legend>
         <div className="row">
           {TYPES.map((t) => (
             <button key={t} type="button" className={`chip${type === t ? ' is-on' : ''}`} aria-pressed={type === t} onClick={() => chooseType(t)}>
@@ -153,18 +153,18 @@ export function ActivityEditForm({
           ))}
         </div>
       </fieldset>
-      <label htmlFor={ids.day}>Day</label>
+      <label htmlFor={ids.day}>Dia</label>
       <input id={ids.day} type="date" value={day} max={today} onChange={(e) => setDay(e.target.value)} />
 
       <fieldset className="chips-field">
-        <legend>Zones, and the quantity in each (optional)</legend>
+        <legend>Zonas, e a quantidade em cada uma (opcional)</legend>
         {zoneIds.map((zoneId) => {
           const name = zoneName(liveZone.get(zoneId)!)
           return (
             <div key={zoneId} className="per-zone__row">
               <label htmlFor={`${ids.unit}-${zoneId}`}>
                 {name}
-                <span className="visually-hidden">, {unit ? UNIT_LABEL[unit] : 'quantity'}</span>
+                <span className="visually-hidden">, {unit ? UNIT_LABEL[unit] : 'quantidade'}</span>
               </label>
               <span className="row">
                 <input
@@ -174,7 +174,7 @@ export function ActivityEditForm({
                   onChange={(e) => setCounts({ ...counts, [zoneId]: e.target.value })}
                 />
                 {zoneIds.length > 1 && (
-                  <button type="button" className="btn btn-icon" aria-label={`Remove ${name} from this entry`} onClick={() => setZoneIds((z) => z.filter((x) => x !== zoneId))}>
+                  <button type="button" className="btn btn-icon" aria-label={`Tirar ${name} deste registo`} onClick={() => setZoneIds((z) => z.filter((x) => x !== zoneId))}>
                     ✕
                   </button>
                 )}
@@ -184,11 +184,11 @@ export function ActivityEditForm({
         })}
         {zones.some((z) => !zoneIds.includes(z.id)) && (
           <select
-            aria-label="Add a zone to this entry"
+            aria-label="Juntar uma zona a este registo"
             value=""
             onChange={(e) => e.target.value && setZoneIds((z) => [...z, e.target.value])}
           >
-            <option value="">＋ Add a zone…</option>
+            <option value="">＋ Juntar uma zona…</option>
             {zones
               .filter((z) => !zoneIds.includes(z.id))
               .map((z) => (
@@ -199,10 +199,10 @@ export function ActivityEditForm({
           </select>
         )}
         <label htmlFor={ids.unit} className="visually-hidden">
-          Unit
+          Unidade
         </label>
         <select id={ids.unit} className="unit-select" value={unit ?? ''} onChange={(e) => setUnit((e.target.value || null) as QuantityUnit | null)}>
-          {(!unit || !units.includes(unit)) && <option value="">unit…</option>}
+          {(!unit || !units.includes(unit)) && <option value="">unidade…</option>}
           {units.map((u) => (
             <option key={u} value={u}>
               {UNIT_LABEL[u]}
@@ -213,7 +213,7 @@ export function ActivityEditForm({
 
       {hasSpecies && species.length > 0 && (
         <fieldset className="chips-field">
-          <legend>{type === 'sowing' ? 'Seed mix' : 'Species'}</legend>
+          <legend>{type === 'sowing' ? 'Mistura de sementes' : 'Espécies'}</legend>
           <div className="row">
             {species.map((s) => {
               const on = s.id in chosenSpecies
@@ -242,7 +242,7 @@ export function ActivityEditForm({
             return (
               <label key={id} className="per-zone__row">
                 <span>
-                  {s?.common_name ?? s?.scientific_name} — how many {type === 'planting' ? 'trees' : 'seeds'}?
+                  {s?.common_name ?? s?.scientific_name}: quantas {type === 'planting' ? 'árvores' : 'sementes'}?
                 </span>
                 <input inputMode="numeric" value={chosenSpecies[id]} onChange={(e) => setChosenSpecies({ ...chosenSpecies, [id]: e.target.value })} />
               </label>
@@ -252,7 +252,7 @@ export function ActivityEditForm({
       )}
 
       <label htmlFor={ids.notes}>
-        Notes <span className="muted">(optional)</span>
+        Notas <span className="muted">(opcional)</span>
       </label>
       <textarea id={ids.notes} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
 
@@ -261,15 +261,15 @@ export function ActivityEditForm({
           {error}{' '}
           {code === 'version_conflict' && onReload && (
             <button type="button" className="btn btn-small" onClick={onReload}>
-              Load latest
+              Carregar a mais recente
             </button>
           )}
         </p>
       )}
       {confirming ? (
         <fieldset className="confirm">
-          <legend className="visually-hidden">Confirm delete</legend>
-          <p>Delete this entry{activity.zones.length > 1 ? ` (it covers ${activity.zones.length} zones)` : ''}?</p>
+          <legend className="visually-hidden">Confirmar que apagas</legend>
+          <p>Apagar este registo{activity.zones.length > 1 ? ` (abrange ${activity.zones.length} zonas)` : ''}?</p>
           <div className="row">
             <button
               type="button"
@@ -278,27 +278,27 @@ export function ActivityEditForm({
               onClick={() => {
                 // the entry leaves the history at once: close now (a refusal shows in the sync bar)
                 del.mutate(activity.id)
-                onDone('Entry deleted.')
+                onDone('Registo apagado.')
               }}
             >
-              Delete
+              Apagar
             </button>
             <button type="button" className="btn" onClick={() => setConfirming(false)}>
-              Keep it
+              Não apagar
             </button>
           </div>
         </fieldset>
       ) : (
         <div className="row form__actions">
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? 'A guardar…' : 'Guardar'}
           </button>
           <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-            Cancel
+            Cancelar
           </button>
           <span className="spacer" />
           <button type="button" className="btn btn-link-danger" onClick={() => setConfirming(true)} disabled={busy}>
-            Delete
+            Apagar
           </button>
         </div>
       )}

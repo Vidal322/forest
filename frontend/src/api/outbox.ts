@@ -9,8 +9,8 @@ import { isApiError } from './client'
 export const OUTBOX_SCOPE = { id: 'outbox' }
 
 /** Said when a change could not reach the server yet: it is kept and sent later. */
-export const SAVED_ON_PHONE = 'Saved on this phone. It will be sent when there is a connection.'
-export const DELETED_ON_PHONE = 'Deleted on this phone. The server will be told when there is a connection.'
+export const SAVED_ON_PHONE = 'Guardado neste telemóvel. Vai ser enviado quando houver rede.'
+export const DELETED_ON_PHONE = 'Apagado neste telemóvel. O servidor vai saber quando houver rede.'
 
 /** No answer at all (no signal, server down): keep the write and try again later. */
 export function isRetryable(err: unknown): boolean {

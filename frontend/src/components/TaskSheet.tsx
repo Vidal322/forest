@@ -55,7 +55,7 @@ export function TaskSheet({
   // adjusting state during render (React's pattern for reacting to a changed input)
   if (added.length > 0) setOrder(known)
   const shown = here.sort((a, b) => known.indexOf(a.id) - known.indexOf(b.id))
-  const name = zone ? zoneName(zone) : (plot?.name ?? 'Tasks')
+  const name = zone ? zoneName(zone) : (plot?.name ?? 'Tarefas')
 
   return (
     <section className="sheet" aria-labelledby="task-sheet-title">
@@ -64,11 +64,11 @@ export function TaskSheet({
           {name}
         </h2>
         <span className="spacer" />
-        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Close">
+        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Fechar">
           ✕
         </button>
       </div>
-      <p className="muted">{zone ? (plot ? `Tasks in this zone · ${plot.name}` : 'Tasks in this zone') : 'Tasks for the whole plot'}</p>
+      <p className="muted">{zone ? (plot ? `Tarefas desta zona · ${plot.name}` : 'Tarefas desta zona') : 'Tarefas da parcela inteira'}</p>
       <ToastLine
         toast={toast}
         onUndo={() => {
@@ -83,16 +83,16 @@ export function TaskSheet({
           ))}
         </ul>
       ) : (
-        <p className="muted">Nothing left to do here. 🌿</p>
+        <p className="muted">Já não há nada por fazer aqui. 🌿</p>
       )}
       <div className="row form__actions">
         {zone ? (
           <Link className="btn" to={`/zones/${zone.id}`}>
-            History & tasks
+            Histórico e tarefas
           </Link>
         ) : (
           <Link className="btn" to="/tasks">
-            All tasks
+            Todas as tarefas
           </Link>
         )}
       </div>

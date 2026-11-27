@@ -1,3 +1,4 @@
+import { formatNumber } from '../domain/numbers'
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { FieldPhoto } from '../components/FieldMap'
 import { toAffine } from '../map/affine'
@@ -149,6 +150,6 @@ export function useUpdateField() {
 
 /** "1 px ≈ 0.48 m" style scale text (centimetres for very detailed photos). */
 export function formatScale(metresPerUnit: number): string {
-  if (metresPerUnit < 0.1) return `1 px ≈ ${Number((metresPerUnit * 100).toPrecision(2))} cm`
-  return `1 px ≈ ${Number(metresPerUnit.toPrecision(2))} m`
+  if (metresPerUnit < 0.1) return `1 px ≈ ${formatNumber(Number((metresPerUnit * 100).toPrecision(2)))} cm`
+  return `1 px ≈ ${formatNumber(Number(metresPerUnit.toPrecision(2)))} m`
 }

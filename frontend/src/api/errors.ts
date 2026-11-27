@@ -2,28 +2,28 @@ import { isApiError } from './client'
 
 /** How each API input field is called on screen, for error sentences. */
 const FIELD_LABELS: Record<string, string> = {
-  scientific_name: 'Scientific name',
-  common_name: 'Common name',
-  notes: 'Notes',
-  name: 'Name',
-  photo: 'The photo',
-  calibration_line: 'The scale line',
-  calibration_length_m: 'The distance',
-  default_water_interval_days: 'The watering interval',
-  performed_on: 'The date',
-  zones: 'Zones:',
-  species: 'Species:',
-  title: 'The title',
-  zone_id: 'The place',
-  plot_id: 'The plot',
-  kind: 'The kind',
-  status: 'The status',
-  due_on: 'The due date',
-  description: 'The details',
-  label: 'The name',
-  geom: 'The outline',
-  alignment: 'The landmarks',
-  captured_on: 'The photo date',
+  scientific_name: 'O nome científico',
+  common_name: 'O nome comum',
+  notes: 'As notas',
+  name: 'O nome',
+  photo: 'A fotografia',
+  calibration_line: 'A linha da escala',
+  calibration_length_m: 'A distância',
+  default_water_interval_days: 'O intervalo de rega',
+  performed_on: 'O dia',
+  zones: 'Zonas:',
+  species: 'Espécies:',
+  title: 'O título',
+  zone_id: 'O sítio',
+  plot_id: 'A parcela',
+  kind: 'O tipo',
+  status: 'O estado',
+  due_on: 'O prazo',
+  description: 'Os pormenores',
+  label: 'O nome',
+  geom: 'O contorno',
+  alignment: 'Os pontos de referência',
+  captured_on: 'O dia da fotografia',
 }
 
 function sentence(s: string): string {
@@ -33,40 +33,40 @@ function sentence(s: string): string {
 
 /** A sentence a person in the field can act on, for any error thrown by the API layer. */
 export function friendlyError(err: unknown): string {
-  if (!isApiError(err)) return 'Something went wrong. Please try again.'
+  if (!isApiError(err)) return 'Algo correu mal. Tenta outra vez.'
   switch (err.code) {
     case 'network':
-      return 'No connection to the server. Check your signal and try again.'
+      return 'Sem ligação ao servidor. Vê se tens rede e tenta outra vez.'
     case 'timeout':
-      return 'The server is taking too long. Try again in a moment.'
+      return 'O servidor está a demorar demasiado. Tenta daqui a pouco.'
     case 'duplicate':
       return err.field && FIELD_LABELS[err.field]
-        ? `${FIELD_LABELS[err.field]} is already used by another entry.`
-        : 'That name is already taken.'
+        ? `${FIELD_LABELS[err.field]} já está a ser usado noutro registo.`
+        : 'Esse nome já existe.'
     case 'field_exists':
-      return 'This field is already set up.'
+      return 'Este terreno já está configurado.'
     case 'no_field':
-      return 'Set up the field first (Field setup).'
+      return 'Configura primeiro o terreno (Configurar o terreno).'
     case 'not_an_image':
-      return "That file isn't a photo the app can read. Use a PNG, JPG or WebP image."
+      return 'Esse ficheiro não é uma fotografia que a aplicação consiga ler. Usa uma imagem PNG, JPG ou WebP.'
     case 'too_large':
       return err.status === 413
-        ? 'The photo is too big to upload (max 30 MB).'
-        : 'The photo has too many pixels (max 12 000 per side, 40 megapixels). Make it smaller first.'
+        ? 'A fotografia é grande demais para enviar (máximo 30 MB).'
+        : 'A fotografia tem píxeis a mais (máximo 12 000 por lado, 40 megapíxeis). Reduz primeiro o tamanho.'
     case 'invalid': {
       const label = err.field ? FIELD_LABELS[err.field] : undefined
       if (label && err.message) return sentence(`${label} ${err.message}`)
-      return err.message ? sentence(`Please check this: ${err.message}`) : 'Please check what you typed.'
+      return err.message ? sentence(`Verifica isto: ${err.message}`) : 'Verifica o que escreveste.'
     }
     case 'deleted':
-      return 'This was deleted in the meantime.'
+      return 'Isto foi apagado entretanto.'
     case 'not_found':
-      return 'This no longer exists.'
+      return 'Isto já não existe.'
     case 'version_conflict':
-      return 'This was changed somewhere else in the meantime. Reload to see the latest.'
+      return 'Isto foi alterado noutro sítio entretanto. Recarrega para veres a versão mais recente.'
     default:
       return err.requestId
-        ? `The server had a problem (ref. ${err.requestId}). Please try again.`
-        : 'The server had a problem. Please try again.'
+        ? `O servidor teve um problema (ref. ${err.requestId}). Tenta outra vez.`
+        : 'O servidor teve um problema. Tenta outra vez.'
   }
 }

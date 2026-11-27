@@ -6,14 +6,14 @@ export function ErrorPage() {
   console.error(error)
   return (
     <div className="page">
-      <h1>Something went wrong</h1>
-      <p>This screen hit an unexpected problem. Your saved entries are safe.</p>
+      <h1>Algo correu mal</h1>
+      <p>Este ecrã teve um problema inesperado. O que já guardaste está a salvo.</p>
       <div className="row">
         <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-          Reload
+          Recarregar
         </button>
         <a className="btn" href="/">
-          Back to the map
+          Voltar ao mapa
         </a>
       </div>
     </div>

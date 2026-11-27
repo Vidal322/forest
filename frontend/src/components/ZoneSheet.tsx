@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { formatHa, KIND_LABEL, zoneName, type Plot, type Zone } from '../api/plots'
-import { formatDay, relativeDay } from '../domain/dates'
+import { formatLongDay, relativeDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
 
@@ -39,10 +39,10 @@ export function ZoneSheet({
   }, [onClose])
 
   const facts: [string, string][] = []
-  if (zone.last_watered_on) facts.push(['Watered', relativeDay(zone.last_watered_on, today)])
-  if (zone.last_sown_on) facts.push(['Sown', relativeDay(zone.last_sown_on, today)])
-  if (zone.last_planted_on) facts.push(['Planted', relativeDay(zone.last_planted_on, today)])
-  if (zone.area_ha !== null) facts.push(['Area', formatHa(zone.area_ha)])
+  if (zone.last_watered_on) facts.push(['Rega', relativeDay(zone.last_watered_on, today)])
+  if (zone.last_sown_on) facts.push(['Sementeira', relativeDay(zone.last_sown_on, today)])
+  if (zone.last_planted_on) facts.push(['Plantação', relativeDay(zone.last_planted_on, today)])
+  if (zone.area_ha !== null) facts.push(['Área', formatHa(zone.area_ha)])
   return (
     <section className="sheet" aria-labelledby="zone-sheet-title">
       <div className="row">
@@ -50,17 +50,17 @@ export function ZoneSheet({
           {zoneName(zone)}
         </h2>
         <span className="spacer" />
-        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Close">
+        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Fechar">
           ✕
         </button>
       </div>
-      {asOf && <p className="sheet__asof">On {formatDay(asOf)}:</p>}
+      {asOf && <p className="sheet__asof">A {formatLongDay(asOf)}:</p>}
       <p className="row">
         <StatusBadge status={status} label={STATUS_LABEL[status]} />
         {plot && <span className="muted">{plot.name}</span>}
         {zone.kind !== 'cultivation' && <span className="muted">· {KIND_LABEL[zone.kind]}</span>}
       </p>
-      {dry && <p className="note">No watering, sowing or planting here for {zone.current_interval_days}+ days.</p>}
+      {dry && <p className="note">Sem rega, sementeira nem plantação há {zone.current_interval_days} dias ou mais.</p>}
       {facts.length > 0 ? (
         <dl className="facts">
           {facts.map(([k, v]) => (
@@ -71,7 +71,7 @@ export function ZoneSheet({
           ))}
         </dl>
       ) : (
-        zone.kind === 'cultivation' && <p className="muted">Nothing logged here yet.</p>
+        zone.kind === 'cultivation' && <p className="muted">Ainda não registaste nada aqui.</p>
       )}
       {zone.notes && <p className="muted">{zone.notes}</p>}
       {children}

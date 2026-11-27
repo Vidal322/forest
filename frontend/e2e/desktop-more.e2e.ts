@@ -9,8 +9,8 @@ for (const width of [1280, 641]) {
     test('the top navigation reaches the More page and its export', async ({ page, request }) => {
       await ensureField(request)
       await page.goto('/')
-      const top = page.getByRole('navigation', { name: 'Main' }).first()
-      const more = top.getByRole('link', { name: 'More' })
+      const top = page.getByRole('navigation', { name: 'Principal' }).first()
+      const more = top.getByRole('link', { name: 'Mais' })
       await expect(more).toBeVisible()
       // the whole bar fits: nothing pushed off screen at the narrowest desktop width
       const box = (await more.boundingBox())!
@@ -23,7 +23,7 @@ for (const width of [1280, 641]) {
       await more.click()
       await expect(page).toHaveURL(/\/more$/)
       await expect(more).toHaveAttribute('aria-current', 'page')
-      await expect(page.getByRole('button', { name: 'Download CSV' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Descarregar CSV' })).toBeVisible()
       await shot(page, `desktop-more-${width}`)
     })
   })

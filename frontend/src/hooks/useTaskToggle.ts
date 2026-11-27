@@ -25,7 +25,7 @@ export function useTaskToggle(onToast: (t: Omit<Toast, 'n'>) => void) {
       )
       // said at once: also true offline, and the row may move before the server answers
       onToast({
-        text: open ? `Done: ${task.title}.` : `Reopened: ${task.title}.`,
+        text: open ? `Tarefa feita: ${task.title}.` : `Tarefa reaberta: ${task.title}.`,
         undo: () => mutate({ id: task.id, input: taskInput(task, { status: task.status }) }),
       })
     },

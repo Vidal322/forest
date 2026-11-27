@@ -36,7 +36,7 @@ test('the map loads a light copy of a big photo, still lined up with the drawing
     const plotId = await putPlot(request, `Display plot ${Date.now()}`, geom)
     await putZone(request, plotId, 'Display zone', geom)
     await page.goto('/')
-    const img = page.getByRole('img', { name: 'Aerial photo of the field' })
+    const img = page.getByRole('img', { name: 'Fotografia aérea do terreno' })
     await expect(img).toHaveAttribute('src', /\/api\/photos\/[0-9a-f-]+\.jpg\/display$/)
     // the 2048 px copy, not the full-size photo (e2e code has no DOM types)
     const naturalWidth = () =>

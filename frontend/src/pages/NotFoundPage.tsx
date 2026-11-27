@@ -3,9 +3,9 @@ import { Link } from 'react-router'
 export function NotFoundPage() {
   return (
     <div className="page">
-      <h1>Page not found</h1>
+      <h1>Página não encontrada</h1>
       <p>
-        <Link to="/">Back to the map</Link>
+        <Link to="/">Voltar ao mapa</Link>
       </p>
     </div>
   )

@@ -14,6 +14,9 @@ export default defineConfig({
   use: {
     ...devices['Pixel 7'],
     baseURL: process.env.E2E_URL ?? 'http://127.0.0.1:8100',
+    // a phone set up in Portugal: native date boxes and number keys as the people in the field see them
+    locale: 'pt-PT',
+    timezoneId: 'Europe/Lisbon',
     channel: 'chrome',
     headless: true,
     screenshot: 'only-on-failure',

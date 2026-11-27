@@ -1,5 +1,7 @@
 import { zoneName, type Plot, type Zone } from '../api/plots'
 import type { Attention } from '../domain/attention'
+import { taskCount } from '../domain/attention'
+import { days } from '../domain/dates'
 import { daysDry } from '../domain/zoneStatus'
 
 /** The expanded "Needs attention" panel: each group with its count, each zone a button. */
@@ -20,7 +22,7 @@ export function NeedsAttention({
   if (summary.total === 0) {
     return (
       <p id={id} className="attention__none">
-        No zone needs water or sowing, and no zone has open tasks.
+        Nenhuma zona está por regar ou por semear, e nenhuma tem tarefas por fazer.
       </p>
     )
   }
@@ -46,12 +48,12 @@ export function NeedsAttention({
     )
   return (
     <div id={id} className="zone-list attention">
-      {group('Need water', summary.water, (z) => {
+      {group('Por regar', summary.water, (z) => {
         const d = daysDry(z, today)
-        return d === null ? '' : `dry ${d} day${d === 1 ? '' : 's'}`
+        return d === null ? '' : `sem rega há ${days(d)}`
       })}
-      {group('Not sown yet', summary.sowing)}
-      {group('Open tasks', summary.tasks, (z) => `${z.open_task_count} open task${z.open_task_count === 1 ? '' : 's'}`)}
+      {group('Ainda sem nada', summary.sowing)}
+      {group('Tarefas por fazer', summary.tasks, (z) => taskCount(z.open_task_count))}
     </div>
   )
 }

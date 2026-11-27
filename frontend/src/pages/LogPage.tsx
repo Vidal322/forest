@@ -76,7 +76,7 @@ export function LogPage() {
   }, [])
   // how to undo the entry being saved: delete it and reopen the tasks it closed
   const undoPending = useRef<(() => void) | undefined>(undefined)
-  // " Done: <titles>." for the tasks the entry being saved closes ('' when none)
+  // " Tarefa feita: <titles>." for the tasks the entry being saved closes ('' when none)
   const donePending = useRef('')
   const [params, setParams] = useSearchParams()
 
@@ -165,29 +165,29 @@ export function LogPage() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (saveState.busy) return
-    if (chosen.length === 0) return setError('Tap the zones you worked on, on the map or in the list.')
-    if (!type) return setError('Choose what you did: watered, sowed, planted…')
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return setError('Choose the day.')
-    if (day > today) return setError("The day can't be after today.")
+    if (chosen.length === 0) return setError('Toca nas zonas onde trabalhaste, no mapa ou na lista.')
+    if (!type) return setError('Escolhe o que fizeste: rega, sementeira, plantação…')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return setError('Escolhe o dia.')
+    if (day > today) return setError('O dia não pode ser depois de hoje.')
     const counts: Record<string, number | null> = {}
     for (const z of chosen) {
       const c = type === 'other' ? null : parseCount(perZone ? (perZone[z.id] ?? '') : sameCount)
-      if (c === 'bad') return setError('Quantities are whole numbers, like 100.')
+      if (c === 'bad') return setError('As quantidades são números inteiros, como 100.')
       counts[z.id] = c
     }
     const anyCount = Object.values(counts).some((c) => c !== null)
-    if (anyCount && !effectiveUnit) return setError('Choose a unit for the quantity.')
+    if (anyCount && !effectiveUnit) return setError('Escolhe a unidade da quantidade.')
     const sp: ActivitySpecies[] = []
     if (hasSpecies) {
       for (const [id, text] of Object.entries(species)) {
         const c = parseCount(text)
-        if (c === 'bad') return setError('Counts per species are whole numbers.')
+        if (c === 'bad') return setError('As quantidades por espécie são números inteiros.')
         sp.push({ species_id: id, quantity: c, unit: c === null ? null : type === 'planting' ? 'trees' : 'seeds', notes: null })
       }
     }
     setError('')
     const names = chosen.map((z) => zoneName(z))
-    const what = ACTIVITY[type].past
+    const what = ACTIVITY[type].saved
     const id = newId()
     const toClose = openTasks.filter(ticked)
     setPendingId(id)
@@ -197,7 +197,8 @@ export function LogPage() {
       del.mutate(id)
     }
     undoPending.current = undo
-    const closed = toClose.length === 0 ? '' : ` Done: ${toClose.map((t) => t.title).join(', ')}.`
+    const closed =
+      toClose.length === 0 ? '' : ` ${toClose.length === 1 ? 'Tarefa feita' : 'Tarefas feitas'}: ${toClose.map((t) => t.title).join(', ')}.`
     donePending.current = closed
     save.mutate(
       {
@@ -217,7 +218,7 @@ export function LogPage() {
       },
       {
         onSuccess: () => {
-          say(`Logged: ${what} ${zonesPhrase(names)}${day === today ? ' today' : ` on ${formatDay(day, today)}`}.${closed}`, undo)
+          say(`${what} em ${zonesPhrase(names)}, ${day === today ? 'hoje' : `a ${formatDay(day, today)}`}.${closed}`, undo)
           reset()
         },
         onError: () => {
@@ -239,10 +240,10 @@ export function LogPage() {
   if (field.data === null || (plots.data && plots.data.length === 0)) {
     return (
       <div className="page">
-        <h1>Log activity</h1>
+        <h1>Registar</h1>
         <p className="note">
-          First {field.data === null ? 'set up the field' : 'draw your plots and zones'}.{' '}
-          <Link to={field.data === null ? '/field' : '/'}>{field.data === null ? 'Field setup' : 'Open the map'}</Link>
+          Primeiro {field.data === null ? 'configura o terreno' : 'desenha as parcelas e as zonas'}.{' '}
+          <Link to={field.data === null ? '/field' : '/'}>{field.data === null ? 'Configurar o terreno' : 'Abrir o mapa'}</Link>
         </p>
       </div>
     )
@@ -250,13 +251,13 @@ export function LogPage() {
 
   return (
     <form ref={form} className="page log" onSubmit={submit} noValidate>
-      <h1>Log activity</h1>
-      <p className="muted small">① tap zones · ② tap what you did · ③ Save</p>
+      <h1>Registar</h1>
+      <p className="muted small">① toca nas zonas · ② toca no que fizeste · ③ Guardar</p>
       <ToastLine
         toast={toast}
         onUndo={() => {
           toast?.undo?.()
-          setToast({ text: 'Entry removed.', n: (toast?.n ?? 0) + 1 })
+          setToast({ text: 'Registo anulado.', n: (toast?.n ?? 0) + 1 })
         }}
       />
 
@@ -275,29 +276,29 @@ export function LogPage() {
       )}
 
       <output className="log__count" aria-live="polite">
-          {chosen.length === 0 ? 'No zones selected' : `${zonesPhrase(chosen.map((z) => zoneName(z)))} selected`}
+          {chosen.length === 0 ? 'Nenhuma zona escolhida' : `Escolhida: ${zonesPhrase(chosen.map((z) => zoneName(z)))}`}
       </output>
       <div className="row log__select">
         {dry.length > 0 && (
           <button type="button" className="chip" onClick={() => setSelected((s) => new Set([...s, ...dry.map((z) => z.id)]))}>
-            All that need water ({dry.length})
+            Todas as zonas por regar ({dry.length})
           </button>
         )}
         {chosen.length > 0 && (
           <button type="button" className="chip" onClick={() => setSelected(new Set())}>
-            Clear
+            Limpar
           </button>
         )}
         <button type="button" className="chip" aria-expanded={showList} onClick={() => setShowList((v) => !v)}>
-          {showList ? 'Hide list' : 'Pick from a list'}
+          {showList ? 'Esconder a lista' : 'Escolher numa lista'}
         </button>
       </div>
 
       {showList && (
         <fieldset className="zone-checks">
-          <legend className="visually-hidden">Zones</legend>
+          <legend className="visually-hidden">Zonas</legend>
           {allZones.length === 0 && (
-            <p className="muted">{zones.isError ? friendlyError(zones.error) : zones.isPending ? 'Loading zones…' : 'No zones yet.'}</p>
+            <p className="muted">{zones.isError ? friendlyError(zones.error) : zones.isPending ? 'A carregar as zonas…' : 'Ainda não há zonas.'}</p>
           )}
           {allZones.map((z) => {
             const s = zoneStatus(z, today)
@@ -313,7 +314,7 @@ export function LogPage() {
       )}
 
       <fieldset className="actions3">
-        <legend className="visually-hidden">What did you do?</legend>
+        <legend className="visually-hidden">O que fizeste?</legend>
         {[...MAIN, ...(showMore || (type && MORE.includes(type)) ? MORE : [])].map((t) => (
           <button
             key={t}
@@ -339,13 +340,13 @@ export function LogPage() {
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.act--fertilizing')?.focus())
           }}
         >
-          More… (fertilized, other)
+          Mais… (adubação, outro)
         </button>
       )}
 
       {openTasks.length > 0 && (
         <fieldset className="zone-checks log__tasks">
-          <legend>Also done</legend>
+          <legend>Também ficou feito</legend>
           {openTasks.map((t) => (
             <label key={t.id} className="zone-check">
               <input
@@ -363,15 +364,15 @@ export function LogPage() {
       )}
 
       <fieldset className="log__when">
-        <legend className="label-like">When</legend>
+        <legend className="label-like">Quando</legend>
         <div className="row">
           {[today, addDays(today, -1)].map((d, i) => (
             <button key={d} type="button" className={`chip${day === d ? ' is-on' : ''}`} aria-pressed={day === d} onClick={() => setDay(i === 0 ? null : d)}>
-              {i === 0 ? 'Today' : 'Yesterday'}
+              {i === 0 ? 'Hoje' : 'Ontem'}
             </button>
           ))}
           <label className="visually-hidden" htmlFor={ids.date}>
-            Another day
+            Outro dia
           </label>
           <input
             id={ids.date}
@@ -387,16 +388,16 @@ export function LogPage() {
       {type && type !== 'other' && (
         <div className="log__qty">
           <label htmlFor={perZone ? undefined : ids.count} id={`${ids.count}-label`}>
-            How many {effectiveUnit ? UNIT_LABEL[effectiveUnit] : ''}
-            {chosen.length > 1 && !perZone ? ' in each zone' : ''} <span className="muted">(optional)</span>
+            Quantidade{effectiveUnit ? ` (${UNIT_LABEL[effectiveUnit]})` : ''}
+            {chosen.length > 1 && !perZone ? ' em cada zona' : ''} <span className="muted">(opcional)</span>
           </label>
           {!perZone ? (
             <div className="input-row">
-              <input id={ids.count} inputMode="numeric" value={sameCount} onChange={(e) => setSameCount(e.target.value)} placeholder="e.g. 100" />
+              <input id={ids.count} inputMode="numeric" value={sameCount} onChange={(e) => setSameCount(e.target.value)} placeholder="por exemplo, 100" />
               <UnitSelect type={type} value={effectiveUnit} onChange={setUnit} />
               {chosen.length > 1 && (
                 <button type="button" className="btn-link" onClick={() => setPerZone(Object.fromEntries(chosen.map((z) => [z.id, sameCount])))}>
-                  Per zone…
+                  Por zona…
                 </button>
               )}
             </div>
@@ -406,7 +407,7 @@ export function LogPage() {
                 <label key={z.id} className="per-zone__row">
                   <span>
                     {zoneName(z)}
-                    <span className="visually-hidden">, {effectiveUnit ? UNIT_LABEL[effectiveUnit] : 'quantity'}</span>
+                    <span className="visually-hidden">, {effectiveUnit ? UNIT_LABEL[effectiveUnit] : 'quantidade'}</span>
                   </span>
                   <input
                     inputMode="numeric"
@@ -418,7 +419,7 @@ export function LogPage() {
               <div className="row">
                 <UnitSelect type={type} value={effectiveUnit} onChange={setUnit} />
                 <button type="button" className="btn-link" onClick={() => setPerZone(null)}>
-                  Same for all
+                  Igual em todas
                 </button>
               </div>
             </div>
@@ -428,10 +429,10 @@ export function LogPage() {
 
       {hasSpecies && (
         <fieldset className="log__species">
-          <legend>{type === 'sowing' ? 'Seed mix' : 'Species'} <span className="muted">(optional)</span></legend>
+          <legend>{type === 'sowing' ? 'Mistura de sementes' : 'Espécies'} <span className="muted">(opcional)</span></legend>
           {(speciesList.data ?? []).length === 0 ? (
             <p className="muted small">
-              No species yet. <Link to="/species">Add species</Link>
+              Ainda não há espécies. <Link to="/species">Acrescentar espécies</Link>
             </p>
           ) : (
             <div className="row">
@@ -463,7 +464,7 @@ export function LogPage() {
             return (
               <label key={id} className="per-zone__row">
                 <span>
-                  {s?.common_name ?? s?.scientific_name} — how many {type === 'planting' ? 'trees' : 'seeds'}?
+                  {s?.common_name ?? s?.scientific_name}: quantas {type === 'planting' ? 'árvores' : 'sementes'}?
                 </span>
                 <input inputMode="numeric" value={species[id]} onChange={(e) => setSpecies({ ...species, [id]: e.target.value })} />
               </label>
@@ -473,9 +474,9 @@ export function LogPage() {
       )}
 
       <details className="log__notes" open={notes !== ''}>
-        <summary>Add notes</summary>
+        <summary>Acrescentar uma nota</summary>
         <label htmlFor={ids.notes} className="visually-hidden">
-          Notes
+          Nota
         </label>
         <textarea id={ids.notes} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
       </details>
@@ -494,12 +495,12 @@ export function LogPage() {
           aria-describedby={error || (ownsResult && save.error) ? ids.err : undefined}
         >
           {saveState.busy
-            ? 'Saving…'
+            ? 'A guardar…'
             : type && chosen.length > 0
-              ? `Save — ${ACTIVITY[type].label} ${chosen.length === 1 ? zoneName(chosen[0]!) : `${chosen.length} zones`}${
-                  closing === 0 ? '' : ` · closes ${closing === 1 ? '1 task' : `${closing} tasks`}`
+              ? `Guardar ${ACTIVITY[type].noun} em ${chosen.length === 1 ? zoneName(chosen[0]!) : `${chosen.length} zonas`}${
+                  closing === 0 ? '' : ` · fecha ${closing === 1 ? '1 tarefa' : `${closing} tarefas`}`
                 }`
-              : 'Save'}
+              : 'Guardar'}
         </button>
       </div>
     </form>
@@ -508,8 +509,8 @@ export function LogPage() {
 
 function UnitSelect({ type, value, onChange }: { type: ActivityType; value: QuantityUnit | null; onChange: (u: QuantityUnit) => void }) {
   return (
-    <select aria-label="Unit" value={value ?? ''} onChange={(e) => onChange(e.target.value as QuantityUnit)} className="unit-select">
-      {value === null && <option value="">unit…</option>}
+    <select aria-label="Unidade" value={value ?? ''} onChange={(e) => onChange(e.target.value as QuantityUnit)} className="unit-select">
+      {value === null && <option value="">unidade…</option>}
       {ZONE_UNITS[type].map((u) => (
         <option key={u} value={u}>
           {UNIT_LABEL[u]}

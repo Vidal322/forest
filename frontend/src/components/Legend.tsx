@@ -5,10 +5,10 @@ const ORDER: ZoneStatus[] = ['needs-water', 'watered', 'planted', 'sown', 'unsow
 
 export function Legend({ id }: { id?: string }) {
   return (
-    <ul className="legend" id={id} aria-label="Map colours">
+    <ul className="legend" id={id} aria-label="Cores do mapa">
       <li>
         <i className="swatch swatch--outline" style={{ borderColor: PLOT_COLOR }} aria-hidden="true" />
-        Plot
+        Parcela
       </li>
       {ORDER.map((s) => (
         <li key={s}>
@@ -23,7 +23,7 @@ export function Legend({ id }: { id?: string }) {
       ))}
       <li>
         <i className="swatch swatch--pin" aria-hidden="true" />
-        Open task
+        Tarefa por fazer
       </li>
     </ul>
   )

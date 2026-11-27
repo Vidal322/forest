@@ -29,7 +29,7 @@ test('the More page downloads the activity log as a CSV a spreadsheet reads', as
   expect(sowing.ok(), await sowing.text()).toBeTruthy()
 
   await page.goto('/more')
-  const button = page.getByRole('button', { name: 'Download CSV' })
+  const button = page.getByRole('button', { name: 'Descarregar CSV' })
   await expect(button).toBeVisible()
   await shot(page, 'export-csv')
 

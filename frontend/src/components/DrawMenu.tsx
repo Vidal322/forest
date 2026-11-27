@@ -14,32 +14,32 @@ export function DrawMenu({ plots, onPick, onClose }: { plots: Plot[]; onPick: (d
   return (
     <section className="sheet menu-sheet" aria-labelledby="draw-menu-title">
       <div className="row">
-        <h2 id="draw-menu-title">Draw</h2>
+        <h2 id="draw-menu-title">Desenhar</h2>
         <span className="spacer" />
-        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Close">
+        <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Fechar">
           ✕
         </button>
       </div>
       <ul>
         <li>
           <button ref={first} type="button" className="btn" onClick={() => onPick(newDraft('zone'))} disabled={plots.length === 0}>
-            🟦 A zone <span className="muted small">— an area you sow, plant or water, inside a plot</span>
+            🟦 Uma zona <span className="muted small">— uma área que semeias, plantas ou regas, dentro de uma parcela</span>
           </button>
         </li>
         <li>
           <button type="button" className="btn" onClick={() => onPick(newDraft('plot'))}>
-            🟩 A plot <span className="muted small">— a named part of the field</span>
+            🟩 Uma parcela <span className="muted small">— uma parte do terreno com nome</span>
           </button>
         </li>
         {plots.map((p) => (
           <li key={p.id}>
             <button type="button" className="btn" onClick={() => onPick(editDraft('plot', p))}>
-              ✎ Edit {p.name}
+              ✎ Editar {p.name}
             </button>
           </li>
         ))}
       </ul>
-      {plots.length === 0 && <p className="muted small">Draw a plot first: zones go inside plots.</p>}
+      {plots.length === 0 && <p className="muted small">Desenha primeiro uma parcela: as zonas ficam dentro das parcelas.</p>}
     </section>
   )
 }

@@ -43,19 +43,19 @@ describe('SpeciesPage', () => {
   it('invites you to add the first species when the catalogue is empty', async () => {
     speciesApi()
     renderApp('/species')
-    expect(await screen.findByText('No species yet.')).toBeInTheDocument()
+    expect(await screen.findByText('Ainda não há espécies.')).toBeInTheDocument()
   })
 
   it('adds a species with an id made on the device', async () => {
     const api = speciesApi()
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: /add species/i }))
-    await userEvent.type(screen.getByLabelText('Scientific name'), '  Arbutus unedo ')
-    await userEvent.type(screen.getByLabelText(/common name/i), 'medronheiro')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(await screen.findByRole('button', { name: /acrescentar espécie/i }))
+    await userEvent.type(screen.getByLabelText('Nome científico'), '  Arbutus unedo ')
+    await userEvent.type(screen.getByLabelText(/nome comum/i), 'medronheiro')
+    await userEvent.click(screen.getByRole('button', { name: 'Acrescentar' }))
 
-    expect(await screen.findByText('Added Arbutus unedo.')).toBeInTheDocument()
-    const list = screen.getByRole('list', { name: 'Species' })
+    expect(await screen.findByText('Espécie acrescentada: Arbutus unedo.')).toBeInTheDocument()
+    const list = screen.getByRole('list', { name: 'Espécies' })
     expect(within(list).getByText('Arbutus unedo')).toBeInTheDocument()
     const put = api.calls.find((c) => c.method === 'PUT')!
     expect(put.path).toMatch(/^\/api\/species\/[0-9a-f-]{36}$/)
@@ -65,25 +65,25 @@ describe('SpeciesPage', () => {
   it('shows a duplicate name next to the field and keeps what you typed', async () => {
     speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: /add species/i }))
-    await userEvent.type(screen.getByLabelText('Scientific name'), 'quercus SUBER')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(await screen.findByRole('button', { name: /acrescentar espécie/i }))
+    await userEvent.type(screen.getByLabelText('Nome científico'), 'quercus SUBER')
+    await userEvent.click(screen.getByRole('button', { name: 'Acrescentar' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Scientific name is already used')
-    expect(screen.getByLabelText('Scientific name')).toHaveValue('quercus SUBER')
-    expect(screen.getByLabelText('Scientific name')).toHaveAttribute('aria-invalid', 'true')
+    expect(await screen.findByRole('alert')).toHaveTextContent('O nome científico já está a ser usado')
+    expect(screen.getByLabelText('Nome científico')).toHaveValue('quercus SUBER')
+    expect(screen.getByLabelText('Nome científico')).toHaveAttribute('aria-invalid', 'true')
     // the list did not keep the rejected entry
-    expect(within(screen.getByRole('list', { name: 'Species' })).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(screen.getByRole('list', { name: 'Espécies' })).getAllByRole('listitem')).toHaveLength(1)
   })
 
   it('edits a species by tapping it', async () => {
     const api = speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Quercus suber' }))
-    const common = screen.getByLabelText(/common name/i)
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Quercus suber' }))
+    const common = screen.getByLabelText(/nome comum/i)
     await userEvent.clear(common)
     await userEvent.type(common, 'sobreiro (cork oak)')
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
 
     expect(await screen.findByText('sobreiro (cork oak)')).toBeInTheDocument()
     expect(api.calls.find((c) => c.method === 'PUT')?.path).toBe(`/api/species/${suber.id}`)
@@ -92,13 +92,13 @@ describe('SpeciesPage', () => {
   it('asks before deleting, then removes it', async () => {
     speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Quercus suber' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(screen.getByRole('group', { name: 'Confirm delete' })).toHaveTextContent('Past plantings and sowings keep it')
-    await userEvent.click(within(screen.getByRole('group', { name: 'Confirm delete' })).getByRole('button', { name: 'Delete' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Quercus suber' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar' }))
+    expect(screen.getByRole('group', { name: 'Confirmar que apagas' })).toHaveTextContent('continuam com ela')
+    await userEvent.click(within(screen.getByRole('group', { name: 'Confirmar que apagas' })).getByRole('button', { name: 'Apagar' }))
 
-    expect(await screen.findByText('Deleted Quercus suber.')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Edit Quercus suber' })).not.toBeInTheDocument())
+    expect(await screen.findByText('Espécie apagada: Quercus suber.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Editar Quercus suber' })).not.toBeInTheDocument())
   })
 
   it('searches by scientific or common name, ignoring accents and case', async () => {
@@ -107,9 +107,9 @@ describe('SpeciesPage', () => {
       { ...suber, id: '22222222-2222-4222-8222-222222222222', scientific_name: 'Castanea sativa', common_name: 'castanheiro' },
     ])
     renderApp('/species')
-    const search = await screen.findByRole('searchbox', { name: 'Search species' })
+    const search = await screen.findByRole('searchbox', { name: 'Procurar espécies' })
     await userEvent.type(search, 'CASTANHÉIRO')
-    const list = screen.getByRole('list', { name: 'Species' })
+    const list = screen.getByRole('list', { name: 'Espécies' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
     expect(within(list).getByText('Castanea sativa')).toBeInTheDocument()
   })
@@ -117,66 +117,66 @@ describe('SpeciesPage', () => {
   it('says so when the server cannot be reached, with a retry', async () => {
     fakeApi({ 'GET /api/species': () => ({ status: 500, body: { error: { code: 'internal' } } }) })
     renderApp('/species')
-    expect(await screen.findByRole('alert')).toHaveTextContent('The server had a problem')
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent('O servidor teve um problema')
+    expect(screen.getByRole('button', { name: 'Tentar outra vez' })).toBeInTheDocument()
   })
 
   it('checks a blank name on the phone, without calling the server', async () => {
     const api = speciesApi()
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: /add species/i }))
-    await userEvent.type(screen.getByLabelText('Scientific name'), '   ')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Scientific name is required.')
-    expect(screen.getByLabelText('Scientific name')).toHaveFocus()
+    await userEvent.click(await screen.findByRole('button', { name: /acrescentar espécie/i }))
+    await userEvent.type(screen.getByLabelText('Nome científico'), '   ')
+    await userEvent.click(screen.getByRole('button', { name: 'Acrescentar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Escreve o nome científico.')
+    expect(screen.getByLabelText('Nome científico')).toHaveFocus()
     expect(api.calls.some((c) => c.method === 'PUT')).toBe(false)
   })
 
   it('without a connection, keeps the new species on the phone and says so', async () => {
     const api = speciesApi()
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: /add species/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /acrescentar espécie/i }))
     api.fetchMock.mockImplementation(async (input) => {
       if (String(input) === '/healthz') return new Response('{"status":"ok"}')
       throw new TypeError('Failed to fetch')
     })
-    await userEvent.type(screen.getByLabelText('Scientific name'), 'Pinus pinea')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.type(screen.getByLabelText('Nome científico'), 'Pinus pinea')
+    await userEvent.click(screen.getByRole('button', { name: 'Acrescentar' }))
 
     expect(await screen.findByText(SAVED_ON_PHONE)).toBeInTheDocument()
     expect(screen.queryByRole('form')).not.toBeInTheDocument()
-    expect(within(screen.getByRole('list', { name: 'Species' })).getByText('Pinus pinea')).toBeInTheDocument()
-    expect(screen.getByText(/1 change saved on this phone/)).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Espécies' })).getByText('Pinus pinea')).toBeInTheDocument()
+    expect(screen.getByText(/1 alteração guardada neste telemóvel/)).toBeInTheDocument()
   })
 
   it('puts focus back on the Add button after Cancel', async () => {
     speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: /add species/i }))
-    expect(screen.getByLabelText('Scientific name')).toHaveFocus()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /add species/i })).toHaveFocus())
+    await userEvent.click(await screen.findByRole('button', { name: /acrescentar espécie/i }))
+    expect(screen.getByLabelText('Nome científico')).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /acrescentar espécie/i })).toHaveFocus())
   })
 
   it('does not open the keyboard when you only tap a species to look at it', async () => {
     speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Quercus suber' }))
-    expect(screen.getByLabelText('Scientific name')).not.toHaveFocus()
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Quercus suber' }))
+    expect(screen.getByLabelText('Nome científico')).not.toHaveFocus()
   })
 
   it('closes the form when the species was deleted elsewhere', async () => {
     const api = speciesApi([suber])
     renderApp('/species')
-    await userEvent.click(await screen.findByRole('button', { name: 'Edit Quercus suber' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Quercus suber' }))
     api.fetchMock.mockImplementation(async (input, init) => {
       if (init?.method === 'PUT') return new Response('{"error":{"code":"deleted"}}', { status: 410 })
       return new Response(String(input) === '/healthz' ? '{"status":"ok"}' : '[]')
     })
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByText('This was deleted in the meantime.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Edit Quercus suber' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(await screen.findByText('Isto foi apagado entretanto.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Editar Quercus suber' })).not.toBeInTheDocument()
   })
 
   it('shows where each species is used: zones, living trees, last sowing and planting', async () => {
@@ -189,17 +189,17 @@ describe('SpeciesPage', () => {
       ],
     )
     renderApp('/species')
-    const suberItem = await screen.findByRole('button', { name: 'Edit Quercus suber' })
+    const suberItem = await screen.findByRole('button', { name: 'Editar Quercus suber' })
     await waitFor(() =>
-      expect(suberItem).toHaveAccessibleDescription('3 zones · 1 tree alive · sown 28 Jun 2024 · planted 3 Oct 2024'),
+      expect(suberItem).toHaveAccessibleDescription('3 zonas · 1 árvore viva · semeada a 28 jun 2024 · plantada a 3 out 2024'),
     )
-    expect(screen.getByRole('button', { name: 'Edit Pinus pinea' })).toHaveAccessibleDescription('Not used yet')
+    expect(screen.getByRole('button', { name: 'Editar Pinus pinea' })).toHaveAccessibleDescription('Ainda não foi usada')
   })
 
   it('still lists the species when their usage cannot be loaded', async () => {
     speciesApi([suber]) // no /api/species-stats: 404
     renderApp('/species')
-    expect(await screen.findByRole('button', { name: 'Edit Quercus suber' })).toBeInTheDocument()
-    expect(screen.queryByText('Not used yet')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Editar Quercus suber' })).toBeInTheDocument()
+    expect(screen.queryByText('Ainda não foi usada')).not.toBeInTheDocument()
   })
 })

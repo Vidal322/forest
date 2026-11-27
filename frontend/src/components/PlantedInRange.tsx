@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router'
 import { friendlyError } from '../api/errors'
 import { usePlantedStats, type PlantedStats } from '../api/stats'
 import { addDays, formatDay } from '../domain/dates'
+import { formatNumber as n } from '../domain/numbers'
 
-const n = (v: number) => v.toLocaleString('en-GB')
 /** A real calendar day as YYYY-MM-DD (not 2026-13-45, which the address could carry). */
 const isDay = (s: string | null): s is string => s !== null && /^\d{4}-\d{2}-\d{2}$/.test(s) && addDays(s, 0) === s
 
@@ -13,10 +13,10 @@ function presets(today: string): { label: string; from: string; to: string }[] {
   const monthStart = `${today.slice(0, 8)}01`
   const lastMonthEnd = addDays(monthStart, -1)
   return [
-    { label: 'This month', from: monthStart, to: today },
-    { label: 'Last month', from: `${lastMonthEnd.slice(0, 8)}01`, to: lastMonthEnd },
-    { label: 'Last 30 days', from: addDays(today, -29), to: today },
-    { label: 'This year', from: `${today.slice(0, 4)}-01-01`, to: today },
+    { label: 'Este mês', from: monthStart, to: today },
+    { label: 'Mês passado', from: `${lastMonthEnd.slice(0, 8)}01`, to: lastMonthEnd },
+    { label: 'Últimos 30 dias', from: addDays(today, -29), to: today },
+    { label: 'Este ano', from: `${today.slice(0, 4)}-01-01`, to: today },
   ]
 }
 
@@ -46,9 +46,9 @@ export function PlantedInRange({ today }: { today: string }) {
 
   return (
     <section className="card" aria-labelledby={`${ids}h`}>
-      <h2 id={`${ids}h`}>Sown &amp; planted by date</h2>
+      <h2 id={`${ids}h`}>Semeado e plantado entre datas</h2>
       <fieldset className="range-presets">
-        <legend className="visually-hidden">Quick ranges</legend>
+        <legend className="visually-hidden">Intervalos rápidos</legend>
         {presets(today).map((p) => (
           <button
             key={p.label}
@@ -63,7 +63,7 @@ export function PlantedInRange({ today }: { today: string }) {
       </fieldset>
       <div className="range-dates">
         <div>
-          <label htmlFor={`${ids}from`}>From</label>
+          <label htmlFor={`${ids}from`}>De</label>
           <input
             id={`${ids}from`}
             type="date"
@@ -73,7 +73,7 @@ export function PlantedInRange({ today }: { today: string }) {
           />
         </div>
         <div>
-          <label htmlFor={`${ids}to`}>To</label>
+          <label htmlFor={`${ids}to`}>Até</label>
           <input
             id={`${ids}to`}
             type="date"
@@ -85,24 +85,24 @@ export function PlantedInRange({ today }: { today: string }) {
       </div>
       {reversed && (
         <p className="note warn" role="alert">
-          The start date is after the end date.
+          O primeiro dia é depois do último.
         </p>
       )}
-      {!reversed && stats.isPending && stats.fetchStatus === 'paused' && <p className="note">No connection. Stats need signal.</p>}
-      {!reversed && stats.isPending && stats.fetchStatus !== 'paused' && <p className="muted">Loading…</p>}
+      {!reversed && stats.isPending && stats.fetchStatus === 'paused' && <p className="note">Sem rede. As estatísticas precisam de rede.</p>}
+      {!reversed && stats.isPending && stats.fetchStatus !== 'paused' && <p className="muted">A carregar…</p>}
       {!reversed && stats.isError && (
         <div className="note warn" role="alert">
           {friendlyError(stats.error)}{' '}
           <button type="button" className="btn" onClick={() => void stats.refetch()}>
-            Try again
+            Tentar outra vez
           </button>
         </div>
       )}
       {shown && (
         <div aria-busy={stale} className={stale ? 'is-stale' : undefined}>
           <p className="muted small" aria-live="polite">
-            {formatDay(shown.from, today)} – {formatDay(shown.to, today)}, both days included
-            {stale ? ' · updating…' : ''}
+            De {formatDay(shown.from, today)} a {formatDay(shown.to, today)}, os dois dias incluídos
+            {stale ? ' · a atualizar…' : ''}
           </p>
           <PlotTable stats={shown} />
           <SpeciesTable stats={shown} />
@@ -113,17 +113,17 @@ export function PlantedInRange({ today }: { today: string }) {
 }
 
 function PlotTable({ stats }: { stats: PlantedStats }) {
-  if (stats.plots.length === 0) return <p className="muted small">No plots yet.</p>
+  if (stats.plots.length === 0) return <p className="muted small">Ainda não há parcelas.</p>
   const holes = stats.plots.reduce((t, p) => t + p.holes_sown, 0)
   const trees = stats.plots.reduce((t, p) => t + p.trees_planted, 0)
   return (
     <table className="trees planted">
-      <caption className="visually-hidden">Per plot</caption>
+      <caption className="visually-hidden">Por parcela</caption>
       <thead>
         <tr>
-          <th scope="col">Plot</th>
-          <th scope="col">Covas sown</th>
-          <th scope="col">Trees planted</th>
+          <th scope="col">Parcela</th>
+          <th scope="col">Covas semeadas</th>
+          <th scope="col">Árvores plantadas</th>
         </tr>
       </thead>
       <tbody>
@@ -136,7 +136,7 @@ function PlotTable({ stats }: { stats: PlantedStats }) {
         ))}
         {stats.plots.length > 1 && (
           <tr className="trees__total">
-            <th scope="row">All plots</th>
+            <th scope="row">Todas as parcelas</th>
             <td>{n(holes)}</td>
             <td>{n(trees)}</td>
           </tr>
@@ -149,18 +149,18 @@ function PlotTable({ stats }: { stats: PlantedStats }) {
 function SpeciesTable({ stats }: { stats: PlantedStats }) {
   return (
     <>
-      <h3 className="stats__h">Per species</h3>
+      <h3 className="stats__h">Por espécie</h3>
       {stats.species.length === 0 ? (
-        <p className="muted small">No species logged on sowings or plantings in these dates.</p>
+        <p className="muted small">Nenhuma espécie registada em sementeiras ou plantações nestas datas.</p>
       ) : (
         <>
           <table className="trees planted">
-            <caption className="visually-hidden">Per species</caption>
+            <caption className="visually-hidden">Por espécie</caption>
             <thead>
               <tr>
-                <th scope="col">Species</th>
-                <th scope="col">Covas sown</th>
-                <th scope="col">Trees planted</th>
+                <th scope="col">Espécie</th>
+                <th scope="col">Covas semeadas</th>
+                <th scope="col">Árvores plantadas</th>
               </tr>
             </thead>
             <tbody>
@@ -181,9 +181,9 @@ function SpeciesTable({ stats }: { stats: PlantedStats }) {
             </tbody>
           </table>
           <p className="muted small">
-            A cova sown with a seed mix counts for each species in it. Trees of a mixed planting count per species only
-            when the count per species was logged; when some of the planting's zones were deleted since, that count shrinks
-            in proportion.
+            Uma cova semeada com uma mistura de sementes conta para cada espécie da mistura. As árvores de uma plantação
+            mista só contam por espécie quando registaste a quantidade de cada espécie; se entretanto foram apagadas
+            algumas zonas dessa plantação, essa quantidade diminui na mesma proporção.
           </p>
         </>
       )}

@@ -77,28 +77,28 @@ describe('PlotPage', () => {
     plotApi()
     renderApp(`/plots/${testPlot.id}`)
     expect(await screen.findByRole('heading', { name: 'Plot 1', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText(/3\.69 ha · 6\.20 ha on the old map · 2 zones/)).toBeInTheDocument()
-    const zones = within(await screen.findByRole('region', { name: 'Zones' }))
+    expect(screen.getByText(/3,69 ha · 6,20 ha no mapa antigo · 2 zonas/)).toBeInTheDocument()
+    const zones = within(await screen.findByRole('region', { name: 'Zonas' }))
     const links = await zones.findAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual([expect.stringMatching(/^Clareira/), expect.stringMatching(/^Ribeira · 1 open task/)])
+    expect(links.map((l) => l.textContent)).toEqual([expect.stringMatching(/^Clareira/), expect.stringMatching(/^Ribeira · 1 tarefa por fazer/)])
     expect(links[0]).toHaveAttribute('href', `/zones/${testZone.id}`)
     expect(zones.queryByText(/Longe/)).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Stats for Plot 1/ })).toHaveAttribute('href', `/stats#plot-${testPlot.id}`)
+    expect(screen.getByRole('link', { name: /Estatísticas de Plot 1/ })).toHaveAttribute('href', `/stats#plot-${testPlot.id}`)
   })
 
   it('lists the open tasks of the plot and its zones, and ticks one done', async () => {
     const api = plotApi()
     renderApp(`/plots/${testPlot.id}`)
-    const todo = within(await screen.findByRole('region', { name: 'To do' }))
-    expect(await todo.findByRole('button', { name: /Edit: .*Regar ribeira/ })).toHaveTextContent('Ribeira · due today')
-    expect(todo.getByRole('button', { name: /Edit: .*Melhorar caminho/ })).toHaveTextContent('Whole plot')
+    const todo = within(await screen.findByRole('region', { name: 'Tarefas' }))
+    expect(await todo.findByRole('button', { name: /Editar: .*Regar ribeira/ })).toHaveTextContent('Ribeira · para hoje')
+    expect(todo.getByRole('button', { name: /Editar: .*Melhorar caminho/ })).toHaveTextContent('Parcela inteira')
     expect(todo.queryByText(/Noutro talhão|Já feito/)).not.toBeInTheDocument()
-    await userEvent.click(todo.getByRole('button', { name: 'Done: Regar ribeira' }))
-    expect(await screen.findByText('Done: Regar ribeira.')).toBeInTheDocument()
+    await userEvent.click(todo.getByRole('button', { name: 'Feita: Regar ribeira' }))
+    expect(await screen.findByText('Tarefa feita: Regar ribeira.')).toBeInTheDocument()
     const put = api.calls.find((c) => c.method === 'PUT')!
     expect(put.body).toMatchObject({ status: 'done', base_version: 1 })
     // stays in place (struck through) so a second tap doesn't land on the next one
-    await waitFor(() => expect(todo.getByRole('button', { name: 'Done: Regar ribeira' })).toHaveAttribute('aria-pressed', 'true'))
+    await waitFor(() => expect(todo.getByRole('button', { name: 'Feita: Regar ribeira' })).toHaveAttribute('aria-pressed', 'true'))
   })
 
   it('shows recent activity in this plot only, each opening the zone’s history', async () => {
@@ -107,12 +107,12 @@ describe('PlotPage', () => {
       entry({ id: '50000000-0000-4000-8000-000000000002', type: 'sowing', zones: [{ zone_id: elsewhere.id, quantity: 5, unit: 'holes' }] }),
     ])
     renderApp(`/plots/${testPlot.id}`)
-    const recent = within(await screen.findByRole('region', { name: 'Recent activity' }))
+    const recent = within(await screen.findByRole('region', { name: 'Últimos registos' }))
     const links = await recent.findAllByRole('link')
     expect(links).toHaveLength(1)
-    expect(links[0]).toHaveTextContent('Watered · 150 litres')
-    expect(links[0]).toHaveTextContent('yesterday')
-    expect(links[0]).toHaveTextContent('Ribeira and Clareira')
+    expect(links[0]).toHaveTextContent('Rega · 150 litros')
+    expect(links[0]).toHaveTextContent('ontem')
+    expect(links[0]).toHaveTextContent('Ribeira e Clareira')
     expect(links[0]).toHaveAttribute('href', `/zones/${ribeira.id}#entry-50000000-0000-4000-8000-000000000001`)
   })
 
@@ -123,9 +123,9 @@ describe('PlotPage', () => {
     const old = entry({ id: '50000000-0000-4000-8000-000000000009', type: 'sowing', performed_on: addDays(today, -60), zones: [{ zone_id: testZone.id, quantity: 80, unit: 'holes' }] })
     const api = plotApi(busy, [old])
     renderApp(`/plots/${testPlot.id}`)
-    const recent = within(await screen.findByRole('region', { name: 'Recent activity' }))
+    const recent = within(await screen.findByRole('region', { name: 'Últimos registos' }))
     const link = await recent.findByRole('link')
-    expect(link).toHaveTextContent('Sowed · 80 covas')
+    expect(link).toHaveTextContent('Sementeira · 80 covas')
     expect(link).toHaveTextContent('Clareira')
     expect(api.calls.some((c) => c.path.startsWith(`/api/activities?plot_id=${testPlot.id}&`))).toBe(true)
   })
@@ -133,7 +133,7 @@ describe('PlotPage', () => {
   it('says when the plot does not exist', async () => {
     plotApi()
     renderApp('/plots/10000000-0000-4000-8000-0000000000ff')
-    expect(await screen.findByRole('heading', { name: 'Plot not found' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Parcela não encontrada' })).toBeInTheDocument()
   })
 
   it('is reached from the plot stats', async () => {

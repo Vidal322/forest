@@ -16,18 +16,18 @@ export function PhotoHistory({ onMessage }: { onMessage: (m: string) => void }) 
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: fieldKey })
       void qc.invalidateQueries({ queryKey: ['field-photos'] })
-      onMessage('The map now shows the photo you chose.')
+      onMessage('O mapa mostra agora a fotografia que escolheste.')
     },
   })
   const [open, setOpen] = useState(false)
   if (!photos.data || photos.data.length < 2) return null
-  const day = (p: PhotoInfo) => (p.captured_on ? formatDay(p.captured_on) : `added ${formatDay(fieldToday(new Date(p.created_at)))}`)
+  const day = (p: PhotoInfo) => (p.captured_on ? formatDay(p.captured_on) : `acrescentada a ${formatDay(fieldToday(new Date(p.created_at)))}`)
   return (
     <section className="card" aria-labelledby="photos-t">
-      <h2 id="photos-t">Photos of the field</h2>
+      <h2 id="photos-t">Fotografias do terreno</h2>
       {/* collapsed: each thumbnail is a whole display copy, heavy on mobile data */}
       <button type="button" className="btn-link" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        {open ? 'Hide' : 'Show'} the {photos.data.length} photos
+        {open ? 'Esconder' : 'Mostrar'} as {photos.data.length} fotografias
       </button>
       {open && (
       <ul className="list">
@@ -36,19 +36,19 @@ export function PhotoHistory({ onMessage }: { onMessage: (m: string) => void }) 
             <img src={photoUrl(p.key, 'display')} alt="" className="photo-row__thumb" loading="lazy" />
             <span className="photo-row__text">
               <b>{day(p)}</b>
-              <span className="muted small">It {fitLabel(p)}</span>
+              <span className="muted small">{fitLabel(p)}</span>
             </span>
             {p.is_current ? (
-              <span className="muted small">shown</span>
+              <span className="muted small">no mapa</span>
             ) : (
               <button
                 type="button"
                 className="btn btn-small"
                 disabled={choose.isPending}
                 onClick={() => choose.mutate(p.id)}
-                aria-label={`Show the photo from ${day(p)}`}
+                aria-label={`Mostrar a fotografia de ${day(p)}`}
               >
-                Show this one
+                Mostrar esta
               </button>
             )}
           </li>

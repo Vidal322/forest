@@ -54,7 +54,7 @@ export function MapPage() {
     viewing !== null && !pastExact && (past.isError || past.fetchStatus === 'paused')
       ? past.isError
         ? friendlyError(past.error)
-        : 'No signal: showing today until there is.'
+        : 'Sem rede: até haver, o mapa mostra hoje.'
       : null
   // while the next day loads, the last one stays; if it can't load, today's colours (the banner says so)
   const pastState = viewing !== null && !pastFailed ? (past.data ?? null) : null
@@ -73,7 +73,7 @@ export function MapPage() {
     if (editId && handledEdit === editId) setParams({}, { replace: true })
   }, [editId, handledEdit, setParams])
 
-  // short confirmations ("Added Plot 1.") fade after a few seconds
+  // short confirmations ("Parcela 1 acrescentada.") fade after a few seconds
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 4000)
@@ -151,7 +151,7 @@ export function MapPage() {
     const sheetOpen = Boolean(selected) || taskAt !== null
     return (
       <div className="fieldmap-page">
-        <h1 className="visually-hidden">Field map</h1>
+        <h1 className="visually-hidden">Mapa do terreno</h1>
         <FieldMap key={`${photo.width}x${photo.height}`} photo={photo}>
           <FieldLayers
             plots={show.plots ? (plots.data ?? []).filter((p) => !(draft?.kind === 'plot' && p.id === draft.id)) : []}
@@ -183,16 +183,16 @@ export function MapPage() {
         {!draft && (
         <div className="map-overlay map-overlay--bottom-left">
           <div className="row">
-            {/* what is shown and what the colours mean, in one panel: two buttons stay clear of “＋ Draw” on a phone */}
+            {/* what is shown and what the colours mean, in one panel: two buttons stay clear of “＋ Desenhar” on a phone */}
             <button
               type="button"
               className="map-btn"
               aria-expanded={panel === 'layers'}
               aria-controls="map-layers"
-              aria-label={hidden > 0 ? `Layers, ${hidden} off` : undefined}
+              aria-label={hidden > 0 ? `Camadas, ${hidden} ${hidden === 1 ? 'escondida' : 'escondidas'}` : undefined}
               onClick={() => setPanel((p) => (p === 'layers' ? null : 'layers'))}
             >
-              Layers
+              Camadas
               {hidden > 0 && <span className="map-btn__dot" aria-hidden="true" />}
             </button>
             <button
@@ -202,13 +202,13 @@ export function MapPage() {
               aria-controls="map-zone-list"
               onClick={() => setPanel((p) => (p === 'zones' ? null : 'zones'))}
             >
-              Zones
+              Zonas
             </button>
           </div>
           {panel === 'layers' && (
             <div id="map-layers" className="map-panel map-panel--scroll">
               <fieldset className="layers">
-                <legend>Show on the map</legend>
+                <legend>Mostrar no mapa</legend>
                 {(Object.keys(LAYER_LABEL) as (keyof MapLayers)[]).map((k) => (
                   <label key={k} className="layers__opt">
                     <input
@@ -221,7 +221,7 @@ export function MapPage() {
                 ))}
               </fieldset>
               <AsOfControl asOf={viewing} today={today} onChange={setAsOf} />
-              <h3 className="layers__key">Colours</h3>
+              <h3 className="layers__key">Legenda</h3>
               <Legend />
             </div>
           )}
@@ -295,12 +295,12 @@ export function MapPage() {
                 void zones.refetch()
               }}
             >
-              Try again
+              Tentar outra vez
             </button>
           </div>
         )}
         {empty && !sheetOpen && !draft && (
-          <p className="map-overlay map-overlay--top note">No plots yet. Tap “＋ Draw” to outline your first plot.</p>
+          <p className="map-overlay map-overlay--top note">Ainda não há parcelas. Toca em “＋ Desenhar” para marcar a primeira.</p>
         )}
         {/* always present, so screen readers hear each new message */}
         <output className="map-overlay map-overlay--toast map-toast-region" aria-live="polite">
@@ -319,16 +319,16 @@ export function MapPage() {
             onClose={closeSheet}
           >
             {/* looking back: logging and editing still act on today, so they say so */}
-            {pastState && <p className="muted">Logging and editing act on today.</p>}
+            {pastState && <p className="muted">O que registares ou editares fica com o dia de hoje.</p>}
             <div className="row form__actions">
               <Link className="btn btn-primary" to={`/log?zone=${selected.id}`}>
-                {pastState ? '＋ Log for today' : '＋ Log activity'}
+                {pastState ? '＋ Registar hoje' : '＋ Registar'}
               </Link>
               <Link className="btn" to={`/zones/${selected.id}`}>
-                History & tasks
+                Histórico e tarefas
               </Link>
               <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
-                {pastState ? '✎ Edit zone today' : '✎ Edit zone'}
+                {pastState ? '✎ Editar a zona hoje' : '✎ Editar a zona'}
               </button>
             </div>
           </ZoneSheet>
@@ -357,7 +357,7 @@ export function MapPage() {
         )}
         {!draft && !sheetOpen && !menuOpen && (
           <button type="button" className="fab" onClick={() => setMenuOpen(true)}>
-            ＋ Draw
+            ＋ Desenhar
           </button>
         )}
         {menuOpen && (
@@ -372,22 +372,22 @@ export function MapPage() {
   }
   return (
     <div className="page">
-      <h1 className="visually-hidden">Field map</h1>
+      <h1 className="visually-hidden">Mapa do terreno</h1>
       {field.isPending && field.fetchStatus === 'paused' && (
-        <p className="note">No connection. The map will appear as soon as there is signal.</p>
+        <p className="note">Sem rede. O mapa aparece assim que houver rede.</p>
       )}
-      {field.isPending && field.fetchStatus !== 'paused' && <p className="muted">Loading the map…</p>}
+      {field.isPending && field.fetchStatus !== 'paused' && <p className="muted">A carregar o mapa…</p>}
       {field.isError && (
         <div className="note warn" role="alert">
           {friendlyError(field.error)}{' '}
           <button type="button" className="btn" onClick={() => void field.refetch()}>
-            Try again
+            Tentar outra vez
           </button>
         </div>
       )}
       {field.data && !photo && (
         <p className="note">
-          The field has no photo. <Link to="/field">Open field setup</Link>
+          O terreno não tem fotografia. <Link to="/field">Abrir Configurar o terreno</Link>
         </p>
       )}
       {field.data === null && (
@@ -395,10 +395,10 @@ export function MapPage() {
           <p style={{ fontSize: '2.5rem', margin: 0 }} aria-hidden="true">
             🌳
           </p>
-          <h2>Welcome to Forest</h2>
-          <p>Start by adding a photo of your field. Everything you plant, sow and water is drawn on it.</p>
+          <h2>Bem-vindo ao Forest</h2>
+          <p>Começa por acrescentar uma fotografia do teu terreno. Tudo o que plantas, semeias e regas fica desenhado nela.</p>
           <Link className="btn btn-primary" to="/field">
-            Set up your field
+            Configurar o teu terreno
           </Link>
         </div>
       )}

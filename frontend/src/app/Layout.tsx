@@ -23,15 +23,15 @@ export function Layout() {
         <Link to="/" className="topbar__brand">
           <span aria-hidden="true">🌳</span> Forest
         </Link>
-        <nav className="topnav" aria-label="Main">
+        <nav className="topnav" aria-label="Principal">
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'} className="topnav__link">
-              {n.label}
+              {n.short ?? n.label}
             </NavLink>
           ))}
           {/* the export (and anything else only on More) must be reachable on desktop too */}
           <NavLink to="/more" className="topnav__link">
-            More
+            Mais
           </NavLink>
         </nav>
         <span className="spacer" />
@@ -40,9 +40,9 @@ export function Layout() {
       <SyncStatus />
       <main className="main" ref={main}>
         {/* saved data and queued changes come back first: no screen runs before (no write can jump the queue) */}
-        {restoring ? <p className="page muted">Opening…</p> : <Outlet />}
+        {restoring ? <p className="page muted">A abrir…</p> : <Outlet />}
       </main>
-      <nav className="tabs" aria-label="Main">
+      <nav className="tabs" aria-label="Principal">
         {tabs.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'}>
             <span className="tabs__icon" aria-hidden="true">
@@ -56,7 +56,7 @@ export function Layout() {
           <span className="tabs__icon" aria-hidden="true">
             ☰
           </span>
-          More
+          Mais
         </Link>
       </nav>
     </>

@@ -1,6 +1,6 @@
-import { addDays, daysBetween, formatDay } from '../domain/dates'
+import { addDays, daysBetween, formatLongDay } from '../domain/dates'
 
-const daysAgo = (n: number) => (n === 1 ? 'yesterday' : `${n} days ago`)
+const daysAgo = (n: number) => (n === 1 ? 'ontem' : `há ${n} dias`)
 
 /** How far back the slider reaches; the date box goes further. */
 export const AS_OF_SLIDER_DAYS = 60
@@ -24,11 +24,11 @@ export function AsOfControl({
   const pick = (d: string) => onChange(!d || d >= today ? null : d)
   return (
     <fieldset className="asof">
-      <legend>Show state as of</legend>
+      <legend>Ver o terreno como estava noutro dia</legend>
       <input
         type="date"
         className="asof__date"
-        aria-label="Date"
+        aria-label="Dia"
         value={day}
         max={today}
         onChange={(e) => pick(e.target.value)}
@@ -36,8 +36,8 @@ export function AsOfControl({
       <input
         type="range"
         className="asof__slider"
-        aria-label="Days back"
-        aria-valuetext={back === 0 ? 'Today' : `${formatDay(day, today)}, ${daysAgo(back)}`}
+        aria-label="Dias para trás"
+        aria-valuetext={back === 0 ? 'Hoje' : `${formatLongDay(day, today)}, ${daysAgo(back)}`}
         min={0}
         max={AS_OF_SLIDER_DAYS}
         step={1}
@@ -45,7 +45,9 @@ export function AsOfControl({
         onChange={(e) => pick(addDays(today, Number(e.target.value) - AS_OF_SLIDER_DAYS))}
       />
       <p className="muted asof__hint">
-        {back === 0 ? 'Today. Drag left to see the field earlier.' : `Colours as on ${formatDay(day, today)}, from what was logged up to then.`}
+        {back === 0
+          ? 'Hoje. Arrasta para a esquerda para veres o terreno mais para trás.'
+          : `Cores como a ${formatLongDay(day, today)}, com o que estava registado até esse dia.`}
       </p>
     </fieldset>
   )
@@ -69,15 +71,15 @@ export function AsOfBanner({
   return (
     <output className={`asof-banner${failed ? ' asof-banner--warn' : ''}`}>
       <span className="asof-banner__text">
-        <strong>Viewing {formatDay(asOf, today)}</strong>
+        <strong>A ver {formatLongDay(asOf, today)}</strong>
         <span className="muted asof-banner__ago">
           {daysAgo(daysBetween(asOf, today))}
-          {loading && !failed && ' · loading…'}
+          {loading && !failed && ' · a carregar…'}
         </span>
         {failed && <span className="asof-banner__error">{failed}</span>}
       </span>
       <button type="button" className="btn asof-banner__today" onClick={onToday}>
-        Back to today
+        Voltar a hoje
       </button>
     </output>
   )

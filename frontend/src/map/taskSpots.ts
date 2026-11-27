@@ -55,5 +55,5 @@ export function taskSpots(tasks: Task[], plots: Plot[], zones: Zone[]): TaskSpot
 /** What a pin says to a screen reader (and on hover). */
 export function pinTitle(spot: TaskSpot): string {
   const [first] = spot.tasks
-  return spot.tasks.length === 1 ? `Task: ${first!.title}` : `${spot.tasks.length} tasks: ${spot.name}`
+  return spot.tasks.length === 1 ? `Tarefa: ${first!.title}` : `${spot.tasks.length} tarefas: ${spot.name}`
 }

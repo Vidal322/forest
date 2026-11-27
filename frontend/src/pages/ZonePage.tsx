@@ -11,6 +11,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { TaskForm } from '../components/TaskForm'
 import { ZoneTrees } from '../components/ZoneTrees'
 import { formatDay, relativeDay } from '../domain/dates'
+import { formatNumber } from '../domain/numbers'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { useFieldToday } from '../hooks/useFieldToday'
 import { useFlash } from '../hooks/useFlash'
@@ -79,18 +80,18 @@ export function ZonePage() {
     return (
       <div className="page">
         <p>
-          <Link to="/">← Map</Link>
+          <Link to="/">← Mapa</Link>
         </p>
         {zones.isPending ? (
-          <p className="muted">Loading…</p>
+          <p className="muted">A carregar…</p>
         ) : zones.isError ? (
           <p className="note warn" role="alert">
             {friendlyError(zones.error)}
           </p>
         ) : (
           <>
-            <h1>Zone not found</h1>
-            <p className="muted">It may have been deleted.</p>
+            <h1>Zona não encontrada</h1>
+            <p className="muted">Pode ter sido apagada.</p>
           </>
         )}
       </div>
@@ -110,7 +111,7 @@ export function ZonePage() {
   return (
     <div className="page">
       <p className="crumbs">
-        <Link to={`/?zone=${zone.id}`}>← Map</Link>
+        <Link to={`/?zone=${zone.id}`}>← Mapa</Link>
         {plot && <span className="muted"> · {plot.name}</span>}
       </p>
       <h1>{zoneName(zone)}</h1>
@@ -120,15 +121,15 @@ export function ZonePage() {
         {zone.area_ha !== null && <span className="muted">{formatHa(zone.area_ha)}</span>}
       </p>
       {needsWater(zone, today) && (
-        <p className="note">No watering, sowing or planting here for {zone.current_interval_days}+ days.</p>
+        <p className="note">Sem rega, sementeira nem plantação há {zone.current_interval_days} dias ou mais.</p>
       )}
       {zone.notes && <p className="muted">{zone.notes}</p>}
       <div className="row">
         <Link className="btn btn-primary" to={`/log?zone=${zone.id}`}>
-          ＋ Log activity
+          ＋ Registar
         </Link>
         <Link className="btn" to={`/?edit=${zone.id}`}>
-          ✎ Edit outline
+          ✎ Editar o contorno
         </Link>
       </div>
       <Flash flash={flash} />
@@ -142,11 +143,11 @@ export function ZonePage() {
 
       <section aria-labelledby="zone-tasks">
         <div className="row section-head">
-          <h2 id="zone-tasks">To do</h2>
+          <h2 id="zone-tasks">Tarefas</h2>
           <span className="spacer" />
           {editing?.kind !== 'task' && (
             <button id="zone-add-task" type="button" className="btn btn-small" onClick={() => open({ kind: 'task' }, 'zone-add-task')}>
-              ＋ Add task
+              ＋ Acrescentar tarefa
             </button>
           )}
         </div>
@@ -164,7 +165,7 @@ export function ZonePage() {
           />
         )}
         {openTasks.length === 0 ? (
-          <p className="muted">Nothing to do here.</p>
+          <p className="muted">Nada por fazer aqui.</p>
         ) : (
           <ul className="list">
             {openTasks.map((t) => (
@@ -175,7 +176,7 @@ export function ZonePage() {
         {closedTasks.length > 0 && (
           <>
             <button type="button" className="btn-link" aria-expanded={showClosed} onClick={() => setShowClosed((v) => !v)}>
-              {showClosed ? 'Hide' : 'Show'} done ({closedTasks.length})
+              {showClosed ? 'Esconder' : 'Mostrar'} as feitas ({closedTasks.length})
             </button>
             {showClosed && (
               <ul className="list">
@@ -192,15 +193,15 @@ export function ZonePage() {
 
       <section aria-labelledby="zone-history">
         <h2 id="zone-history" className="section-head">
-          History
+          Histórico
         </h2>
         {history.isError && (
           <p className="note warn" role="alert">
             {friendlyError(history.error)}
           </p>
         )}
-        {history.offline && history.data.length === 0 && <p className="note">No connection. The history will appear when there is signal.</p>}
-        {history.data.length === 0 && !history.isPending && !history.offline && <p className="muted">Nothing logged here yet.</p>}
+        {history.offline && history.data.length === 0 && <p className="note">Sem rede. O histórico aparece quando houver rede.</p>}
+        {history.data.length === 0 && !history.isPending && !history.offline && <p className="muted">Ainda não registaste nada aqui.</p>}
         <ol className="timeline">
           {history.data.map((a) => {
             const mine = a.zones.find((z) => z.zone_id === zone.id)
@@ -230,19 +231,19 @@ export function ZonePage() {
                   onClick={() => open({ kind: 'activity', activity: a }, `entry-${a.id}`)}
                 >
                   <span className="timeline__title">
-                    <span className="visually-hidden">Edit: </span>
+                    <span className="visually-hidden">Editar: </span>
                     <span aria-hidden="true">{ACTIVITY[a.type].icon}</span> {ACTIVITY[a.type].label}
-                    {mine?.quantity != null && mine.unit && ` · ${mine.quantity} ${UNIT_LABEL[mine.unit]}`}
+                    {mine?.quantity != null && mine.unit && ` · ${formatNumber(mine.quantity)} ${UNIT_LABEL[mine.unit]}`}
                   </span>
                   <span className="timeline__meta">
                     {formatDay(a.performed_on, today)}
                     {relativeDay(a.performed_on, today) !== formatDay(a.performed_on, today) && ` (${relativeDay(a.performed_on, today)})`}
-                    {others > 0 && ` · with ${others} other zone${others === 1 ? '' : 's'}`}
+                    {others > 0 && ` · com ${others === 1 ? 'mais 1 zona' : `mais ${others} zonas`}`}
                   </span>
                   {a.species.length > 0 && (
                     <span className="timeline__meta">
                       {a.species
-                        .map((s) => `${speciesName.get(s.species_id) ?? 'a deleted species'}${s.quantity != null ? ` ×${s.quantity}` : ''}`)
+                        .map((s) => `${speciesName.get(s.species_id) ?? 'uma espécie apagada'}${s.quantity != null ? ` ×${formatNumber(s.quantity)}` : ''}`)
                         .join(', ')}
                     </span>
                   )}

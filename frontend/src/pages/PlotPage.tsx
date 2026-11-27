@@ -8,7 +8,9 @@ import { Flash } from '../components/Flash'
 import { StatusBadge } from '../components/StatusBadge'
 import { TaskForm } from '../components/TaskForm'
 import { TaskRow, ToastLine } from '../components/TaskRow'
+import { taskCount } from '../domain/attention'
 import { formatDay, relativeDay } from '../domain/dates'
+import { formatNumber } from '../domain/numbers'
 import { byNeed, NEED_ORDER_HINT, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { useFieldToday } from '../hooks/useFieldToday'
 import { useFlash } from '../hooks/useFlash'
@@ -67,18 +69,18 @@ export function PlotPage() {
     return (
       <div className="page">
         <p>
-          <Link to="/">← Map</Link>
+          <Link to="/">← Mapa</Link>
         </p>
         {plots.isPending ? (
-          <p className="muted">Loading…</p>
+          <p className="muted">A carregar…</p>
         ) : plots.isError ? (
           <p className="note warn" role="alert">
             {friendlyError(plots.error)}
           </p>
         ) : (
           <>
-            <h1>Plot not found</h1>
-            <p className="muted">It may have been deleted.</p>
+            <h1>Parcela não encontrada</h1>
+            <p className="muted">Pode ter sido apagada.</p>
           </>
         )}
       </div>
@@ -88,23 +90,23 @@ export function PlotPage() {
   // zone tasks count under their plot; a task ticked here keeps its place until the page is left
   const plotTasks = (tasks.data ?? []).filter((t) => taskPlotId(t, allZones) === plot.id && (isOpen(t) || pinned.has(t.id)))
   const zoneById = new Map(own.map((z) => [z.id, z]))
-  const place = (t: Task) => (t.zone_id ? (zoneById.get(t.zone_id) ? zoneName(zoneById.get(t.zone_id)!) : 'A deleted zone') : 'Whole plot')
+  const place = (t: Task) => (t.zone_id ? (zoneById.get(t.zone_id) ? zoneName(zoneById.get(t.zone_id)!) : 'Uma zona apagada') : 'Parcela inteira')
 
   return (
     <div className="page">
       <p className="crumbs">
-        <Link to="/">← Map</Link>
+        <Link to="/">← Mapa</Link>
       </p>
       <h1>{plot.name}</h1>
       <p className="muted">
-        {plot.area_ha !== null ? formatHa(plot.area_ha) : 'Area not measured yet'}
-        {plot.declared_area_ha !== null && ` · ${formatHa(plot.declared_area_ha)} on the old map`}
-        {` · ${own.length} zone${own.length === 1 ? '' : 's'}`}
+        {plot.area_ha !== null ? formatHa(plot.area_ha) : 'Área ainda por medir'}
+        {plot.declared_area_ha !== null && ` · ${formatHa(plot.declared_area_ha)} no mapa antigo`}
+        {` · ${own.length === 1 ? '1 zona' : `${own.length} zonas`}`}
       </p>
       {plot.notes && <p className="muted">{plot.notes}</p>}
       <div className="row">
         <Link className="btn" to={`/stats#plot-${plot.id}`}>
-          📊 Stats for {plot.name}
+          📊 Estatísticas de {plot.name}
         </Link>
       </div>
       <Flash flash={flash} />
@@ -118,7 +120,7 @@ export function PlotPage() {
 
       <section aria-labelledby="plot-zones">
         <div className="section-head">
-          <h2 id="plot-zones">Zones</h2>
+          <h2 id="plot-zones">Zonas</h2>
         </div>
         {zones.isError && !zones.data && (
           <p className="note warn" role="alert">
@@ -128,7 +130,7 @@ export function PlotPage() {
         {zones.isPending && <p className="muted">Loading…</p>}
         {zones.data && own.length === 0 && (
           <p className="muted">
-            No zones in this plot yet. <Link to="/">Draw them on the map.</Link>
+            Ainda não há zonas nesta parcela. <Link to="/">Desenha-as no mapa.</Link>
           </p>
         )}
         {own.length > 0 && (
@@ -145,7 +147,7 @@ export function PlotPage() {
                         {z.open_task_count > 0 && (
                           <span className="zone-list__meta">
                             {' '}
-                            · {z.open_task_count} open task{z.open_task_count === 1 ? '' : 's'}
+                            · {taskCount(z.open_task_count)}
                           </span>
                         )}
                       </span>
@@ -161,11 +163,11 @@ export function PlotPage() {
 
       <section aria-labelledby="plot-tasks">
         <div className="row section-head">
-          <h2 id="plot-tasks">To do</h2>
+          <h2 id="plot-tasks">Tarefas</h2>
           <span className="spacer" />
           {editing === null && (
             <button id="plot-add-task" type="button" className="btn btn-small" onClick={() => open({}, 'plot-add-task')}>
-              ＋ Add task
+              ＋ Acrescentar tarefa
             </button>
           )}
         </div>
@@ -187,7 +189,7 @@ export function PlotPage() {
             {friendlyError(tasks.error)}
           </p>
         )}
-        {tasks.data && plotTasks.length === 0 && <p className="muted">Nothing to do in this plot.</p>}
+        {tasks.data && plotTasks.length === 0 && <p className="muted">Nada por fazer nesta parcela.</p>}
         {plotTasks.length > 0 && (
           <ul className="list">
             {plotTasks.map((t) => (
@@ -207,16 +209,16 @@ export function PlotPage() {
 
       <section aria-labelledby="plot-recent">
         <div className="section-head">
-          <h2 id="plot-recent">Recent activity</h2>
+          <h2 id="plot-recent">Últimos registos</h2>
         </div>
         {history.isError && (
           <p className="note warn" role="alert">
             {friendlyError(history.error)}
           </p>
         )}
-        {history.offline && recent.length === 0 && <p className="note">No connection. Recent activity will appear when there is signal.</p>}
+        {history.offline && recent.length === 0 && <p className="note">Sem rede. Os últimos registos aparecem quando houver rede.</p>}
         {zones.data && recent.length === 0 && !history.isPending && !history.offline && !history.isError && (
-          <p className="muted">Nothing logged in this plot yet.</p>
+          <p className="muted">Ainda não registaste nada nesta parcela.</p>
         )}
         {recent.length > 0 && (
           <ol className="timeline">
@@ -227,7 +229,7 @@ export function PlotPage() {
         )}
         {recent.length > shown && (
           <button type="button" className="btn-link" onClick={() => setShown((n) => n + RECENT_STEP * 2)}>
-            Show more ({recent.length - shown} older)
+            Mostrar mais ({recent.length - shown} mais antigos)
           </button>
         )}
       </section>
@@ -257,7 +259,7 @@ function RecentEntry({ a, zoneById, today }: { a: Activity; zoneById: Map<string
       <Link className="timeline__item" to={`/zones/${here[0]!.zone_id}#entry-${a.id}`}>
         <span className="timeline__title">
           <span aria-hidden="true">{ACTIVITY[a.type].icon}</span> {ACTIVITY[a.type].label}
-          {total !== null && unit && ` · ${total.toLocaleString('en-GB')} ${UNIT_LABEL[unit]}`}
+          {total !== null && unit && ` · ${formatNumber(total)} ${UNIT_LABEL[unit]}`}
         </span>
         <span className="timeline__meta">
           {day}

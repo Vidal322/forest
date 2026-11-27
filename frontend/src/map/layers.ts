@@ -7,7 +7,7 @@ export interface MapLayers {
 
 export const ALL_LAYERS: MapLayers = { plots: true, zones: true, tasks: true }
 
-export const LAYER_LABEL: Record<keyof MapLayers, string> = { plots: 'Plots', zones: 'Zones', tasks: 'Tasks' }
+export const LAYER_LABEL: Record<keyof MapLayers, string> = { plots: 'Parcelas', zones: 'Zonas', tasks: 'Tarefas' }
 
 /** The stored choice, or everything shown for anything missing or unreadable. */
 export function parseLayers(stored: unknown): MapLayers {
