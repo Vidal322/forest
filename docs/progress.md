@@ -435,3 +435,9 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Review: not run.
 - Browser check: not needed.
 - Follow-ups: needs P3 (map look, banner, zone codes). Owner: answer the zone-code question for P3, or say to build P4a now on the current map with zone names.
+
+## 2026-11-27 · P4b Log by painting: plant, sow, fertilise, other — blocked
+- Change: none, no code written.
+- Review: not run.
+- Browser check: not needed.
+- Follow-ups: needs P4a (painting tool row, paint state, banner, sheet, outbox save). P4a waits on the P3 zone-code question; answer it, or say to build P4a now with zone names.

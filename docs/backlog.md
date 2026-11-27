@@ -394,7 +394,7 @@ Acceptance:
 - Unit tests for the paint state (add, remove, take the last off, cancel, switch tools); the anti-AI checklist passes.
 
 ### P4b · Log by painting: plant, sow, fertilise, other
-Status: todo
+Status: blocked: needs P4a (Regar tool), which waits on the P3 zone-code question: (a) stored per plot, (b) order on the phone, (c) no codes, or build P4a now with zone names?
 Touches: frontend (paint tools, second step)
 Area: redesign, log, map
 Acceptance:
