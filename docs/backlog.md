@@ -376,7 +376,7 @@ Acceptance:
 - The anti-AI checklist passes on the map; its allow-list entries go.
 
 ### P4a · Log by painting: the water tool
-Status: todo
+Status: blocked: needs P3, which waits on where zone codes come from (a stored per plot, b order on the phone, c none); or build P4a now with zone names instead of codes?
 Touches: frontend (map page, a paint-state module, log save path)
 Area: redesign, log, map
 Acceptance:

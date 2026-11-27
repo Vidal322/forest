@@ -429,3 +429,9 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Review: not run.
 - Browser check: not needed.
 - Follow-ups: owner must choose where zone codes come from (a stored per plot, b order on the phone, c none). P5 uses the same code.
+
+## 2026-11-27 · P4a Log by painting: the water tool — blocked
+- Change: none, no code written.
+- Review: not run.
+- Browser check: not needed.
+- Follow-ups: needs P3 (map look, banner, zone codes). Owner: answer the zone-code question for P3, or say to build P4a now on the current map with zone names.
