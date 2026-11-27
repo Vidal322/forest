@@ -9,6 +9,7 @@ import (
 // ExportZone is one zone of an exported activity, by name (never its shape).
 type ExportZone struct {
 	Plot     string  `json:"plot"`
+	Code     string  `json:"code"`
 	Label    *string `json:"label"`
 	Kind     string  `json:"kind"`
 	Quantity *int    `json:"quantity"`
@@ -42,7 +43,7 @@ func (s *Store) ExportActivities(ctx context.Context) (list []ExportActivity, to
 	}
 	rows, err := s.db.Query(ctx, `
 		SELECT to_char(a.performed_on, 'YYYY-MM-DD'), a.type::text, a.notes,
-		       COALESCE((SELECT json_agg(json_build_object('plot', p.name, 'label', z.label, 'kind', z.kind,
+		       COALESCE((SELECT json_agg(json_build_object('plot', p.name, 'code', 'Z' || z.number, 'label', z.label, 'kind', z.kind,
 		                                                   'quantity', az.quantity, 'unit', az.unit)
 		                                 ORDER BY lower(p.name), p.id, lower(z.label) NULLS LAST, z.id)
 		                   FROM activity_zone az

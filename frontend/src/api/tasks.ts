@@ -3,7 +3,7 @@ import { daysBetween, formatDay, relativeDay } from '../domain/dates'
 import type { IconName } from '../components/icons'
 import { ACTIVITY, type Activity, type ActivityType } from './activities'
 import { defineEntity } from './entity'
-import { zoneName, type Plot, type Zone } from './plots'
+import { zoneTitle, type Plot, type Zone } from './plots'
 
 export type TaskKind = 'sow' | 'plant' | 'water' | 'fertilize' | 'add_nests' | 'improve_path' | 'other'
 export type TaskStatus = 'open' | 'in_progress' | 'done' | 'cancelled'
@@ -137,12 +137,12 @@ export function taskPlotId(t: Pick<Task, 'plot_id' | 'zone_id'>, zones: Zone[]):
   return zones.find((z) => z.id === t.zone_id)?.plot_id
 }
 
-/** Where a task is: "Clareira, Parcela 1" or "Parcela 2". */
+/** Where a task is: "Z3 Clareira, Parcela 1" or "Parcela 2". */
 export function taskPlace(t: Task, plots: Plot[], zones: Zone[]): string {
   if (t.zone_id) {
     const z = zones.find((x) => x.id === t.zone_id)
     const p = z && plots.find((x) => x.id === z.plot_id)
-    return z ? `${zoneName(z)}${p ? `, ${p.name}` : ''}` : 'Uma zona apagada'
+    return z ? `${zoneTitle(z)}${p ? `, ${p.name}` : ''}` : 'Uma zona apagada'
   }
   return plots.find((p) => p.id === t.plot_id)?.name ?? 'Uma parcela apagada'
 }

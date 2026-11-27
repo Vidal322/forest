@@ -13,6 +13,7 @@ const wrapper = MemoryRouter
 const zone = (label: string, over: Partial<Zone>): Zone => ({
   ...testZone,
   id: `20000000-0000-4000-8000-${String(++n).padStart(12, '0')}`,
+  code: `Z${n}`,
   label,
   last_sown_on: null,
   last_planted_on: null,
@@ -38,16 +39,23 @@ describe('ZoneList', () => {
     expect(screen.getByText(/Primeiro as mais urgentes/)).toBeInTheDocument()
     const names = within(screen.getByRole('region', { name: testPlot.name }))
       .getAllByRole('button')
-      .map((b) => b.textContent!.match(/^[A-H]/)![0])
+      .map((b) => b.textContent!.match(/^Z\d+ ([A-H])/)![1])
     expect(names.join('')).toBe('ECHDFGAB')
     expect(screen.getByRole('button', { name: /F path with a task · 2 tarefas por fazer/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /G watered with a task · 1 tarefa por fazer/ })).toBeInTheDocument()
   })
 
+  it('shows each zone’s code before its name, and "nova" until a zone made offline reaches the server', () => {
+    const zones = [zone('Alpha', { code: 'Z12' }), zone('Beta', { code: null })]
+    render(<ZoneList plots={[testPlot]} zones={zones} today={today} onPick={pick} />, { wrapper })
+    expect(screen.getByRole('button', { name: /^Z12 Alpha/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^nova Beta/ })).toBeInTheDocument()
+  })
+
   it('follows the day: a zone that dries out moves up', () => {
     const zones = [zone('Alpha', { last_watered_on: '2026-11-21' }), zone('Beta', { last_watered_on: '2026-11-20' })]
     const { rerender } = render(<ZoneList plots={[testPlot]} zones={zones} today={today} onPick={pick} />, { wrapper })
-    const order = () => screen.getAllByRole('button').map((b) => b.textContent!.match(/^(Alpha|Beta)/)![0])
+    const order = () => screen.getAllByRole('button').map((b) => b.textContent!.match(/^Z\d+ (Alpha|Beta)/)![1])
     expect(order()).toEqual(['Alpha', 'Beta']) // both fine: by name
     rerender(<ZoneList plots={[testPlot]} zones={zones} today="2026-11-27" onPick={pick} />)
     expect(order()).toEqual(['Beta', 'Alpha']) // Beta is due on the 27th, Alpha not yet

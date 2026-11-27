@@ -52,7 +52,7 @@ func (h *handlers) exportActivitiesCSV(w http.ResponseWriter, r *http.Request) {
 	cw := csv.NewWriter(&buf)
 	cw.Comma = ';'
 	cw.UseCRLF = true // what spreadsheets expect
-	_ = cw.Write([]string{"Data", "Tipo", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"})
+	_ = cw.Write([]string{"Data", "Tipo", "Código", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"})
 	for _, a := range list {
 		notes := ""
 		if a.Notes != nil {
@@ -61,6 +61,7 @@ func (h *handlers) exportActivitiesCSV(w http.ResponseWriter, r *http.Request) {
 		_ = cw.Write(safeCells(
 			a.PerformedOn,
 			exportTypeLabel[a.Type],
+			strings.Join(exportZoneCodes(a.Zones), listSep),
 			strings.Join(exportZoneNames(a.Zones), listSep),
 			strings.Join(exportPlotNames(a.Zones), listSep),
 			strings.Join(exportSpecies(a.Species), listSep),
@@ -110,6 +111,15 @@ func exportZoneNames(zones []store.ExportZone) []string {
 		names[i] = exportZoneName(z)
 	}
 	return names
+}
+
+// exportZoneCodes: each zone's code ("Z3"), in the same order as the names.
+func exportZoneCodes(zones []store.ExportZone) []string {
+	codes := make([]string, len(zones))
+	for i, z := range zones {
+		codes[i] = z.Code
+	}
+	return codes
 }
 
 // exportPlotNames: each plot once, in the zones' order (they come sorted by plot).

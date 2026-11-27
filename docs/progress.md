@@ -441,3 +441,9 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
 - Review: not run.
 - Browser check: not needed.
 - Follow-ups: needs P4a (painting tool row, paint state, banner, sheet, outbox save). P4a waits on the P3 zone-code question; answer it, or say to build P4a now with zone names.
+
+## 2026-11-27 · P2b Zone codes (Z1, Z2…) — merged (squash of branch auto/P2b)
+- Change: every zone now has a code (Z1, Z2…) given out per plot by the database (migration 00014, trigger `zone_number`). Codes are never reused, a moved zone gets the next code of its new plot, and existing zones were numbered by the migration. The code shows in the zone lists, zone sheet, zone page subtitle, task rows and a new "Código" CSV column. A zone drawn offline shows "nova" until it syncs. PutZone now locks the plot FOR NO KEY UPDATE and PutTask locks plot then zone, to avoid deadlocks.
+- Review: no blocking findings. Minor, left as is: zone writes in one plot now queue up (only mentioned in passing in the docs); CSV codes repeat across plots and are matched by the Parcelas column only (author's choice); `walkthrough.e2e.ts` flakes at its offline steps (lines ~93 and ~105), also on master.
+- Browser check: full e2e suite 16/16 on the second run (one walkthrough flake on the first); read the list and offline sheet screenshots at Pixel 7 size.
+- Follow-ups: the walkthrough e2e flake should be fixed in its own item.

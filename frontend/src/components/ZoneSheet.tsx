@@ -4,6 +4,7 @@ import { formatLongDay, relativeDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
 import { Icon } from './Icon'
+import { ZoneCode } from './ZoneCode'
 
 /** Bottom sheet for the zone tapped on the map (or picked from the zone list). */
 export function ZoneSheet({
@@ -47,6 +48,7 @@ export function ZoneSheet({
   return (
     <section className="sheet" aria-labelledby="zone-sheet-title">
       <div className="row">
+        <ZoneCode zone={zone} />
         <h2 id="zone-sheet-title" ref={heading} tabIndex={-1}>
           {zoneName(zone)}
         </h2>

@@ -86,7 +86,7 @@ describe('TasksPage', () => {
     renderApp('/tasks')
     expect(await screen.findByRole('heading', { name: /Atrasadas/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Sem prazo/ })).toBeInTheDocument()
-    expect(screen.getByText(/Clareira, Plot 1, atrasada desde \d+ [a-z]{3}$/)).toBeInTheDocument()
+    expect(screen.getByText(/^Z1 Clareira, Plot 1, atrasada desde \d+ [a-z]{3}$/)).toBeInTheDocument()
   })
 
   it('ticks a task done in one tap, from its current version', async () => {

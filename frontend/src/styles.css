@@ -344,6 +344,11 @@ details > summary { cursor: pointer; min-height: 44px; display: flex; align-item
 }
 .swatch--dashed { outline: 2px dashed var(--ink); outline-offset: -2px; }
 .btn-icon { min-width: 44px; min-height: 44px; padding: 0; }
+/* zone codes ("Z3") before the name; "nova" (not synced yet) reads quieter */
+.zone-code { font-weight: 700; font-variant-numeric: tabular-nums; }
+.zone-code--new { font-weight: 400; color: var(--ink-2); }
+.sheet .row > .zone-code { font-size: 1.15rem; }
+.page-subtitle { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--ink-2); }
 .zone-list__hint { font-size: 0.85rem; color: var(--ink-2); margin: 0 0 0.25rem; }
 .zone-list__meta { font-size: 0.88rem; color: var(--ink-2); }
 .zone-list h3 { font-size: 0.95rem; font-weight: 700; color: var(--ink-2); margin: 0.5rem 0 0.25rem; }

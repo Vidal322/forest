@@ -42,6 +42,16 @@ func Name(prefix string) string {
 	return prefix + " " + uuid.NewString()[:8]
 }
 
+// Pool returns the shared pool (migrated to the latest schema), for the rare test
+// that needs several connections at once (locks, concurrent writers). What it
+// commits is seen by everyone using the database: keep it out of the app's way
+// (e.g. under a soft-deleted field) and remove it in t.Cleanup.
+func Pool(t testing.TB) *pgxpool.Pool {
+	t.Helper()
+	rawTx(t) // opens and migrates the pool (or skips the test)
+	return pool
+}
+
 func rawTx(t testing.TB) pgx.Tx {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")

@@ -38,9 +38,9 @@ test('the More page downloads the activity log as a CSV a spreadsheet reads', as
   const bytes = await readFile((await download.path())!)
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]) // UTF-8 BOM: accents survive Excel
   const text = bytes.subarray(3).toString('utf8')
-  expect(text.split('\r\n')[0]).toBe('Data;Tipo;Zonas;Parcelas;Espécies;Quantidade;Notas')
+  expect(text.split('\r\n')[0]).toBe('Data;Tipo;Código;Zonas;Parcelas;Espécies;Quantidade;Notas')
   expect(text).toContain(
-    `2025-06-28;Sementeira;Clareira, Rochas;${plot};${name} (sobreiro);50 covas;Sementeira à mão, “boa” terra`,
+    `2025-06-28;Sementeira;Z1, Z2;Clareira, Rochas;${plot};${name} (sobreiro);50 covas;Sementeira à mão, “boa” terra`,
   )
   await expect(page.getByRole('alert')).toHaveCount(0)
 })

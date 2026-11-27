@@ -2,10 +2,11 @@ import { useCallback, useMemo, useRef, useState, type CSSProperties } from 'reac
 import { Link, useParams } from 'react-router'
 import { ACTIVITY, activities as activitiesApi, UNIT_LABEL, usePlotHistory, zonesPhrase, type Activity } from '../api/activities'
 import { friendlyError } from '../api/errors'
-import { formatHa, plots as plotsApi, zoneName, zones as zonesApi, type Zone } from '../api/plots'
+import { formatHa, plots as plotsApi, zoneName, zoneTitle, zones as zonesApi, type Zone } from '../api/plots'
 import { isOpen, resolvedLink, taskPlotId, tasks as tasksApi, type Task } from '../api/tasks'
 import { Flash } from '../components/Flash'
 import { StatusBadge } from '../components/StatusBadge'
+import { ZoneCode } from '../components/ZoneCode'
 import { TaskForm } from '../components/TaskForm'
 import { TaskRow, ToastLine } from '../components/TaskRow'
 import { taskCount } from '../domain/attention'
@@ -91,7 +92,7 @@ export function PlotPage() {
   // zone tasks count under their plot; a task ticked here keeps its place until the page is left
   const plotTasks = (tasks.data ?? []).filter((t) => taskPlotId(t, allZones) === plot.id && (isOpen(t) || pinned.has(t.id)))
   const zoneById = new Map(own.map((z) => [z.id, z]))
-  const place = (t: Task) => (t.zone_id ? (zoneById.get(t.zone_id) ? zoneName(zoneById.get(t.zone_id)!) : 'Uma zona apagada') : 'Parcela inteira')
+  const place = (t: Task) => (t.zone_id ? (zoneById.get(t.zone_id) ? zoneTitle(zoneById.get(t.zone_id)!) : 'Uma zona apagada') : 'Parcela inteira')
 
   return (
     <div className="page">
@@ -144,7 +145,7 @@ export function PlotPage() {
                   <li key={z.id}>
                     <Link className="zone-list__item" to={`/zones/${z.id}`}>
                       <span>
-                        {zoneName(z)}
+                        <ZoneCode zone={z} /> {zoneName(z)}
                         {z.open_task_count > 0 && (
                           <span className="zone-list__meta">
                             {' '}

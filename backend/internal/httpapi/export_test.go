@@ -17,7 +17,7 @@ func TestExportActivitiesCSV(t *testing.T) {
 	h := newFieldRouter(t)
 	// no field yet: just the header
 	rec := send(t, h, http.MethodGet, "/api/export/activities.csv", "")
-	if rec.Code != 200 || !strings.HasPrefix(rec.Body.String(), "\uFEFFData;Tipo;Zonas;Parcelas;Espécies;Quantidade;Notas\r\n") {
+	if rec.Code != 200 || !strings.HasPrefix(rec.Body.String(), "\uFEFFData;Tipo;Código;Zonas;Parcelas;Espécies;Quantidade;Notas\r\n") {
 		t.Fatalf("empty export: %d %q", rec.Code, rec.Body)
 	}
 
@@ -87,11 +87,11 @@ func TestExportActivitiesCSV(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := [][]string{
-		{"Data", "Tipo", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"},
-		{earlier, "Plantação", "B", "Encosta", spName + " (sobreiro): 12 árvores", "12 árvores", ""},
-		{yesterday, "Sementeira", "Á1, B, Caminho", "Encosta, Vale", spName + " (sobreiro): 300 sementes", "120 covas, 40 sementes",
+		{"Data", "Tipo", "Código", "Zonas", "Parcelas", "Espécies", "Quantidade", "Notas"},
+		{earlier, "Plantação", "Z1", "B", "Encosta", spName + " (sobreiro): 12 árvores", "12 árvores", ""},
+		{yesterday, "Sementeira", "Z2, Z1, Z1", "Á1, B, Caminho", "Encosta, Vale", spName + " (sobreiro): 300 sementes", "120 covas, 40 sementes",
 			"Ninhos; \"bem\" regados\ncom água"},
-		{today, "Rega", "Á1", "Encosta", "", "50 litros", "'=1+1"},
+		{today, "Rega", "Z2", "Á1", "Encosta", "", "50 litros", "'=1+1"},
 	}
 	if !slices.EqualFunc(rows, want, slices.Equal) {
 		t.Fatalf("rows:\n got %q\nwant %q", rows, want)

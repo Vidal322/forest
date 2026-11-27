@@ -17,6 +17,7 @@ var ZoneKinds = []string{"cultivation", "path", "other"}
 type Zone struct {
 	ID        uuid.UUID `json:"id"`
 	PlotID    uuid.UUID `json:"plot_id"`
+	Code      string    `json:"code"` // "Z3": given out per plot by the database, never reused
 	Label     *string   `json:"label"`
 	Kind      string    `json:"kind"`
 	Geom      Polygon   `json:"geom"`
@@ -70,7 +71,7 @@ func (in ZoneInput) normalize() (ZoneInput, error) {
 
 // zoneSelectOn is zoneSelect with the state as it stood on day $1 (zone_status_on).
 const zoneSelectOn = `
-	SELECT z.id, z.plot_id, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
+	SELECT z.id, z.plot_id, 'Z' || z.number, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
 	       (ST_Area(z.geom) * f.metres_per_unit ^ 2 / 10000)::float8, z.updated_at,
 	       to_char(st.last_sown_on, 'YYYY-MM-DD'), to_char(st.last_planted_on, 'YYYY-MM-DD'),
 	       to_char(st.last_watered_on, 'YYYY-MM-DD'), st.current_interval_days, st.open_task_count, st.needs_water
@@ -79,7 +80,7 @@ const zoneSelectOn = `
 	  JOIN field f ON f.id = st.field_id`
 
 const zoneSelect = `
-	SELECT z.id, z.plot_id, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
+	SELECT z.id, z.plot_id, 'Z' || z.number, z.label, z.kind::text, ST_AsGeoJSON(z.geom), z.notes,
 	       (ST_Area(z.geom) * f.metres_per_unit ^ 2 / 10000)::float8, z.updated_at,
 	       to_char(st.last_sown_on, 'YYYY-MM-DD'), to_char(st.last_planted_on, 'YYYY-MM-DD'),
 	       to_char(st.last_watered_on, 'YYYY-MM-DD'), st.current_interval_days, st.open_task_count, st.needs_water
@@ -90,7 +91,7 @@ const zoneSelect = `
 func scanZone(row pgx.Row) (Zone, error) {
 	var z Zone
 	var openTasks int64
-	err := row.Scan(&z.ID, &z.PlotID, &z.Label, &z.Kind, geomJSON[Polygon]{&z.Geom}, &z.Notes, &z.AreaHa, &z.UpdatedAt,
+	err := row.Scan(&z.ID, &z.PlotID, &z.Code, &z.Label, &z.Kind, geomJSON[Polygon]{&z.Geom}, &z.Notes, &z.AreaHa, &z.UpdatedAt,
 		&z.LastSownOn, &z.LastPlantedOn, &z.LastWateredOn, &z.CurrentIntervalDays, &openTasks, &z.NeedsWater)
 	z.OpenTaskCount = int(openTasks)
 	return z, err
@@ -155,11 +156,13 @@ func (s *Store) PutZone(ctx context.Context, id uuid.UUID, in ZoneInput) (z Zone
 		if zoneDeleted {
 			return ErrDeleted
 		}
-		// The plot must be live; FOR SHARE keeps it from being deleted or reshaped meanwhile.
+		// The plot must be live; the lock keeps it from being deleted or reshaped meanwhile. It is
+		// FOR NO KEY UPDATE, not FOR SHARE: a new (or moved) zone bumps the plot's zone counter
+		// (trigger zone_number), and two writers holding FOR SHARE would deadlock upgrading it.
 		var inside, plotDeleted bool
 		err = tx.db.QueryRow(ctx, `
 			SELECT ST_Within(ST_SetSRID(ST_GeomFromGeoJSON($2), 0), ST_Buffer(p.geom, 1)), p.deleted_at IS NOT NULL
-			  FROM plot p WHERE p.id = $1 FOR SHARE`,
+			  FROM plot p WHERE p.id = $1 FOR NO KEY UPDATE`,
 			in.PlotID, in.Geom.json()).Scan(&inside, &plotDeleted)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return invalid("plot_id", "não existe ou foi apagada")

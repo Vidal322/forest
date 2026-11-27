@@ -150,8 +150,17 @@ func (s *Store) PutTask(ctx context.Context, id uuid.UUID, in TaskInput) (t Task
 		// take them in, so the two can't deadlock. FOR SHARE keeps the target alive.
 		var targetDeleted *bool
 		if in.ZoneID != nil {
-			err := tx.db.QueryRow(ctx, `SELECT z.deleted_at IS NOT NULL OR p.deleted_at IS NOT NULL
-				FROM zone z JOIN plot p ON p.id = z.plot_id WHERE z.id = $1 FOR SHARE OF z, p`, in.ZoneID).Scan(&targetDeleted)
+			// two statements, plot then zone: one locking both could take the zone first and
+			// deadlock with PutZone, which holds the plot (FOR NO KEY UPDATE) and then writes the zone
+			var plotDeleted, zoneDeleted bool
+			err := tx.db.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM plot
+				WHERE id = (SELECT plot_id FROM zone WHERE id = $1) FOR SHARE`, in.ZoneID).Scan(&plotDeleted)
+			if err == nil {
+				err = tx.db.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM zone WHERE id = $1 FOR SHARE`, in.ZoneID).Scan(&zoneDeleted)
+			}
+			if err == nil {
+				targetDeleted = new(plotDeleted || zoneDeleted)
+			}
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return err
 			}

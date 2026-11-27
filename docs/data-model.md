@@ -82,6 +82,7 @@ classDiagram
 
     class Zone {
         +UUID id
+        +String code
         +String? label
         +ZoneKind kind
         +Polygon geom
@@ -273,6 +274,7 @@ erDiagram
         geometry_polygon geom "SRID 0"
         numeric declared_area_ha "nullable, owner label"
         text notes "nullable"
+        int last_zone_number "last zone code number given out"
         timestamptz created_at
         timestamptz updated_at
         timestamptz deleted_at "nullable"
@@ -280,6 +282,7 @@ erDiagram
     ZONE {
         uuid id PK
         uuid plot_id FK
+        int number "code Z<number>, unique per plot, set by the database"
         text label "nullable"
         zone_kind kind "default cultivation"
         geometry_polygon geom "SRID 0"
@@ -361,6 +364,7 @@ erDiagram
 - `activity_zone.unit` must fit the activity type (API): sowing holes/seeds, planting trees, watering litres, fertilizing kg/litres, other any — so totals like "covas sown" never silently miss entries.
 - Every activity has ≥ 1 zone. A foreign key can't enforce that, so the API does (the activity and its join rows are written in one transaction).
 - A zone must lie inside its plot: checked by the API with `ST_Within(zone.geom, ST_Buffer(plot.geom, 1))` (1 unit tolerance). The same check applies to `tree.position` vs its plot. Cross-table CHECKs aren't possible in PostgreSQL.
+- Zone **codes** ("Z1", "Z2"…, the API's `code` = `'Z' || zone.number`) are given out per plot by the database, never by the client, and never reused: trigger `zone_number` takes `plot.last_zone_number + 1` on insert and when a zone moves to another plot; any other update (an edit, a same-content PUT, a soft delete) keeps the number, so a deleted zone keeps its code and the next zone gets the next one. Unique index `zone (plot_id, number)`, deleted zones included. Bumping the counter locks the plot row, so concurrent inserts in one plot get distinct codes; the store takes that lock first (`FOR NO KEY UPDATE`, plot → zone). It doesn't move `plot.updated_at`. Zones that existed before codes were numbered per plot in creation order. A zone made offline has no code until it reaches the server (the app shows "nova").
 - Zones **may overlap** (e.g. re-sowing part of an old area); no exclusion constraint. Each zone belongs to exactly one plot, which is stored, not inferred from geometry.
 - Unique names ignore soft-deleted rows: partial unique indexes `plot (field_id, lower(name)) WHERE deleted_at IS NULL` and `species (lower(scientific_name)) WHERE deleted_at IS NULL` (both case-insensitive).
 - Geometry columns also `CHECK (ST_SRID(geom) = 0 AND NOT ST_IsEmpty(geom))` — `geometry(…, 0)` alone does not enforce SRID 0. The store writes `ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON($1)), 0)`.
@@ -378,7 +382,7 @@ erDiagram
 - Views ignore everything soft-deleted (field, plot, zone, activity, task, species): a deleted zone's history stays in the tables but no longer feeds plot numbers.
 - View **`plot_stats`**: `area_ha`, `tree_count` (alive), `dead_tree_count`, `species_count`, `last_watered_on` and `open_task_count` (the plot's own tasks plus its zones' tasks). `species_count` = distinct species across alive trees in the plot ∪ species in sowing/planting `activity_species` rows whose activity touches the plot's zones.
 - Species usage (`GET /api/species-stats`, a query, no view): per live species, `zone_count` = distinct live zones holding its alive trees (counted on the zone or inside it by position) ∪ zones of its live sowings/plantings; `alive_tree_count` (live plots only); `last_sown_on` / `last_planted_on` from the activity log.
-- Activity export (`GET /api/export/activities.csv`, a query): every live activity of the live field, oldest first, as UTF-8 CSV with a BOM, laid out for Portuguese spreadsheets: `;` between columns (the comma is their decimal separator; every quantity is a whole number), header Data, Tipo, Zonas, Parcelas, Espécies, Quantidade, Notas, types and units in the app's words (Rega, Sementeira…; covas, sementes, árvores, litros, kg); several values in one cell are joined with ", ". The file is `forest-atividades-<today>.csv`. Names only (zones deleted since keep their name; unlabelled zones read "Zona sem nome"/"Caminho"/"Área sem nome" like the app), never ids or coordinates. Quantity = the zone quantities added up per unit ("120 covas, 40 sementes"), else the species quantities; each species also shows its own quantity. Cells that start like a formula get a leading `'`.
+- Activity export (`GET /api/export/activities.csv`, a query): every live activity of the live field, oldest first, as UTF-8 CSV with a BOM, laid out for Portuguese spreadsheets: `;` between columns (the comma is their decimal separator; every quantity is a whole number), header Data, Tipo, Código, Zonas, Parcelas, Espécies, Quantidade, Notas, types and units in the app's words (Rega, Sementeira…; covas, sementes, árvores, litros, kg); several values in one cell are joined with ", ". The file is `forest-atividades-<today>.csv`. Código holds the zones' codes ("Z3, Z1") in the same order as Zonas. Names and codes only (zones deleted since keep their name and code; unlabelled zones read "Zona sem nome"/"Caminho"/"Área sem nome" like the app), never ids or coordinates. Quantity = the zone quantities added up per unit ("120 covas, 40 sementes"), else the species quantities; each species also shows its own quantity. Cells that start like a formula get a leading `'`.
 - Sown and planted between two dates (`GET /api/planted-stats?from=&to=`, both days included, a query): per live plot, covas sown (sowing quantities in unit holes) and trees planted (planting quantities in unit trees) on its live zones. Per species: covas aren't split by species, so a species gets the covas of every sowing whose mix included it (a cova sown with a mix counts for each species); trees are its own count on the planting (`activity_species`, unit trees), or the planting's whole count when it was the only species — a mixed planting without counts per species is left out of the species totals. Like the per-plot sums, the species totals follow the live zones: a species' own count isn't split by zone, so when some of a planting's zones are deleted it is scaled (rounded) to the share of the planting's trees still on live zones, or of its zones when no trees were counted per zone.
 - Overlap side effects: watering zone A does not mark an overlapping zone B as watered; a point can be in several zones (Q8 may return several); summed zone areas can double-count — plot areas always use the plot polygon.
 - Indexes:

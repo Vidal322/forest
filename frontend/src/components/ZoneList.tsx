@@ -3,6 +3,7 @@ import { zoneName, type Plot, type Zone } from '../api/plots'
 import { taskCount } from '../domain/attention'
 import { byNeed, NEED_ORDER_HINT, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
+import { ZoneCode } from './ZoneCode'
 import { Icon } from './Icon'
 
 /** Every zone as a button, by plot, most urgent first: the way to reach zones without aiming at the map. */
@@ -43,7 +44,7 @@ export function ZoneList({
                   <li key={z.id}>
                     <button type="button" onClick={() => onPick(z)}>
                       <span>
-                        {zoneName(z)}
+                        <ZoneCode zone={z} /> {zoneName(z)}
                         {z.open_task_count > 0 && (
                           <>
                             {' '}

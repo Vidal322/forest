@@ -358,7 +358,7 @@ Acceptance:
 - The shell and shared components pass the anti-AI checklist (whole pages are P3–P6).
 
 ### P2b · Zone codes (Z1, Z2…)
-Status: todo
+Status: done (2026-11-27)
 Touches: backend (migration, store, API, CSV export), docs/data-model.md, frontend (types, zone list, zone sheet, zone page, tasks)
 Area: redesign, zone-code
 Acceptance:

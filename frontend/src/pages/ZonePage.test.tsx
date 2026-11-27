@@ -54,6 +54,7 @@ describe('ZonePage', () => {
     zoneApi()
     renderApp(`/zones/${testZone.id}`)
     expect(await screen.findByRole('heading', { name: 'Clareira' })).toBeInTheDocument()
+    expect(screen.getByText('Zona Z1 da parcela Plot 1, 0,23 ha')).toBeInTheDocument()
     const history = await screen.findByRole('button', { name: /Editar: .*Sementeira/ })
     expect(history).toHaveTextContent('Sementeira · 100 covas')
     expect(history).toHaveTextContent('há 3 dias')

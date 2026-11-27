@@ -478,7 +478,7 @@ describe('drawing', () => {
     const today = fieldToday()
     // both watered today; Clareira only comes first for its open task
     const clareira: Zone = { ...testZone, last_watered_on: today }
-    const alto: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000002', label: 'Alto', last_watered_on: today }
+    const alto: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000002', code: 'Z2', label: 'Alto', last_watered_on: today }
     const task: Task = {
       id: '40000000-0000-4000-8000-000000000001',
       plot_id: null,
@@ -524,7 +524,7 @@ describe('drawing', () => {
       within(screen.getByRole('region', { name: testPlot.name }))
         .getAllByRole('button')
         .map((b) => b.textContent)
-    expect(order()).toEqual([expect.stringMatching(/^Clareira · 1 tarefa por fazer/), expect.stringMatching(/^Alto/)])
+    expect(order()).toEqual([expect.stringMatching(/^Z1 Clareira · 1 tarefa por fazer/), expect.stringMatching(/^Z2 Alto/)])
 
     onlineManager.setOnline(false)
     onTestFinished(() => onlineManager.setOnline(true))
@@ -534,7 +534,7 @@ describe('drawing', () => {
     await act(() => router.navigate('/'))
     await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
     // nothing left to do in Clareira: back in name order, before the outbox is sent
-    expect(order()).toEqual([expect.stringMatching(/^Alto/), expect.stringMatching(/^Clareira$|^Clareira[^·]/)])
+    expect(order()).toEqual([expect.stringMatching(/^Z2 Alto/), expect.stringMatching(/^Z1 Clareira$|^Z1 Clareira[^·]/)])
     expect(puts).toEqual([])
 
     // reopened, still offline: counted again
@@ -543,13 +543,13 @@ describe('drawing', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Feita: Regar' }))
     await act(() => router.navigate('/'))
     await userEvent.click(await screen.findByRole('button', { name: 'Zonas' }))
-    expect(order()[0]).toMatch(/^Clareira · 1 tarefa por fazer/)
+    expect(order()[0]).toMatch(/^Z1 Clareira · 1 tarefa por fazer/)
 
     // meanwhile a second task was added there elsewhere: once synced, the server's count wins
     tasks = [...tasks, { ...task, id: '40000000-0000-4000-8000-000000000009', title: 'Semear' }]
     onlineManager.setOnline(true)
     await waitFor(() => expect(puts).toHaveLength(2))
-    await waitFor(() => expect(order()[0]).toMatch(/^Clareira · 2 tarefas por fazer/))
+    await waitFor(() => expect(order()[0]).toMatch(/^Z1 Clareira · 2 tarefas por fazer/))
     expect(queryClient.getQueryData<Zone[]>(['zones'])!.find((z) => z.id === clareira.id)!.open_task_count).toBe(2)
   })
 })

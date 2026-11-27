@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { Link, useLocation, useParams } from 'react-router'
 import { ACTIVITY, activities as activitiesApi, UNIT_LABEL, useZoneHistory, type Activity } from '../api/activities'
 import { friendlyError } from '../api/errors'
-import { formatHa, KIND_LABEL, plots as plotsApi, zoneName, zones as zonesApi } from '../api/plots'
+import { KIND_LABEL, plots as plotsApi, zoneName, zoneSubtitle, zones as zonesApi } from '../api/plots'
 import { useSpeciesList } from '../api/species'
 import { isOpen, resolvedLink, tasks as tasksApi, type Task } from '../api/tasks'
 import { ActivityEditForm } from '../components/ActivityEditForm'
@@ -116,10 +116,10 @@ export function ZonePage() {
         {plot && <span className="muted"> · {plot.name}</span>}
       </p>
       <h1>{zoneName(zone)}</h1>
+      <p className="page-subtitle">{zoneSubtitle(zone, plot)}</p>
       <p className="row">
         <StatusBadge status={status} label={STATUS_LABEL[status]} />
         {zone.kind !== 'cultivation' && <span className="muted">{KIND_LABEL[zone.kind]}</span>}
-        {zone.area_ha !== null && <span className="muted">{formatHa(zone.area_ha)}</span>}
       </p>
       {needsWater(zone, today) && (
         <p className="note">Sem rega, sementeira nem plantação há {zone.current_interval_days} dias ou mais.</p>

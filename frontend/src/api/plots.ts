@@ -26,6 +26,8 @@ export type ZoneKind = 'cultivation' | 'path' | 'other'
 export interface Zone {
   id: string
   plot_id: string
+  /** "Z3": given out per plot by the server; null for a zone made offline that hasn't reached it yet */
+  code: string | null
   label: string | null
   kind: ZoneKind
   geom: Polygon
@@ -63,26 +65,31 @@ export const plots = defineEntity<Plot, PlotInput>({
   },
 })
 
+/** A zone as the phone shows it while its save waits in the outbox. */
+export const optimisticZone = (id: string, input: ZoneInput, before: Zone | undefined): Zone => ({
+  // a new zone has no history yet; an edited one keeps its derived state
+  last_sown_on: null,
+  last_planted_on: null,
+  last_watered_on: null,
+  current_interval_days: 7,
+  open_task_count: 0,
+  needs_water: input.kind === 'cultivation' ? false : null,
+  area_ha: null,
+  ...before,
+  id,
+  ...input,
+  // given out by the server per plot: a new zone, or one moved to another plot, waits for its code
+  code: before && before.plot_id === input.plot_id ? (before.code ?? null) : null,
+  updated_at: before?.updated_at ?? new Date().toISOString(),
+})
+
 export const zones = defineEntity<Zone, ZoneInput>({
   name: 'zones',
   alsoRefresh: [['plot-stats'], ['tasks'], ['tree-counts'], ['species-stats'], ['planted-stats']],
   // deleting a zone deletes its tasks and counted trees: hide them at once (also offline)
   onDeleteOptimistic: (qc, id) => hideRelated(qc, (r) => r.zone_id === id, new Set([id])),
   sort: (a, b) => a.id.localeCompare(b.id), // drawing order is decided by FieldLayers
-  optimistic: (id, input, before) => ({
-    // a new zone has no history yet; an edited one keeps its derived state
-    last_sown_on: null,
-    last_planted_on: null,
-    last_watered_on: null,
-    current_interval_days: 7,
-    open_task_count: 0,
-    needs_water: input.kind === 'cultivation' ? false : null,
-    area_ha: null,
-    ...before,
-    id,
-    ...input,
-    updated_at: before?.updated_at ?? new Date().toISOString(),
-  }),
+  optimistic: optimisticZone,
 })
 
 /**
@@ -122,6 +129,25 @@ export function withStateOf(zones: Zone[], past: Zone[]): Zone[] {
 /** The zone's label, or a description for unlabelled zones. */
 export function zoneName(z: Zone): string {
   return z.label ?? (z.kind === 'path' ? 'Caminho' : z.kind === 'other' ? 'Área sem nome' : 'Zona sem nome')
+}
+
+/** The zone's code ("Z3"), or "nova" while a zone made offline hasn't reached the server. */
+export function zoneCode(z: Pick<Zone, 'code'>): string {
+  return z.code ?? 'nova'
+}
+
+/** "Z3 Clareira"; a zone that hasn't reached the server yet reads "Clareira (nova)". */
+export function zoneTitle(z: Zone): string {
+  return z.code ? `${z.code} ${zoneName(z)}` : `${zoneName(z)} (nova)`
+}
+
+/**
+ * The zone page's subtitle: "Zona Z3 da Parcela 1, 0,41 ha" ("da parcela Encosta" when
+ * the plot's name doesn't already say parcela).
+ */
+export function zoneSubtitle(z: Zone, plot: Pick<Plot, 'name'> | undefined): string {
+  const of = plot ? ` da ${/^parcela\b/i.test(plot.name) ? plot.name : `parcela ${plot.name}`}` : ''
+  return [`Zona ${zoneCode(z)}${of}`, z.area_ha !== null ? formatHa(z.area_ha) : null].filter(Boolean).join(', ')
 }
 
 export const KIND_LABEL: Record<ZoneKind, string> = { cultivation: 'Cultivo', path: 'Caminho', other: 'Outro' }

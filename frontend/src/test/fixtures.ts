@@ -43,6 +43,7 @@ export const testPlot: Plot = {
 export const testZone: Zone = {
   id: '20000000-0000-4000-8000-000000000001',
   plot_id: testPlot.id,
+  code: 'Z1',
   label: 'Clareira',
   kind: 'cultivation',
   geom: { type: 'Polygon', coordinates: [ring(50, 50, 150)] },

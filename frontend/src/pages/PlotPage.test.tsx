@@ -12,7 +12,7 @@ import { renderApp } from '../test/render'
 const today = fieldToday()
 const otherPlot: Plot = { ...testPlot, id: '10000000-0000-4000-8000-000000000002', name: 'Plot 2' }
 // watered yesterday: fine; testZone (Clareira) needs water and comes first
-const ribeira: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000002', label: 'Ribeira', last_watered_on: addDays(today, -1), needs_water: false, open_task_count: 1 }
+const ribeira: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000002', code: 'Z2', label: 'Ribeira', last_watered_on: addDays(today, -1), needs_water: false, open_task_count: 1 }
 const elsewhere: Zone = { ...testZone, id: '20000000-0000-4000-8000-000000000003', label: 'Longe', plot_id: otherPlot.id }
 
 const task = (over: Partial<Task>): Task => ({
@@ -80,7 +80,7 @@ describe('PlotPage', () => {
     expect(screen.getByText(/3,69 ha · 6,20 ha no mapa antigo · 2 zonas/)).toBeInTheDocument()
     const zones = within(await screen.findByRole('region', { name: 'Zonas' }))
     const links = await zones.findAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual([expect.stringMatching(/^Clareira/), expect.stringMatching(/^Ribeira · 1 tarefa por fazer/)])
+    expect(links.map((l) => l.textContent)).toEqual([expect.stringMatching(/^Z1 Clareira/), expect.stringMatching(/^Z2 Ribeira · 1 tarefa por fazer/)])
     expect(links[0]).toHaveAttribute('href', `/zones/${testZone.id}`)
     expect(zones.queryByText(/Longe/)).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Estatísticas de Plot 1/ })).toHaveAttribute('href', `/stats#plot-${testPlot.id}`)

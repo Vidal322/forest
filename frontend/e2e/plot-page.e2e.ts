@@ -27,7 +27,7 @@ test('a plot’s page: reached from its label on the map and from the stats', as
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
 
   const zones = page.getByRole('region', { name: 'Zonas' }).getByRole('link')
-  await expect(zones).toHaveText([/^Clareira · 1 tarefa por fazer/, /^Rochas/])
+  await expect(zones).toHaveText([/^Z1 Clareira · 1 tarefa por fazer/, /^Z2 Rochas/])
   await expect(page.getByRole('region', { name: 'Tarefas', exact: true })).toContainText('Semear clareira')
   const recent = page.getByRole('region', { name: 'Últimos registos' }).getByRole('link')
   await expect(recent).toHaveCount(1)

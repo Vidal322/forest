@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -101,5 +102,62 @@ func TestZonesAsOfAPI(t *testing.T) {
 		if code, field := decodeFieldError(t, rec); rec.Code != 422 || code != "invalid" || field != "as_of" {
 			t.Fatalf("%s: %d %s %s", bad, rec.Code, code, field)
 		}
+	}
+}
+
+func TestZoneCodesAPI(t *testing.T) {
+	h := newFieldRouter(t)
+	if rec := upload(t, h, "Quinta", pngBytes(t, 300, 200)); rec.Code != http.StatusCreated {
+		t.Fatalf("setup: %d", rec.Code)
+	}
+	plotID := uuid.NewString()
+	if rec := send(t, h, http.MethodPut, "/api/plots/"+plotID, `{"name":"Plot codes","geom":`+squareJSON+`}`); rec.Code != 201 {
+		t.Fatalf("plot: %d %s", rec.Code, rec.Body)
+	}
+	body := `{"plot_id":"` + plotID + `","geom":{"type":"Polygon","coordinates":[[[10,10],[30,10],[30,30],[10,30]]]}}`
+	put := func(id string, wantStatus int) string {
+		t.Helper()
+		rec := send(t, h, http.MethodPut, "/api/zones/"+id, body)
+		var z store.Zone
+		if err := json.NewDecoder(rec.Body).Decode(&z); rec.Code != wantStatus || err != nil {
+			t.Fatalf("put zone: %d %v", rec.Code, err)
+		}
+		return z.Code
+	}
+	first, second := uuid.NewString(), uuid.NewString()
+	if c := put(first, 201); c != "Z1" {
+		t.Fatalf("first: %q", c)
+	}
+	if c := put(second, 201); c != "Z2" {
+		t.Fatalf("second: %q", c)
+	}
+	if c := put(first, 200); c != "Z1" { // a repeated offline PUT keeps it
+		t.Fatalf("same PUT: %q", c)
+	}
+	if rec := send(t, h, http.MethodDelete, "/api/zones/"+second, ""); rec.Code != 204 {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+	if c := put(uuid.NewString(), 201); c != "Z3" { // Z2 is not given out again
+		t.Fatalf("after delete: %q", c)
+	}
+
+	// the client never sets it
+	rec := send(t, h, http.MethodPut, "/api/zones/"+uuid.NewString(), `{"code":"Z9",`+body[1:])
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("client code: %d %s", rec.Code, rec.Body)
+	}
+
+	rec = send(t, h, http.MethodGet, "/api/zones", "")
+	var zones []store.Zone
+	if err := json.NewDecoder(rec.Body).Decode(&zones); err != nil {
+		t.Fatal(err)
+	}
+	var codes []string
+	for _, z := range zones {
+		codes = append(codes, z.Code)
+	}
+	slices.Sort(codes) // one test transaction: every zone has the same created_at
+	if !slices.Equal(codes, []string{"Z1", "Z3"}) {
+		t.Fatalf("listed codes: %v", codes)
 	}
 }
