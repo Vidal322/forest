@@ -423,3 +423,9 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   (3) the design spec's sowing task shows the water icon (test data), left as is.
 - Browser check: full e2e suite 15/15 on the last runs; tabs, tasks and zone sheet screenshots read on a phone size.
 - Follow-ups: P3 and P6 must empty the allow-list entries; watch the walkthrough flake until P4c.
+
+## 2026-11-27 · P3 Map: photo with paint marks — blocked
+- Change: none, no code written.
+- Review: not run.
+- Browser check: not needed.
+- Follow-ups: owner must choose where zone codes come from (a stored per plot, b order on the phone, c none). P5 uses the same code.

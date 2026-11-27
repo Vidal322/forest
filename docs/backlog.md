@@ -358,7 +358,7 @@ Acceptance:
 - The shell and shared components pass the anti-AI checklist (whole pages are P3–P6).
 
 ### P3 · Map: photo with paint marks
-Status: todo
+Status: blocked: zones have no code (Z1, Z3…), only an optional name. Where should the code come from? (a) stored per plot, given out automatically, never reused (migration + API; show in zone list, sheet, tasks, CSV?), (b) worked out on the phone from the order of live zones (codes shift on delete), or (c) no code: status-coloured blob with the zone name or initials.
 Touches: frontend (map page, FieldMap / FieldLayers, Legend, ZoneSheet look)
 Area: redesign, map
 Acceptance:
