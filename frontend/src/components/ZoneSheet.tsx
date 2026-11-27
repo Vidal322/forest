@@ -3,6 +3,7 @@ import { formatHa, KIND_LABEL, zoneName, type Plot, type Zone } from '../api/plo
 import { formatLongDay, relativeDay } from '../domain/dates'
 import { needsWater, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
+import { Icon } from './Icon'
 
 /** Bottom sheet for the zone tapped on the map (or picked from the zone list). */
 export function ZoneSheet({
@@ -51,14 +52,15 @@ export function ZoneSheet({
         </h2>
         <span className="spacer" />
         <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Fechar">
-          ✕
+          <Icon name="close" />
         </button>
       </div>
       {asOf && <p className="sheet__asof">A {formatLongDay(asOf)}:</p>}
       <p className="row">
         <StatusBadge status={status} label={STATUS_LABEL[status]} />
-        {plot && <span className="muted">{plot.name}</span>}
-        {zone.kind !== 'cultivation' && <span className="muted">· {KIND_LABEL[zone.kind]}</span>}
+        {(plot || zone.kind !== 'cultivation') && (
+          <span className="muted">{[plot?.name, zone.kind !== 'cultivation' ? KIND_LABEL[zone.kind] : null].filter(Boolean).join(', ')}</span>
+        )}
       </p>
       {dry && <p className="note">Sem rega, sementeira nem plantação há {zone.current_interval_days} dias ou mais.</p>}
       {facts.length > 0 ? (

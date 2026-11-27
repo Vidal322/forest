@@ -9,6 +9,7 @@ import { formatDay } from '../domain/dates'
 import { useFlash } from '../hooks/useFlash'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
+import { Icon } from '../components/Icon'
 
 type Editing = { mode: 'add' } | { mode: 'edit'; species: Species } | null
 
@@ -69,7 +70,7 @@ export function SpeciesPage() {
             className="btn btn-primary"
             onClick={() => open({ mode: 'add' }, 'species-add')}
           >
-            ＋ Acrescentar espécie
+            <Icon name="add" /> Acrescentar espécie
           </button>
         )}
       </div>
@@ -112,7 +113,7 @@ export function SpeciesPage() {
             <span className="visually-hidden">Procurar espécies</span>
             <input
               type="search"
-              placeholder="🔍 Procurar espécies"
+              placeholder="Procurar espécies"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

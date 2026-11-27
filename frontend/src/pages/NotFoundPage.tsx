@@ -5,7 +5,7 @@ export function NotFoundPage() {
     <div className="page">
       <h1>Página não encontrada</h1>
       <p>
-        <Link to="/">Voltar ao mapa</Link>
+        <Link className="link-tap" to="/">Voltar ao mapa</Link>
       </p>
     </div>
   )

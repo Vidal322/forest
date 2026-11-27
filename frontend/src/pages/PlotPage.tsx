@@ -16,6 +16,7 @@ import { useFieldToday } from '../hooks/useFieldToday'
 import { useFlash } from '../hooks/useFlash'
 import { useTaskToggle, type Toast } from '../hooks/useTaskToggle'
 import { STATUS_COLOR } from '../map/colors'
+import { Icon } from '../components/Icon'
 
 /** How many log entries the page shows at first, and how many more each tap adds. */
 const RECENT_STEP = 10
@@ -69,7 +70,7 @@ export function PlotPage() {
     return (
       <div className="page">
         <p>
-          <Link to="/">← Mapa</Link>
+          <Link className="link-tap" to="/"><Icon name="back" size={18} /> Mapa</Link>
         </p>
         {plots.isPending ? (
           <p className="muted">A carregar…</p>
@@ -95,7 +96,7 @@ export function PlotPage() {
   return (
     <div className="page">
       <p className="crumbs">
-        <Link to="/">← Mapa</Link>
+        <Link className="link-tap" to="/"><Icon name="back" size={18} /> Mapa</Link>
       </p>
       <h1>{plot.name}</h1>
       <p className="muted">
@@ -106,7 +107,7 @@ export function PlotPage() {
       {plot.notes && <p className="muted">{plot.notes}</p>}
       <div className="row">
         <Link className="btn" to={`/stats#plot-${plot.id}`}>
-          📊 Estatísticas de {plot.name}
+          <Icon name="stats" /> Estatísticas de {plot.name}
         </Link>
       </div>
       <Flash flash={flash} />
@@ -167,7 +168,7 @@ export function PlotPage() {
           <span className="spacer" />
           {editing === null && (
             <button id="plot-add-task" type="button" className="btn btn-small" onClick={() => open({}, 'plot-add-task')}>
-              ＋ Acrescentar tarefa
+              <Icon name="add" /> Acrescentar tarefa
             </button>
           )}
         </div>
@@ -258,7 +259,7 @@ function RecentEntry({ a, zoneById, today }: { a: Activity; zoneById: Map<string
     <li style={{ '--c': ENTRY_COLOR[a.type] } as CSSProperties}>
       <Link className="timeline__item" to={`/zones/${here[0]!.zone_id}#entry-${a.id}`}>
         <span className="timeline__title">
-          <span aria-hidden="true">{ACTIVITY[a.type].icon}</span> {ACTIVITY[a.type].label}
+          <Icon name={ACTIVITY[a.type].icon} /> {ACTIVITY[a.type].label}
           {total !== null && unit && ` · ${formatNumber(total)} ${UNIT_LABEL[unit]}`}
         </span>
         <span className="timeline__meta">

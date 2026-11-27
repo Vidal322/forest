@@ -7,6 +7,7 @@ import { isOpen, TASK_KIND, tasks as tasksApi, type Task, type TaskKind, type Ta
 import { addDays } from '../domain/dates'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
+import { Icon } from './Icon'
 
 /** "zone:<id>" or "plot:<id>" — one select for "where". */
 type Where = `zone:${string}` | `plot:${string}` | ''
@@ -171,7 +172,7 @@ export function TaskForm({
         <div className="row">
           {KIND_ORDER.map((k) => (
             <button key={k} type="button" className={`chip${kind === k ? ' is-on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
-              <span aria-hidden="true">{TASK_KIND[k].icon}</span> {TASK_KIND[k].label}
+              <Icon name={TASK_KIND[k].icon} /> {TASK_KIND[k].label}
             </button>
           ))}
         </div>

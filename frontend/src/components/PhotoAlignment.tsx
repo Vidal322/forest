@@ -8,6 +8,7 @@ import { fieldKey, fieldPhoto, type Field } from '../api/field'
 import { toFramePoint, toLatLng, type FramePoint } from '../map/frame'
 import { FieldMap } from './FieldMap'
 import { fitLabel, type PhotoInfo } from './photoFit'
+import { Icon } from './Icon'
 
 interface Pair {
   photo: FramePoint
@@ -175,7 +176,7 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
       </p>
       <label className="photo-pick">
         <input key={inputKey} id={ids.file} type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => pick(e.target.files?.[0] ?? null)} />
-        <span aria-hidden="true">📷</span>
+        <Icon name="camera" size={28} />
         <span>{file ? `${file.name} (toca para mudar)` : 'Escolher a fotografia mais recente'}</span>
       </label>
 
@@ -234,7 +235,7 @@ export function PhotoAlignment({ field, onDone }: { field: Field; onDone: (messa
                 <li key={i}>
                   <button type="button" className="chip" onClick={() => removePair(i)} aria-label={`Tirar o ponto ${i + 1}`}>
                     {i + 1}
-                    {p.frame ? '' : ' (só num)'} ✕
+                    {p.frame ? '' : ' (só num)'} <Icon name="close" size={16} />
                   </button>
                 </li>
               ))}

@@ -27,6 +27,6 @@ export function attention(zones: Zone[], today: string): Attention {
 export const taskCount = (n: number) => (n === 1 ? '1 tarefa por fazer' : `${n} tarefas por fazer`)
 
 export function attentionLabel(total: number): string {
-  if (total === 0) return '✓ Nenhuma zona precisa de nada'
+  if (total === 0) return 'Nenhuma zona precisa de nada'
   return total === 1 ? '1 zona precisa de atenção' : `${total} zonas precisam de atenção`
 }

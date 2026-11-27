@@ -4,6 +4,7 @@ import { DELETED_ON_PHONE, SAVED_ON_PHONE } from '../api/outbox'
 import { MONTHS, overlappingMonths, wateringRules, type WateringRule } from '../api/stats'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
+import { Icon } from './Icon'
 
 const monthRange = (r: Pick<WateringRule, 'from_month' | 'to_month'>) =>
   r.from_month === r.to_month ? MONTHS[r.from_month - 1] : `de ${MONTHS[r.from_month - 1]} a ${MONTHS[r.to_month - 1]}`
@@ -68,7 +69,7 @@ export function WateringRules({ defaultDays, onMessage }: { defaultDays: number;
         <RuleForm onDone={done} onCancel={() => setEditing(null)} />
       ) : (
         <button type="button" className="btn" onClick={() => setEditing('new')}>
-          ＋ Acrescentar uma estação
+          <Icon name="add" /> Acrescentar uma estação
         </button>
       )}
     </section>

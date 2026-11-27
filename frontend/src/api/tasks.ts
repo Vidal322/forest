@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { daysBetween, formatDay, relativeDay } from '../domain/dates'
-import { ACTIVITY, type Activity } from './activities'
+import type { IconName } from '../components/icons'
+import { ACTIVITY, type Activity, type ActivityType } from './activities'
 import { defineEntity } from './entity'
 import { zoneName, type Plot, type Zone } from './plots'
 
@@ -35,14 +36,14 @@ export interface TaskInput {
   base_version: number | null
 }
 
-export const TASK_KIND: Record<TaskKind, { label: string; icon: string }> = {
-  sow: { label: 'Semear', icon: '🕳️' },
-  plant: { label: 'Plantar', icon: '🌱' },
-  water: { label: 'Regar', icon: '💧' },
-  fertilize: { label: 'Adubar', icon: '🧪' },
-  add_nests: { label: 'Fazer ninhos', icon: '🪺' },
-  improve_path: { label: 'Melhorar o caminho', icon: '🛤️' },
-  other: { label: 'Outro', icon: '•' },
+export const TASK_KIND: Record<TaskKind, { label: string; icon: IconName }> = {
+  sow: { label: 'Semear', icon: 'sow' },
+  plant: { label: 'Plantar', icon: 'plant' },
+  water: { label: 'Regar', icon: 'water' },
+  fertilize: { label: 'Adubar', icon: 'fertilize' },
+  add_nests: { label: 'Fazer ninhos', icon: 'nests' },
+  improve_path: { label: 'Melhorar o caminho', icon: 'path' },
+  other: { label: 'Outro', icon: 'other' },
 }
 
 /** When an open task is due: "para hoje", "para amanhã", "para daqui a 3 dias", "para 2 dez", "atrasada desde 20 nov". */
@@ -52,6 +53,9 @@ export function dueLabel(due: string, today: string): string {
 }
 
 export const isOpen = (t: Pick<Task, 'status'>) => t.status === 'open' || t.status === 'in_progress'
+
+/** Open and past its due day (the Tasks tab counts these). */
+export const isLate = (t: Pick<Task, 'status' | 'due_on'>, today: string) => isOpen(t) && t.due_on !== null && t.due_on < today
 
 /** The task as an input for an edit, starting from its current version. */
 export function taskInput(t: Task, changes: Partial<TaskInput> = {}): TaskInput {
@@ -133,17 +137,17 @@ export function taskPlotId(t: Pick<Task, 'plot_id' | 'zone_id'>, zones: Zone[]):
   return zones.find((z) => z.id === t.zone_id)?.plot_id
 }
 
-/** Where a task is: "Clareira · Parcela 1" or "Parcela 2". */
+/** Where a task is: "Clareira, Parcela 1" or "Parcela 2". */
 export function taskPlace(t: Task, plots: Plot[], zones: Zone[]): string {
   if (t.zone_id) {
     const z = zones.find((x) => x.id === t.zone_id)
     const p = z && plots.find((x) => x.id === z.plot_id)
-    return z ? `${zoneName(z)}${p ? ` · ${p.name}` : ''}` : 'Uma zona apagada'
+    return z ? `${zoneName(z)}${p ? `, ${p.name}` : ''}` : 'Uma zona apagada'
   }
   return plots.find((p) => p.id === t.plot_id)?.name ?? 'Uma parcela apagada'
 }
 
-export type ResolvedLink = { to: string; label: string }
+export type ResolvedLink = { to: string; type: ActivityType; label: string }
 
 /**
  * Where to see the log entry that closed a task: its line in a zone's history
@@ -164,6 +168,7 @@ export function resolvedLink(task: Task, entries: Activity[], zones: Zone[], tod
   const rel = relativeDay(a.performed_on, today)
   return {
     to: `/zones/${zoneId}#entry-${a.id}`,
-    label: `${ACTIVITY[a.type].icon} ${ACTIVITY[a.type].label} ${day}${rel === day ? '' : ` (${rel})`}`,
+    type: a.type,
+    label: `${ACTIVITY[a.type].label} ${day}${rel === day ? '' : ` (${rel})`}`,
   }
 }

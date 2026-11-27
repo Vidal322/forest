@@ -1,6 +1,7 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { apiGet } from './client'
 import { defineEntity } from './entity'
+import type { IconName } from '../components/icons'
 import type { Zone } from './plots'
 
 export type ActivityType = 'watering' | 'sowing' | 'planting' | 'fertilizing' | 'other'
@@ -42,12 +43,12 @@ export interface ActivityInput {
 }
 
 /** `label` names the kind ("Rega"); `noun` goes after a verb ("Guardar rega"), `saved` confirms it. */
-export const ACTIVITY: Record<ActivityType, { label: string; noun: string; saved: string; icon: string; unit: QuantityUnit | null }> = {
-  watering: { label: 'Rega', noun: 'rega', saved: 'Rega guardada', icon: '💧', unit: 'litres' },
-  sowing: { label: 'Sementeira', noun: 'sementeira', saved: 'Sementeira guardada', icon: '🕳️', unit: 'holes' },
-  planting: { label: 'Plantação', noun: 'plantação', saved: 'Plantação guardada', icon: '🌱', unit: 'trees' },
-  fertilizing: { label: 'Adubação', noun: 'adubação', saved: 'Adubação guardada', icon: '🧪', unit: 'kg' },
-  other: { label: 'Outro', noun: 'registo', saved: 'Registo guardado', icon: '•', unit: null },
+export const ACTIVITY: Record<ActivityType, { label: string; noun: string; saved: string; icon: IconName; unit: QuantityUnit | null }> = {
+  watering: { label: 'Rega', noun: 'rega', saved: 'Rega guardada', icon: 'water', unit: 'litres' },
+  sowing: { label: 'Sementeira', noun: 'sementeira', saved: 'Sementeira guardada', icon: 'sow', unit: 'holes' },
+  planting: { label: 'Plantação', noun: 'plantação', saved: 'Plantação guardada', icon: 'plant', unit: 'trees' },
+  fertilizing: { label: 'Adubação', noun: 'adubação', saved: 'Adubação guardada', icon: 'fertilize', unit: 'kg' },
+  other: { label: 'Outro', noun: 'registo', saved: 'Registo guardado', icon: 'other', unit: null },
 }
 
 /** Units a quantity per zone can be in, by type (the server refuses others; totals add these up). */

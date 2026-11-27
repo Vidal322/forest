@@ -27,6 +27,7 @@ import type { Toast } from '../hooks/useTaskToggle'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { newId } from '../lib/uuid'
 import { FieldLayers } from '../map/FieldLayers'
+import { Icon } from '../components/Icon'
 
 const MAIN: ActivityType[] = ['watering', 'sowing', 'planting']
 const MORE: ActivityType[] = ['fertilizing', 'other']
@@ -323,9 +324,7 @@ export function LogPage() {
             aria-pressed={type === t}
             onClick={() => chooseType(t)}
           >
-            <span className="act__icon" aria-hidden="true">
-              {ACTIVITY[t].icon}
-            </span>
+            <Icon className="act__icon" name={ACTIVITY[t].icon} size={28} />
             {ACTIVITY[t].label}
           </button>
         ))}
@@ -355,7 +354,7 @@ export function LogPage() {
                 onChange={(e) => setTaskTicks((cur) => ({ ...cur, [t.id]: e.target.checked }))}
               />
               <span>
-                <span aria-hidden="true">{TASK_KIND[t.kind].icon}</span> {t.title}
+                <Icon name={TASK_KIND[t.kind].icon} /> {t.title}
                 <span className="muted small"> · {taskPlace(t, plots.data ?? [], allZones)}</span>
               </span>
             </label>

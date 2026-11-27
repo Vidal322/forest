@@ -6,6 +6,7 @@ import { SAVED_ON_PHONE } from '../api/outbox'
 import { zoneName, type Zone } from '../api/plots'
 import type { Species } from '../api/species'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
+import { Icon } from './Icon'
 
 const TYPES: ActivityType[] = ['watering', 'sowing', 'planting', 'fertilizing', 'other']
 
@@ -148,7 +149,7 @@ export function ActivityEditForm({
         <div className="row">
           {TYPES.map((t) => (
             <button key={t} type="button" className={`chip${type === t ? ' is-on' : ''}`} aria-pressed={type === t} onClick={() => chooseType(t)}>
-              <span aria-hidden="true">{ACTIVITY[t].icon}</span> {ACTIVITY[t].label}
+              <Icon name={ACTIVITY[t].icon} /> {ACTIVITY[t].label}
             </button>
           ))}
         </div>
@@ -175,7 +176,7 @@ export function ActivityEditForm({
                 />
                 {zoneIds.length > 1 && (
                   <button type="button" className="btn btn-icon" aria-label={`Tirar ${name} deste registo`} onClick={() => setZoneIds((z) => z.filter((x) => x !== zoneId))}>
-                    ✕
+                    <Icon name="close" />
                   </button>
                 )}
               </span>
@@ -188,7 +189,7 @@ export function ActivityEditForm({
             value=""
             onChange={(e) => e.target.value && setZoneIds((z) => [...z, e.target.value])}
           >
-            <option value="">＋ Juntar uma zona…</option>
+            <option value="">Juntar uma zona…</option>
             {zones
               .filter((z) => !zoneIds.includes(z.id))
               .map((z) => (

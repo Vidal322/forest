@@ -23,6 +23,7 @@ import { FieldLayers } from '../map/FieldLayers'
 import { LAYER_LABEL, parseLayers, type MapLayers } from '../map/layers'
 import { TaskPins } from '../map/TaskPins'
 import { taskSpots } from '../map/taskSpots'
+import { Icon } from '../components/Icon'
 
 export function MapPage() {
   const field = useField()
@@ -183,7 +184,7 @@ export function MapPage() {
         {!draft && (
         <div className="map-overlay map-overlay--bottom-left">
           <div className="row">
-            {/* what is shown and what the colours mean, in one panel: two buttons stay clear of “＋ Desenhar” on a phone */}
+            {/* what is shown and what the colours mean, in one panel: two buttons stay clear of “Desenhar” on a phone */}
             <button
               type="button"
               className="map-btn"
@@ -264,9 +265,7 @@ export function MapPage() {
               onClick={() => setPanel((p) => (p === 'attention' ? null : 'attention'))}
             >
               {attentionLabel(needs.total)}
-              <span className="map-btn__chevron" aria-hidden="true">
-                {panel === 'attention' ? '▴' : '▾'}
-              </span>
+              <Icon className="map-btn__chevron" name={panel === 'attention' ? 'up' : 'down'} size={18} />
             </button>
             {panel === 'attention' && (
               <div className="map-panel map-panel--scroll">
@@ -300,7 +299,7 @@ export function MapPage() {
           </div>
         )}
         {empty && !sheetOpen && !draft && (
-          <p className="map-overlay map-overlay--top note">Ainda não há parcelas. Toca em “＋ Desenhar” para marcar a primeira.</p>
+          <p className="map-overlay map-overlay--top note">Ainda não há parcelas. Toca em “Desenhar” para marcar a primeira.</p>
         )}
         {/* always present, so screen readers hear each new message */}
         <output className="map-overlay map-overlay--toast map-toast-region" aria-live="polite">
@@ -322,13 +321,13 @@ export function MapPage() {
             {pastState && <p className="muted">O que registares ou editares fica com o dia de hoje.</p>}
             <div className="row form__actions">
               <Link className="btn btn-primary" to={`/log?zone=${selected.id}`}>
-                {pastState ? '＋ Registar hoje' : '＋ Registar'}
+                <Icon name="add" /> {pastState ? 'Registar hoje' : 'Registar'}
               </Link>
               <Link className="btn" to={`/zones/${selected.id}`}>
                 Histórico e tarefas
               </Link>
               <button type="button" className="btn" onClick={() => startDraft(editDraft('zone', selected))}>
-                {pastState ? '✎ Editar a zona hoje' : '✎ Editar a zona'}
+                <Icon name="edit" /> {pastState ? 'Editar a zona hoje' : 'Editar a zona'}
               </button>
             </div>
           </ZoneSheet>
@@ -357,7 +356,7 @@ export function MapPage() {
         )}
         {!draft && !sheetOpen && !menuOpen && (
           <button type="button" className="fab" onClick={() => setMenuOpen(true)}>
-            ＋ Desenhar
+            <Icon name="add" /> Desenhar
           </button>
         )}
         {menuOpen && (
@@ -392,9 +391,6 @@ export function MapPage() {
       )}
       {field.data === null && (
         <div className="welcome card">
-          <p style={{ fontSize: '2.5rem', margin: 0 }} aria-hidden="true">
-            🌳
-          </p>
           <h2>Bem-vindo ao Forest</h2>
           <p>Começa por acrescentar uma fotografia do teu terreno. Tudo o que plantas, semeias e regas fica desenhado nela.</p>
           <Link className="btn btn-primary" to="/field">

@@ -335,7 +335,7 @@ Acceptance:
   UTF-8 BOM kept; tests updated. The More page's button reads "Descarregar CSV".
 
 ### P2 · Visual base: fonts, colours, icons, tabs, checks
-Status: todo
+Status: done (2026-11-27)
 Touches: frontend (styles.css, app shell and nav, shared components: buttons, chips, sheets, banners, StatusBadge,
 SyncStatus, Flash), package.json, e2e
 Area: redesign, styles, navigation

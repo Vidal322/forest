@@ -46,7 +46,7 @@ test('the main flows on a phone: field, plot, zone, watering, an offline sowing,
   await page.getByRole('navigation', { name: 'Principal' }).last().getByRole('link', { name: 'Mapa' }).click()
   await expect(page.getByText('Ainda não há parcelas.')).toBeVisible()
   await page.getByRole('button', { name: 'Afastar' }).click({ trial: true }) // the note doesn't cover it
-  await page.getByRole('button', { name: '＋ Desenhar' }).click()
+  await page.getByRole('button', { name: 'Desenhar' }).click()
   await shot(page, 'walkthrough-04-draw-menu')
   await page.getByRole('button', { name: /Uma parcela/ }).click()
   await drawOutline(page, [
@@ -63,7 +63,7 @@ test('the main flows on a phone: field, plot, zone, watering, an offline sowing,
   await page.getByRole('button', { name: 'Guardar', exact: true }).click()
   await expect(page.getByText('Encosta acrescentada.')).toBeVisible()
 
-  await page.getByRole('button', { name: '＋ Desenhar' }).click()
+  await page.getByRole('button', { name: 'Desenhar' }).click()
   await page.getByRole('button', { name: /Uma zona/ }).click()
   await drawOutline(page, [
     [0.3, 0.3],
@@ -84,7 +84,7 @@ test('the main flows on a phone: field, plot, zone, watering, an offline sowing,
   await shot(page, 'walkthrough-08-zone-sheet')
 
   // ── 3. Quick log a watering ───────────────────────────────────────────────────────────────────
-  await sheet.getByRole('link', { name: '＋ Registar', exact: true }).click()
+  await sheet.getByRole('link', { name: 'Registar', exact: true }).click()
   await expect(page.getByText('Escolhida: Canteiro')).toBeVisible()
   await page.getByRole('button', { name: 'Rega', exact: true }).click()
   await page.getByLabel(/Quantidade \(litros\)/).fill('40')
@@ -122,7 +122,7 @@ test('the main flows on a phone: field, plot, zone, watering, an offline sowing,
 
   // ── 6. Add a task and close it ────────────────────────────────────────────────────────────────
   await page.getByRole('navigation', { name: 'Principal' }).last().getByRole('link', { name: 'Tarefas' }).click()
-  await page.getByRole('button', { name: '＋ Acrescentar tarefa' }).click()
+  await page.getByRole('button', { name: 'Acrescentar tarefa' }).click()
   await page.getByLabel('O que há para fazer?').fill('Pôr ninhos')
   await page.getByLabel('Onde').selectOption({ label: 'Canteiro (Encosta)' })
   await page.getByRole('button', { name: /Fazer ninhos/ }).click()

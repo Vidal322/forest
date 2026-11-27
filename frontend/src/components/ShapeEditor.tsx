@@ -8,6 +8,7 @@ import { useTreeCounts } from '../api/trees'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { closeRing, ringArea } from '../map/geometry'
 import { checkDraft, withCorners, type Draft } from '../map/draft'
+import { Icon } from './Icon'
 
 /** The bottom panel while drawing: instructions, Undo/Cancel/Next, then the details form. */
 export function ShapeEditor({
@@ -57,7 +58,7 @@ export function ShapeEditor({
             setDraft({ ...draft, corners: draft.history[draft.history.length - 1] ?? [], history: draft.history.slice(0, -1) })
           }
         >
-          ↶ Desfazer
+          <Icon name="undo" /> Desfazer
         </button>
         <button type="button" className="btn" onClick={() => setDraft(null)}>
           Cancelar
@@ -151,7 +152,7 @@ function DetailsShell({
             {busy ? 'A guardar…' : 'Guardar'}
           </button>
           <button type="button" className="btn" onClick={onBack} disabled={busy}>
-            ← Contorno
+            <Icon name="back" /> Contorno
           </button>
           <span className="spacer" />
           {onDelete && (

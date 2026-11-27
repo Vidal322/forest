@@ -24,14 +24,14 @@ test('the map shows the zones as they were on a past day, and goes back to today
   const labelId = await page.locator('.map-label--zone', { hasText: 'Old sowing' }).getAttribute('id')
   const zone = page.locator(`path.map-zone[aria-describedby="${labelId}"]`)
   // sown 20 days ago, never watered: dry today
-  await expect(zone).toHaveAttribute('fill', '#d9822b')
+  await expect(zone).toHaveAttribute('fill', '#F26B1D')
 
   await page.getByRole('button', { name: 'Camadas' }).click()
   await page.getByLabel('Dia', { exact: true }).fill(fieldDay(-18))
   await expect(page.getByText(/^A ver /)).toBeVisible()
   await expect(page.getByText('há 18 dias')).toBeVisible()
   // two days after sowing it was just sown
-  await expect(zone).toHaveAttribute('fill', '#c9a227')
+  await expect(zone).toHaveAttribute('fill', '#F2D14A')
   await shot(page, 'map-as-of-panel')
   await page.getByRole('button', { name: 'Camadas' }).click()
   await shot(page, 'map-as-of')
@@ -39,7 +39,7 @@ test('the map shows the zones as they were on a past day, and goes back to today
   // before anything was logged: nothing there yet
   await page.getByRole('button', { name: 'Camadas' }).click()
   await page.getByLabel('Dia', { exact: true }).fill(fieldDay(-25))
-  await expect(zone).toHaveAttribute('fill', '#efe7d6')
+  await expect(zone).toHaveAttribute('fill', '#FFFFFF')
   await page.getByRole('button', { name: 'Camadas' }).click()
 
   // near its corner: the walkthrough's smaller zone lies over its middle (and gave the field a scale, so the sheet
@@ -49,13 +49,13 @@ test('the map shows the zones as they were on a past day, and goes back to today
   await expect(sheet).toContainText('Sem nada')
   // its actions still act on today, and say so
   await expect(sheet).toContainText('O que registares ou editares fica com o dia de hoje.')
-  await expect(sheet.getByRole('link', { name: '＋ Registar hoje' })).toBeVisible()
-  await expect(sheet.getByRole('button', { name: '✎ Editar a zona hoje' })).toBeVisible()
+  await expect(sheet.getByRole('link', { name: 'Registar hoje' })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Editar a zona hoje' })).toBeVisible()
   await shot(page, 'map-as-of-sheet')
   await page.getByRole('button', { name: 'Voltar a hoje' }).click()
   await expect(page.getByText(/^A ver /)).toHaveCount(0)
-  await expect(zone).toHaveAttribute('fill', '#d9822b')
+  await expect(zone).toHaveAttribute('fill', '#F26B1D')
   await expect(sheet).toContainText('Por regar')
-  await expect(sheet.getByRole('link', { name: '＋ Registar', exact: true })).toBeVisible()
+  await expect(sheet.getByRole('link', { name: 'Registar', exact: true })).toBeVisible()
   await expect(sheet).not.toContainText('fica com o dia de hoje')
 })

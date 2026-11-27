@@ -1,7 +1,9 @@
 import { Link } from 'react-router'
+import { ACTIVITY } from '../api/activities'
 import { dueLabel, isOpen, TASK_KIND, type ResolvedLink, type Task } from '../api/tasks'
 import { fieldToday, whenDay } from '../domain/dates'
 import type { Toast } from '../hooks/useTaskToggle'
+import { Icon } from './Icon'
 
 /** The short message with an optional Undo, shown above the lists. */
 export function ToastLine({ toast, onUndo }: { toast: Toast | null; onUndo: () => void }) {
@@ -46,7 +48,7 @@ export function TaskRow({
     <>
       <span className="task__title">
         {onEdit && <span className="visually-hidden">Editar: </span>}
-        <span aria-hidden="true">{TASK_KIND[task.kind].icon}</span> {task.title}
+        <Icon name={TASK_KIND[task.kind].icon} /> {task.title}
       </span>
       <span className="task__meta">
         {[
@@ -57,7 +59,7 @@ export function TaskRow({
           task.status === 'cancelled' ? 'cancelada' : null,
         ]
           .filter(Boolean)
-          .join(' · ')}
+          .join(', ')}
       </span>
     </>
   )
@@ -65,7 +67,7 @@ export function TaskRow({
     <li className={`task${open ? '' : ' task--closed'}${overdue ? ' task--overdue' : ''}`}>
       <button type="button" className="task__tick" aria-pressed={!open} aria-label={`Feita: ${task.title}`} onClick={onToggle}>
         <span className="task__tick-circle" aria-hidden="true">
-          {open ? '' : '✓'}
+          {!open && <Icon name="check" size={18} />}
         </span>
       </button>
       <div className="task__main">
@@ -78,7 +80,9 @@ export function TaskRow({
         )}
         {resolvedBy && (
           <Link className="task__link" to={resolvedBy.to}>
-            <span className="visually-hidden">Feita com o registo:</span> {resolvedBy.label} →
+            <span className="visually-hidden">Feita com o registo:</span> <Icon name={ACTIVITY[resolvedBy.type].icon} size={18} />{' '}
+            {resolvedBy.label}
+            <Icon name="next" size={16} />
           </Link>
         )}
       </div>

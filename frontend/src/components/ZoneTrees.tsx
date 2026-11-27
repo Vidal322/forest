@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import type { Species } from '../api/species'
 import { MAX_TREES, useSetTreeCounts, useTreeCounts } from '../api/trees'
 import { formatNumber } from '../domain/numbers'
+import { Icon } from './Icon'
 
 const KEY_LABEL = { alive: 'vivas', dead: 'mortas' } as const
 
@@ -26,7 +27,7 @@ export function ZoneTrees({ zoneId, species, onMessage }: { zoneId: string; spec
         <span className="spacer" />
         {!editing && species.length > 0 && (
           <button type="button" className="btn btn-small" onClick={() => setEditing(true)}>
-            ✎ Contar árvores
+            <Icon name="edit" /> Contar árvores
           </button>
         )}
       </div>

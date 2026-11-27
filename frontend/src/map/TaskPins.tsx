@@ -4,6 +4,7 @@ import { Marker, useMap, useMapEvents } from 'react-leaflet'
 import { TASK_KIND } from '../api/tasks'
 import { toLatLng } from './frame'
 import { pinTitle, type TaskSpot } from './taskSpots'
+import { iconSvg } from '../components/icons'
 
 /** A pin's title only where its place is this wide on screen (else the pins' labels pile up). */
 const LABEL_MIN_PX = 120
@@ -53,14 +54,14 @@ function Pin({
 }) {
   const n = spot.tasks.length
   const first = spot.tasks[0]!
-  const mark = n === 1 ? TASK_KIND[first.kind].icon : String(n)
+  const mark = n === 1 ? iconSvg(TASK_KIND[first.kind].icon, 16) : escape(String(n))
   const text = n === 1 ? first.title : `${n} tarefas`
   const icon = useMemo(
     () =>
       divIcon({
         className: `map-task-pin${n > 1 ? ' map-task-pin--many' : ''}${selected ? ' is-selected' : ''}`,
         // hidden from screen readers: the marker's title names the pin
-        html: `<i aria-hidden="true">${escape(mark)}</i>${label ? `<span aria-hidden="true">${escape(text)}</span>` : ''}`,
+        html: `<i aria-hidden="true">${mark}</i>${label ? `<span aria-hidden="true">${escape(text)}</span>` : ''}`,
         // 44 px to tap; the dot sits just under the place's centre, clear of the zone's name
         iconSize: [44, 44],
         iconAnchor: [22, 0],

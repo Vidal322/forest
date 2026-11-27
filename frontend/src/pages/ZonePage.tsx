@@ -18,6 +18,7 @@ import { useFlash } from '../hooks/useFlash'
 import { STATUS_COLOR } from '../map/colors'
 import { TaskRow, ToastLine } from '../components/TaskRow'
 import { useTaskToggle, type Toast } from '../hooks/useTaskToggle'
+import { Icon } from '../components/Icon'
 
 type Editing = { kind: 'activity'; activity: Activity } | { kind: 'task'; task?: Task } | null
 
@@ -80,7 +81,7 @@ export function ZonePage() {
     return (
       <div className="page">
         <p>
-          <Link to="/">← Mapa</Link>
+          <Link className="link-tap" to="/"><Icon name="back" size={18} /> Mapa</Link>
         </p>
         {zones.isPending ? (
           <p className="muted">A carregar…</p>
@@ -111,7 +112,7 @@ export function ZonePage() {
   return (
     <div className="page">
       <p className="crumbs">
-        <Link to={`/?zone=${zone.id}`}>← Mapa</Link>
+        <Link className="link-tap" to={`/?zone=${zone.id}`}><Icon name="back" size={18} /> Mapa</Link>
         {plot && <span className="muted"> · {plot.name}</span>}
       </p>
       <h1>{zoneName(zone)}</h1>
@@ -126,10 +127,10 @@ export function ZonePage() {
       {zone.notes && <p className="muted">{zone.notes}</p>}
       <div className="row">
         <Link className="btn btn-primary" to={`/log?zone=${zone.id}`}>
-          ＋ Registar
+          <Icon name="add" /> Registar
         </Link>
         <Link className="btn" to={`/?edit=${zone.id}`}>
-          ✎ Editar o contorno
+          <Icon name="edit" /> Editar o contorno
         </Link>
       </div>
       <Flash flash={flash} />
@@ -147,7 +148,7 @@ export function ZonePage() {
           <span className="spacer" />
           {editing?.kind !== 'task' && (
             <button id="zone-add-task" type="button" className="btn btn-small" onClick={() => open({ kind: 'task' }, 'zone-add-task')}>
-              ＋ Acrescentar tarefa
+              <Icon name="add" /> Acrescentar tarefa
             </button>
           )}
         </div>
@@ -232,7 +233,7 @@ export function ZonePage() {
                 >
                   <span className="timeline__title">
                     <span className="visually-hidden">Editar: </span>
-                    <span aria-hidden="true">{ACTIVITY[a.type].icon}</span> {ACTIVITY[a.type].label}
+                    <Icon name={ACTIVITY[a.type].icon} /> {ACTIVITY[a.type].label}
                     {mine?.quantity != null && mine.unit && ` · ${formatNumber(mine.quantity)} ${UNIT_LABEL[mine.unit]}`}
                   </span>
                   <span className="timeline__meta">

@@ -159,16 +159,16 @@ describe('MapPage', () => {
     expect(sheet).not.toHaveTextContent('Por regar')
     // its actions act on today, and say so
     expect(sheet).toHaveTextContent('O que registares ou editares fica com o dia de hoje.')
-    expect(within(sheet).getByRole('link', { name: '＋ Registar hoje' })).toHaveAttribute('href', `/log?zone=${testZone.id}`)
-    expect(within(sheet).getByRole('button', { name: '✎ Editar a zona hoje' })).toBeInTheDocument()
-    expect(within(sheet).queryByRole('link', { name: '＋ Registar' })).not.toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Registar hoje' })).toHaveAttribute('href', `/log?zone=${testZone.id}`)
+    expect(within(sheet).getByRole('button', { name: 'Editar a zona hoje' })).toBeInTheDocument()
+    expect(within(sheet).queryByRole('link', { name: 'Registar' })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Voltar a hoje' }))
     expect(screen.queryByText(/A ver /)).not.toBeInTheDocument()
     expect(sheet).toHaveTextContent('Por regar')
     expect(sheet).not.toHaveTextContent('fica com o dia de hoje')
-    expect(within(sheet).getByRole('link', { name: '＋ Registar' })).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: '✎ Editar a zona' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'Registar' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Editar a zona' })).toBeInTheDocument()
   })
 
   it('says so when a past day cannot be loaded', async () => {
@@ -227,7 +227,7 @@ describe('task pins', () => {
     fireEvent.click(pin)
     const sheet = await screen.findByRole('region', { name: 'Clareira' })
     expect(within(sheet).getByRole('heading', { name: 'Clareira' })).toHaveFocus()
-    expect(sheet).toHaveTextContent('Tarefas desta zona · Plot 1')
+    expect(sheet).toHaveTextContent('Tarefas desta zona (Plot 1)')
     expect(sheet).not.toHaveTextContent('Já feito')
     // not over the sheet
     expect(screen.queryByRole('button', { name: /precisa/ })).not.toBeInTheDocument()
@@ -274,10 +274,10 @@ describe('task pins', () => {
     mapApi({ 'GET /api/tasks': () => ({ status: 200, body: [openTask] }) })
     const { container } = renderApp('/')
     fireEvent.click(await screen.findByRole('button', { name: 'Tarefa: Regar' }))
-    expect(await screen.findByText('Tarefas desta zona · Plot 1')).toBeInTheDocument()
+    expect(await screen.findByText('Tarefas desta zona (Plot 1)')).toBeInTheDocument()
     await userEvent.click(container.querySelector('path.map-zone')!)
-    expect(await screen.findByRole('link', { name: /^＋ Registar$/ })).toBeInTheDocument()
-    expect(screen.queryByText('Tarefas desta zona · Plot 1')).not.toBeInTheDocument()
+    expect(await within(screen.getByRole('main')).findByRole('link', { name: /^Registar$/ })).toBeInTheDocument()
+    expect(screen.queryByText('Tarefas desta zona (Plot 1)')).not.toBeInTheDocument()
   })
 })
 
@@ -346,7 +346,7 @@ describe('drawing', () => {
       return new Response(path === '/healthz' ? '{"status":"ok"}' : '[]')
     })
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desenhar' }))
     await userEvent.click(screen.getByRole('button', { name: /Uma parcela/ }))
     expect(screen.getByText(/0 de pelo menos 3/)).toBeInTheDocument()
 
@@ -375,7 +375,7 @@ describe('drawing', () => {
   it('cannot draw a zone before there is a plot', async () => {
     mapApi({ 'GET /api/plots': () => ({ status: 200, body: [] }), 'GET /api/zones': () => ({ status: 200, body: [] }) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desenhar' }))
     expect(screen.getByRole('button', { name: /Uma zona/ })).toBeDisabled()
     expect(screen.getByText(/Desenha primeiro uma parcela/)).toBeInTheDocument()
   })
@@ -389,15 +389,15 @@ describe('drawing', () => {
     expect(screen.getByRole('heading', { name: 'Editar o contorno da zona' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Seguinte' }))
     expect(screen.getByLabelText(/Nome/)).toHaveValue('Clareira')
-    await userEvent.click(screen.getByRole('button', { name: '← Contorno' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Contorno' }))
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(screen.getByRole('button', { name: '＋ Desenhar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Desenhar' })).toBeInTheDocument()
   })
 
   it('undoes corners, and refuses a plot name that is taken', async () => {
     const api = mapApi()
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desenhar' }))
     await userEvent.click(screen.getByRole('button', { name: /Uma parcela/ }))
     const mapEl = container.querySelector('.leaflet-container')!
     for (const [x, y] of [
@@ -431,7 +431,7 @@ describe('drawing', () => {
       return new Response(path.startsWith('/api/') ? '[]' : '{"status":"ok"}')
     })
     const { container } = renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: '＋ Desenhar' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Desenhar' }))
     await userEvent.click(screen.getByRole('button', { name: /Uma zona/ }))
     const mapEl = container.querySelector('.leaflet-container')!
     // well inside Plot 1 (0–400 frame units, shown from the top-left of the map)

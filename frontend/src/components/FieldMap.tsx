@@ -114,7 +114,7 @@ export function FieldMap({
         onClick={() => map?.fitBounds(bounds, { animate: !prefersReducedMotion() })}
         disabled={!map}
       >
-        <span aria-hidden="true">⤢</span> Terreno todo
+        Terreno todo
       </button>
     </section>
   )

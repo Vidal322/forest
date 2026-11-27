@@ -410,3 +410,16 @@ One entry per backlog item the loop finished (or gave up on), newest at the bott
   because quantities are integers; `agree()` hard-codes the plural fields.
 - Browser check: full e2e suite (14) passed, including export-csv.e2e.ts.
 - Follow-ups: none.
+
+## 2026-11-27 · P2 Visual base: fonts, colours, icons, tabs, checks — merged (squash of branch commits 8dcd960 + 149e025)
+- Change: Atkinson Hyperlegible Next and Alegreya are bundled (no outside requests, precached). The Pintar tokens replace
+  the old palette (no shadows, gradients or caps; 44 px chips and small buttons; 3 px focus outline; reduced motion). SVG
+  icons replace emoji in the nav, buttons and activity/task kinds. Phone tabs are Mapa, Registar, Tarefas ("(1 atrasada)"
+  when late) and Mais; the sync line is in words. New `antiAi.test.ts` content check (allow-list per page, shrink-only)
+  and `e2e/design.e2e.ts` (axe WCAG 2.1 AA and 44 px targets on all 10 pages). Rows use ", " instead of " · ".
+- Review: no blocking findings. Minor: (1) walkthrough e2e failed once in several runs on "Rega guardada" not in the
+  viewport, probably an existing flake in the Log page that P4c removes; (2) the shared components AsOf, NeedsAttention,
+  ShapeEditor, ZoneList, PlantedInRange and FieldLayers still have " · " allow-list entries, to be emptied by P3 and P6;
+  (3) the design spec's sowing task shows the water icon (test data), left as is.
+- Browser check: full e2e suite 15/15 on the last runs; tabs, tasks and zone sheet screenshots read on a phone size.
+- Follow-ups: P3 and P6 must empty the allow-list entries; watch the walkthrough flake until P4c.

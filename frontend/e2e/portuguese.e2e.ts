@@ -23,7 +23,7 @@ test('the app speaks Portuguese: page language, installed name, the map and the 
 
   await tabs.getByRole('link', { name: 'Tarefas' }).click()
   await expect(page.getByRole('heading', { name: /^Hoje/ })).toBeVisible()
-  await expect(page.getByText(`Clareira pt · ${name} · para hoje`)).toBeVisible()
+  await expect(page.getByText(`Clareira pt, ${name}, para hoje`)).toBeVisible()
   await shot(page, 'portuguese-tasks')
 
   // the installed app's name and description

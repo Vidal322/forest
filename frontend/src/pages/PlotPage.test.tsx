@@ -90,7 +90,7 @@ describe('PlotPage', () => {
     const api = plotApi()
     renderApp(`/plots/${testPlot.id}`)
     const todo = within(await screen.findByRole('region', { name: 'Tarefas' }))
-    expect(await todo.findByRole('button', { name: /Editar: .*Regar ribeira/ })).toHaveTextContent('Ribeira · para hoje')
+    expect(await todo.findByRole('button', { name: /Editar: .*Regar ribeira/ })).toHaveTextContent('Ribeira, para hoje')
     expect(todo.getByRole('button', { name: /Editar: .*Melhorar caminho/ })).toHaveTextContent('Parcela inteira')
     expect(todo.queryByText(/Noutro talhão|Já feito/)).not.toBeInTheDocument()
     await userEvent.click(todo.getByRole('button', { name: 'Feita: Regar ribeira' }))

@@ -9,6 +9,7 @@ import { TaskRow, ToastLine } from '../components/TaskRow'
 import { daysBetween } from '../domain/dates'
 import { useFieldToday } from '../hooks/useFieldToday'
 import { useTaskToggle, type Toast } from '../hooks/useTaskToggle'
+import { Icon } from '../components/Icon'
 
 type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | null
 /** Open tasks grouped by urgency, with one tap to tick them done; closed ones below. */
@@ -114,7 +115,7 @@ export function TasksPage() {
               setEditing({ mode: 'add' })
             }}
           >
-            ＋ Acrescentar tarefa
+            <Icon name="add" /> Acrescentar tarefa
           </button>
         )}
       </div>
@@ -183,7 +184,7 @@ export function TasksPage() {
         groups.length === 0 &&
         editing === null && (
           <div className="empty">
-            <p>Nada por fazer{filterName ? ` em ${filterName}` : ''}. 🌿</p>
+            <p>Nada por fazer{filterName ? ` em ${filterName}` : ''}.</p>
             {elsewhere > 0 ? (
               <>
                 <p className="muted">

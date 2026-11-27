@@ -86,7 +86,7 @@ describe('TasksPage', () => {
     renderApp('/tasks')
     expect(await screen.findByRole('heading', { name: /Atrasadas/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Sem prazo/ })).toBeInTheDocument()
-    expect(screen.getByText(/Clareira · Plot 1 · atrasada desde \d+ [a-z]{3}$/)).toBeInTheDocument()
+    expect(screen.getByText(/Clareira, Plot 1, atrasada desde \d+ [a-z]{3}$/)).toBeInTheDocument()
   })
 
   it('ticks a task done in one tap, from its current version', async () => {
@@ -291,7 +291,7 @@ describe('TasksPage', () => {
       taskApi([base, later], 0, true)
       renderApp('/tasks')
       await userEvent.click(await chip(/Plot 2 \(0\)/))
-      expect(screen.getByText('Nada por fazer em Plot 2. 🌿')).toBeInTheDocument()
+      expect(screen.getByText('Nada por fazer em Plot 2.')).toBeInTheDocument()
       expect(screen.getByText('2 tarefas por fazer noutras parcelas.')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Mostrar todas as parcelas' }))
       expect(screen.getByRole('button', { name: /Todas as parcelas/ })).toHaveAttribute('aria-pressed', 'true')

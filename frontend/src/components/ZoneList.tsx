@@ -3,6 +3,7 @@ import { zoneName, type Plot, type Zone } from '../api/plots'
 import { taskCount } from '../domain/attention'
 import { byNeed, NEED_ORDER_HINT, STATUS_LABEL, zoneStatus } from '../domain/zoneStatus'
 import { StatusBadge } from './StatusBadge'
+import { Icon } from './Icon'
 
 /** Every zone as a button, by plot, most urgent first: the way to reach zones without aiming at the map. */
 export function ZoneList({
@@ -32,7 +33,7 @@ export function ZoneList({
           <section key={p.id} aria-label={p.name}>
             <h3>
               <Link to={`/plots/${p.id}`}>
-                {p.name} <span aria-hidden="true">›</span>
+                {p.name} <Icon name="next" size={16} />
               </Link>
             </h3>
             <ul>

@@ -25,7 +25,6 @@ export function SyncStatus() {
     <div className="sync">
       {waiting > 0 && (
         <output className="sync__waiting">
-          <span aria-hidden="true">⏳</span>{' '}
           {waiting === 1
             ? '1 alteração guardada neste telemóvel, à espera de rede.'
             : `${waiting} alterações guardadas neste telemóvel, à espera de rede.`}

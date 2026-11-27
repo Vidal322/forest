@@ -5,6 +5,7 @@ import { isOpen, type Task } from '../api/tasks'
 import { useTaskToggle, type Toast } from '../hooks/useTaskToggle'
 import { spotKey } from '../map/taskSpots'
 import { TaskRow, ToastLine } from './TaskRow'
+import { Icon } from './Icon'
 
 /**
  * Bottom sheet for a task pin tapped on the map: the open tasks of that zone (or plot),
@@ -65,10 +66,10 @@ export function TaskSheet({
         </h2>
         <span className="spacer" />
         <button type="button" className="btn btn-icon" onClick={onClose} aria-label="Fechar">
-          ✕
+          <Icon name="close" />
         </button>
       </div>
-      <p className="muted">{zone ? (plot ? `Tarefas desta zona · ${plot.name}` : 'Tarefas desta zona') : 'Tarefas da parcela inteira'}</p>
+      <p className="muted">{zone ? (plot ? `Tarefas desta zona (${plot.name})` : 'Tarefas desta zona') : 'Tarefas da parcela inteira'}</p>
       <ToastLine
         toast={toast}
         onUndo={() => {
@@ -83,7 +84,7 @@ export function TaskSheet({
           ))}
         </ul>
       ) : (
-        <p className="muted">Já não há nada por fazer aqui. 🌿</p>
+        <p className="muted">Já não há nada por fazer aqui.</p>
       )}
       <div className="row form__actions">
         {zone ? (

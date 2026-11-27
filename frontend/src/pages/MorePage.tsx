@@ -5,6 +5,7 @@ import { apiDownload } from '../api/client'
 import { friendlyError } from '../api/errors'
 import { OUTBOX_SCOPE } from '../api/outbox'
 import { NAV } from '../app/nav'
+import { Icon } from '../components/Icon'
 
 /** Everything that isn't a bottom tab on phones, and the export (also in the top bar on wide screens). */
 export function MorePage() {
@@ -15,7 +16,7 @@ export function MorePage() {
         {NAV.filter((n) => !n.tab).map((n) => (
           <li key={n.to}>
             <Link to={n.to}>
-              <span aria-hidden="true">{n.icon}</span> {n.label}
+              <Icon name={n.icon} /> {n.label}
             </Link>
           </li>
         ))}
@@ -67,7 +68,7 @@ function ExportCard() {
         </p>
       )}
       <button type="button" className="btn btn-primary btn-block" onClick={() => void download()} disabled={busy}>
-        <span aria-hidden="true">⬇</span> {busy ? 'A preparar…' : 'Descarregar CSV'}
+        <Icon name="download" /> {busy ? 'A preparar…' : 'Descarregar CSV'}
       </button>
       {error && (
         <p className="note warn" role="alert">

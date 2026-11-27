@@ -24,6 +24,7 @@ import { WateringRules } from '../components/WateringRules'
 import { useOutboxWrite } from '../hooks/useOutboxWrite'
 import { CalibrationLine } from '../map/CalibrationLine'
 import type { FramePoint } from '../map/frame'
+import { Icon } from '../components/Icon'
 
 /** Set up the field (name + first photo), then its scale and watering default. */
 export function FieldSetupPage() {
@@ -107,7 +108,7 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
           aria-invalid={blamed === 'photo' || undefined}
           aria-describedby={errorFor('photo')}
         />
-        <span aria-hidden="true">📷</span>
+        <Icon name="camera" size={28} />
         <span>{file ? `${file.name} (toca para mudar)` : 'Escolher a fotografia do terreno'}</span>
         <span className="muted small">
           {file ? `${formatNumber(Math.round((file.size / 1_048_576) * 10) / 10)} MB` : 'PNG, JPG ou WebP, até 30 MB'}
@@ -116,7 +117,7 @@ function CreateFieldForm({ onCreated }: { onCreated: () => void }) {
       {preview && <img className="photo-preview" src={preview} alt="Pré-visualização do terreno que escolheste" />}
 
       <p className="note privacy">
-        🔒 O servidor guarda só os píxeis: todos os dados EXIF e de GPS são apagados no envio. Antes de enviares, corta
+        O servidor guarda só os píxeis: todos os dados EXIF e de GPS são apagados no envio. Antes de enviares, corta
         as coordenadas, nomes de sítios ou moradas que apareçam <em>dentro</em> da imagem.
       </p>
 
@@ -197,7 +198,7 @@ function FieldSettings({ field, flash }: { field: Field; flash: FlashState }) {
         <p className="muted small">Com estes dados, ninguém consegue pôr este terreno num mapa real.</p>
         {photo && (
           <p>
-            <Link to="/">Abrir o mapa →</Link>
+            <Link className="link-tap" to="/">Abrir o mapa</Link>
           </p>
         )}
       </section>

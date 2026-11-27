@@ -43,7 +43,7 @@ describe('attention', () => {
   })
 
   it('says how many zones need attention', () => {
-    expect(attentionLabel(0)).toBe('✓ Nenhuma zona precisa de nada')
+    expect(attentionLabel(0)).toBe('Nenhuma zona precisa de nada')
     expect(attentionLabel(1)).toBe('1 zona precisa de atenção')
     expect(attentionLabel(4)).toBe('4 zonas precisam de atenção')
   })

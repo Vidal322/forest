@@ -9,6 +9,7 @@ import { PlantedInRange } from '../components/PlantedInRange'
 import { relativeDay } from '../domain/dates'
 import { formatNumber as n } from '../domain/numbers'
 import { useFieldToday } from '../hooks/useFieldToday'
+import { Icon } from '../components/Icon'
 
 /** Per plot: area (measured vs the old map), what was sown/planted (all time and between two dates), watering, and what's pending. */
 export function StatsPage() {
@@ -89,8 +90,8 @@ function PlotCard({ p, today }: { p: PlotStats; today: string }) {
   return (
     <section className="card" aria-labelledby={`plot-${p.plot_id}`}>
       <h2 id={`plot-${p.plot_id}`}>
-        <Link to={`/plots/${p.plot_id}`}>
-          {p.name} <span aria-hidden="true">›</span>
+        <Link className="link-tap" to={`/plots/${p.plot_id}`}>
+          {p.name} <Icon name="next" size={18} />
         </Link>
       </h2>
       <p className="muted">
