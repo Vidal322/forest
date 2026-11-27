@@ -247,3 +247,200 @@ Acceptance:
 - If the flake is a real app bug (scrolling to the card is unreliable on a phone), fix the app, not only the test.
 - The whole e2e suite passes 3 runs in a row.
 
+
+## Redesign "Pintar" (target: `docs/mockups/pintar/`)
+
+Decided with the owner on 2026-11-27 (canvas "Forest — three non-generic directions", page "Pintar"). The static
+mockups are the look: `mapa.html` (map + tools), `regar.html` (painting zones), `plantar.html` (counts and species),
+`zona.html` (zone page). They show the main path only; anything they leave out keeps today's behaviour, restyled. Their links are placeholders
+(for example the Plantar tool jumps straight to `plantar.html`): painting with Plantar or Semear looks like
+`regar.html` with that tool chosen and its paint colour.
+The older `docs/mockups/*.html` and today's app are the reference for features, not for looks.
+
+Every P item starts by reading this whole section (decisions, glossary, tokens, checklist): the loop shows an agent
+only its own item. P2–P6 share the `redesign` area and run in this order; each one first checks that the items
+before it are `done` and returns `blocked` if not.
+
+Decisions:
+- **Language**: everything a user can see is in Portuguese (Portugal), addressed as "tu" ("Toca noutra zona").
+  Glossary: plot = parcela; zone = zona; water = regar / rega; plant = plantar / plantação; sow = semear / sementeira;
+  fertilise = adubar / adubação; other = outro; task = tarefa (por fazer, em curso, feita, cancelada); species =
+  espécie(s); tree = árvore (viva / morta, vivas / mortas); units: covas (holes), sementes (seeds), árvores, litros,
+  kg; zone status (feminine, agrees with "zona"): por regar, regada, plantada, semeada, sem nada, caminho (path);
+  late = atrasada; save = guardar; cancel = cancelar; undo a save = anular; take the last painted zone off = tirar a
+  última; note = nota ("Acrescentar uma nota"); photo = fotografia; edit = editar; delete = apagar; today / yesterday
+  = hoje / ontem; map = mapa; legend = legenda; layers = camadas; history = histórico; stats = estatísticas; field
+  setup = configurar o terreno; more = mais; offline = sem rede. Status as a sentence: "Sem rega há 20 dias".
+- **Formats**: dates "22 de novembro" (long) and "2 nov" (short), months in lower case, both from one custom
+  formatter (Intl's pt-PT short form is "2/11", not wanted); numbers with `Intl.NumberFormat('pt-PT')` as it is
+  (decimal comma, "0,41 ha"; it doesn't group 4-digit numbers, fine). The CSV export follows Portuguese spreadsheets:
+  `;` between columns, decimal comma, header in Portuguese, several values in one cell joined with ", " (a deliberate
+  break from the English export).
+- **Flow**: logging starts from the tools on the map (Regar, Plantar, Semear, Outro); the Log tab goes and the phone
+  tabs are Mapa, Tarefas, Mais (Tarefas shows the number of late tasks). Pick a tool, tap zones to paint them (tap
+  again to take one off; painted zones stay painted when you switch tools), then save. ✕ leaves without saving;
+  "Tirar a última" takes the last painted zone off. With no tool picked, tapping a zone opens the zone sheet as today.
+- **Look**: the field photo stays the map. Zone codes are marking-paint blobs whose colour is the status; dry zones
+  are also hatched, so status is never colour alone. Place names (zones, plots) are set in Alegreya italic and nothing
+  else is; all other text is Atkinson Hyperlegible Next. Both are self-hosted and precached, so they work offline.
+- **Tokens**:
+  - UI: pine `#2C4A3A` (main actions), ink `#1F2A24` (text), secondary text `#4F5A53`, water `#1F64B8` (water button
+    and tool), rust `#A9461D` / `#8E3A0F` (late, dead, errors), control borders `#8A947F` (3:1 on white), dividers
+    `#E2E6D8`, sheets white; tool tints `#DCEAF8` (regar), `#E2EDD6` (plantar), `#F4EBCD` (semear), `#ECEDE8` (outro).
+  - On the photo: paint blobs orange `#F26B1D` (por regar), blue `#6FB2F2` (regada), green `#9BD06A` (plantada),
+    yellow `#F2D14A` (semeada), white `#FFFFFF` (sem nada), grey `#B8B4A8` (caminho); hatching in marking orange
+    `#F26B1D`; painted zones blue `#2D7FE0` (regar), green `#3E8E3A` (plantar), yellow `#F2D14A` (semear) at 55–60 %.
+    Text on the photo always has a 4 px dark halo `#1E2416` or sits on a solid chip; codes on blobs are `#1F1A12`,
+    on a zone painted with water `#174D92`. A dashed white outline means the zone overlaps a bigger one; others are solid.
+  - More UI shades: inactive tabs and icons `#59645C`, body text on tints `#3F4B43`, banner icon rust `#B4470F`,
+    semear icon ochre `#8A6A16`.
+  - Tree symbols (zone page): one symbol per species, given in the order the species were created: filled circle
+    `#2C4A3A`, ring `#6E8F35`, filled square `#8A6A16`, ring square `#1F64B8`, filled triangle `#4F5A53`, then the
+    same shapes again in outline; dead trees are the species' symbol crossed out in rust. The legend is always shown.
+  - Radii by size: 12 px controls, 16 px buttons and banners, 24 px sheet tops. No box-shadow anywhere (rings and
+    selection are outlines or borders). Focus: 3 px `#1F64B8` outline, 2 px offset.
+
+Anti-AI checklist (every item below that changes UI; the reviewer checks it on the phone screenshots and also runs
+the `frontend-design:frontend-design` skill on the changed screens). P2 turns the first three lines into automatic
+checks:
+- No emoji as icons (inline SVG line icons), no gradients, no box-shadow, no all-caps (`text-transform: uppercase`).
+- No " · " joined strings and no "→" / "←" in text; sentence case; a button says what it does and the confirmation
+  reuses the word ("Guardar rega" → "Rega guardada").
+- Text contrast ≥ 4.5:1, control borders ≥ 3:1, touch targets ≥ 44 × 44 px, visible focus, reduced motion respected.
+- Judged by the reviewer: no decoration that carries no information, no grid of look-alike cards where a list or
+  table would do.
+
+### P1 · Portuguese (pt-PT) in the frontend
+Status: todo
+Touches: frontend (every page and component, index.html, PWA manifest, unit and e2e tests)
+Parallel: alone
+Acceptance:
+- Read the section "Redesign Pintar" above first (glossary, formats).
+- No English left that a user can see in the frontend: pages, buttons, empty states, errors and confirmations,
+  `aria-label`s, page titles, the PWA name and description. Strings live next to the feature that uses them (no i18n
+  library: Portuguese is the only language). Error texts that come from the API are shown as they arrive (P1b translates them at the source).
+- `<html lang="pt-PT">`; dates and numbers as in "Formats" (replace the `en-GB` / `en-CA` display formatters, keep ISO
+  dates where code compares them). Names the user typed (zones, species) are shown as typed.
+- Unit and e2e tests updated; one test renders every page and fails on a list of known English words ("Save",
+  "Watered", "Tasks", "Cancel", …).
+
+### P1b · Portuguese (pt-PT) in the API and the CSV export
+Status: todo
+Touches: backend (user-facing error messages, CSV export)
+Area: export, api-text
+Acceptance:
+- Read the section "Redesign Pintar" above first.
+- Validation and conflict messages the UI can show are in Portuguese (the codes and HTTP statuses stay the same).
+- The CSV export follows "Formats": Portuguese header, `;` between columns, decimal comma, ", " inside a cell,
+  UTF-8 BOM kept; tests updated. The More page's button reads "Descarregar CSV".
+
+### P2 · Visual base: fonts, colours, icons, tabs, checks
+Status: todo
+Touches: frontend (styles.css, app shell and nav, shared components: buttons, chips, sheets, banners, StatusBadge,
+SyncStatus, Flash), package.json, e2e
+Area: redesign, styles, navigation
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P1 done.
+- Fonts from `@fontsource/atkinson-hyperlegible-next` (400, 500, 700) and `@fontsource/alegreya` (italic 400, 500,
+  700), imported so Vite bundles them and the service worker precaches them; no request to Google Fonts;
+  `font-display: swap`; the OFL licences stay in the packages.
+- The tokens replace the current palette; emoji in nav, buttons and the activity / task-kind icons
+  (`api/activities.ts`) become inline SVG line icons.
+- Phone tabs: Mapa, Tarefas (with the late count), Mais; the Log tab stays until P4c removes it. The desktop top
+  navigation keeps today's links, restyled. The sync state reads in words and hides when nothing waits.
+- Automatic checks, run by `pnpm check` or the e2e suite: a test over `src/**/*.tsx` and `styles.css` for emoji,
+  `box-shadow`, `uppercase`, `linear-gradient`, " · " and arrows; `@axe-core/playwright` on every page (contrast,
+  labels); a Playwright check that every visible control's clickable box is at least 44 × 44 px (a checkbox is measured
+  by its label; links inside running text are exempt; Leaflet's controls are restyled to 44 px in P3). The content
+  checks scan JSX text and string literals only, never comments. Existing pages may
+  fail the content checks until P3–P6 restyle them: keep an explicit allow-list per page in the test that those items
+  shrink to empty.
+- The shell and shared components pass the anti-AI checklist (whole pages are P3–P6).
+
+### P3 · Map: photo with paint marks
+Status: todo
+Touches: frontend (map page, FieldMap / FieldLayers, Legend, ZoneSheet look)
+Area: redesign, map
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P2 done.
+- Matches `mapa.html`: white zone outlines on the photo, the zone code in a paint blob coloured by status (colours in
+  the tokens, caminho included), dry zones hatched, zone names in Alegreya italic with a dark halo; every zone,
+  overlapping ones included, has a visible, tappable blob; labels stay readable at every zoom.
+- Top: plot switcher ("Parcela 1", "Todas as parcelas"). Choosing a plot fits the map to it; the banner and its count
+  cover the chosen plot (all plots for "Todas as parcelas"); the switcher has a link to the plot's page (tapping a plot outline still opens it too).
+- Banner "N zonas por regar: <names>" (hidden when none) opens `/log?zone=…` with those zones (P4a switches it to
+  the water tool).
+- Everything today's map has stays: drawing plots and zones (the draw button and menu), layers and the "as of" date,
+  the zones list, task pins and their sheet, the zone sheet with its actions. They take the new look, nothing is
+  removed. "Legenda" opens a legend explaining blobs, hatching and painted fills.
+- The anti-AI checklist passes on the map; its allow-list entries go.
+
+### P4a · Log by painting: the water tool
+Status: todo
+Touches: frontend (map page, a paint-state module, log save path)
+Area: redesign, log, map
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P3 done.
+- Matches `regar.html`: the tool row on the map, with Regar working (the others can open today's log page until
+  P4b). Tap zones to paint or unpaint them; the banner says "A regar N zonas" with ✕ and "Tirar a última"; the
+  sheet has the day ("Mudar o dia", no future days), optional litres per zone ("Acrescentar litros"), an optional
+  note, the open tasks on those zones with M1's ticking rule (only matching kinds are ticked by default), and
+  "Guardar rega".
+- Overlaps keep today's rule (the smaller zone wins the tap) and "Escolher da lista" picks zones without the photo.
+- Saving goes through the outbox (a queued change counts as saved), returns to the map with no tool, and shows "Rega
+  guardada" with "Anular" for a few seconds. The P3 banner and the zone page's "Regar" open the tool with those zones. The zone sheet's log action opens
+  the tool row with that zone painted and no tool chosen yet (picking a tool keeps it); `/log` links stay for old
+  bookmarks only.
+- Unit tests for the paint state (add, remove, take the last off, cancel, switch tools); the anti-AI checklist passes.
+
+### P4b · Log by painting: plant, sow, fertilise, other
+Status: todo
+Touches: frontend (paint tools, second step)
+Area: redesign, log, map
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P4a done.
+- Plantar and Semear paint like Regar; the sheet's button reads "Continuar com N zonas" and opens the second step
+  (`plantar.html`; back returns to the painting with the zones kept).
+- Plantar: trees per zone (stepper and typed number), species with optional counts; when the species counts don't
+  add up to the trees, a warning says how many are left ("4 árvores ainda sem espécie") but saving is allowed.
+- Semear: count per zone in covas or sementes (a choice, covas by default), the seed mix with optional seed counts and
+  no sum check.
+- Outro holds Adubar (optional kg per zone) and "Outra atividade" (today's `other` type, note required as today),
+  with the same fields as today. Day, note and task closing as in P4a. Buttons "Guardar plantação", "Guardar sementeira", "Guardar adubação",
+  "Guardar atividade"; confirmations reuse the word ("Atividade guardada").
+- Tests for each type's payload (same as today's log produces); the anti-AI checklist passes.
+
+### P4c · Remove the Log tab
+Status: todo
+Touches: frontend (routes, nav, LogPage and its tests), e2e walkthrough
+Area: redesign, log, navigation
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P4b done.
+- The Log tab goes; `/log` (with or without `?zone=`) redirects to the map with the water tool open and those zones
+  painted; nothing links to the old page; its code and tests go once every feature lives in the tools.
+- The e2e walkthrough logs a watering and a planting by painting, one of them offline, and still syncs.
+
+### P5 · Zone page
+Status: todo
+Touches: frontend (zone page, ZoneTrees, the zone's history list)
+Area: redesign, zone-page
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P4c done.
+- Matches `zona.html`: photo crop of the zone, the name in Alegreya italic, the status in one sentence for every
+  status (not only "Sem rega há N dias"), "Regar" (opens the water tool with this zone) and "Outra coisa" (the other
+  tools), open tasks with "Acrescentar tarefa" and "Mostrar feitas (N)", history in plain sentences with quantities and
+  species ("Regada com Encosta norte", "30 árvores plantadas: sobreiro e castanheiro"), each entry still tappable
+  to edit or delete; "Ver tudo" expands the full history in place.
+- Trees as symbols (see the tree-symbol tokens), one per tree, grouped by species, dead ones crossed out; over 100 trees one symbol stands for 10 (said in
+  the legend). "Corrigir" edits the counts as today.
+- Zone notes, kind (caminho) and "Editar contorno" stay. The anti-AI checklist passes; its allow-list entries go.
+
+### P6 · The other screens in the new style
+Status: todo
+Touches: frontend (tasks, species, stats, plot page, field setup, draw zone, more)
+Area: redesign, styles
+Acceptance:
+- Read the section "Redesign Pintar" above first. Needs P5 done.
+- Every remaining screen uses the tokens, fonts and icons and passes the anti-AI checklist; the P2 allow-list is
+  empty at the end; screenshots of each screen on a phone in the progress entry; no feature removed.
+- Place names in Alegreya italic wherever a zone or plot is named; tables that hold numbers stay tables.

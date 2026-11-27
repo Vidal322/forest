@@ -1,7 +1,8 @@
 # Forest — instructions for Claude
 
 Reforestation field tracker: Go API (`backend/`) + React PWA (`frontend/`), PostgreSQL + PostGIS in Docker, Nix dev shell.
-Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/mockups/` (UI target).
+Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/mockups/` (UI target; the look is
+`docs/mockups/pintar/`, decisions in `docs/backlog.md` section "Redesign Pintar").
 
 ## Workflow
 
@@ -25,6 +26,8 @@ Design docs: `docs/data-model.md` (source of truth for the schema) and `docs/moc
 
 ## Rules worth remembering
 
+- Every text a user sees is Portuguese (Portugal), addressed as "tu"; follow the glossary in `docs/backlog.md`.
+- UI changes pass the anti-AI checklist in `docs/backlog.md` (no emoji icons, no all-caps labels, no box-shadow, …).
 - No real GPS is ever stored. Coordinates are pixels of the first field photo, PostGIS SRID 0.
   Write geometries with `ST_SetSRID(ST_Force2D(ST_GeomFromGeoJSON($1)), 0)`.
 - Zone status ("needs water", …) is derived from the activity log (`zone_status` view), never stored.
